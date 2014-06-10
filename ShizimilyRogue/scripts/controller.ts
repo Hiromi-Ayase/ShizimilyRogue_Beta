@@ -4,39 +4,56 @@
     var HEIGHT = 25;
 
     export class Game {
-        private sceneManager: View.SceneManager;
-        private map: Dungeon.Map;
+        private dungeonManager: Model.DungeonManager;
+        private gameScene: View.GameScene;
 
         constructor() {
         }
 
         // フレームごとに呼ばれる
-        public updateFrame(): void {
-        }
+        private update(e): any {
+            if (!View.Scene.animating) {
+                var unit = this.dungeonManager.next();
+                var action: { [id: number]: Common.Action } = null;
+                if (unit.id == Common.PLAYER_ID) {
+                    if (View.Scene.keyDown) {
+                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.DOWN));
+                    } else if (View.Scene.keyLeft) {
+                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.LEFT));
+                    } else if (View.Scene.keyUp) {
+                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.UP));
+                    } else if (View.Scene.keyRight) {
+                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.RIGHT));
+                    }
 
-        // 入力ごとに呼ばれる
-        public inputHandler(code:Dungeon.Input): void {
+                } else {
+                    action = this.dungeonManager.phase(unit);
+                }
+                if (action != null)
+                this.gameScene.updateUnit(unit,action[0]);
+            }
         }
 
         // ゲームの開始
         public start(): void {
-            // Dungeon(Model)とSceneManager(View)の作成
-            this.sceneManager = new View.SceneManager();
-            var t = this;
-
-            // Initialize view
-            View.Scene.init(function () {
-                t.newGame();
+            View.Scene.init(() => {
+                this.newGame();
+            }, (e) => {
+                this.update(e);
             });
         }
 
         private newGame(): void {
+            // Dungeon(Model)とSceneManager(View)の作成
+            this.dungeonManager = new Model.DungeonManager(WIDTH, HEIGHT);
+
             // Map生成
-            this.map = new Dungeon.Map(WIDTH, HEIGHT);
-            // SceneをGameSceneに
-            var floorTable = this.map.getTable(Common.Layer.Floor);
-            var groundTable = this.map.getTable(Common.Layer.Ground);
-            this.sceneManager.scene = new View.GameScene(floorTable, groundTable);
+            var floorTable = this.dungeonManager.getMap(Common.Layer.Floor);
+            var groundTable = this.dungeonManager.getMap(Common.Layer.Ground);
+            var units = this.dungeonManager.units;
+
+            this.gameScene = new View.GameScene(floorTable, groundTable, units);
+            View.Scene.setScene(this.gameScene);
         }
 
         // ゲームの終了判定

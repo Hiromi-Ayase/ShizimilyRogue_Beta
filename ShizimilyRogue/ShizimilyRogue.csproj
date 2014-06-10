@@ -19,6 +19,7 @@
   <ItemGroup>
     <Content Include="docs\design.txt" />
     <Content Include="images\floor_01.png" />
+    <Content Include="images\unit.png" />
     <Content Include="images\wall_01.png" />
     <Content Include="index.html" />
     <TypeScriptCompile Include="scripts\common.ts" />
