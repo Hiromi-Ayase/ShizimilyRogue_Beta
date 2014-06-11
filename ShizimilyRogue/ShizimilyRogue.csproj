@@ -29,6 +29,7 @@
     <TypeScriptCompile Include="scripts\controller.ts" />
     <TypeScriptCompile Include="scripts\enchant.d.ts" />
     <TypeScriptCompile Include="scripts\gameScene.ts" />
+    <TypeScriptCompile Include="scripts\rot.d.ts" />
     <TypeScriptCompile Include="scripts\scene.ts" />
   </ItemGroup>
   <ItemGroup>

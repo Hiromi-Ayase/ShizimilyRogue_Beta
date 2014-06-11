@@ -6,7 +6,7 @@
 
     // シーン
     export class Scene extends enchant.Scene {
-        static IMAGES: string[] = ["../images/wall_01.png", "../images/floor_01.png", "../images/unit.png"];
+        static IMAGES: string[] = ["./images/wall_01.png", "./images/floor_01.png", "./images/unit.png"];
         static IMAGE_UNIT: enchant.Surface;
         static IMAGE_WALL: enchant.Surface;
         static IMAGE_FLOOR: enchant.Surface;
@@ -59,6 +59,26 @@
         static get keyRight(): boolean {
             return Scene._keyRight;
         }
+        static get keyDirection(): number {
+            if (Scene._keyUp && Scene._keyLeft)
+                return Common.DIR.UP_LEFT;
+            else if (Scene._keyUp && Scene._keyRight)
+                return Common.DIR.UP_RIGHT;
+            else if (Scene._keyDown && Scene._keyRight)
+                return Common.DIR.DOWN_RIGHT;
+            else if (Scene._keyDown && Scene._keyLeft)
+                return Common.DIR.DOWN_LEFT;
+            else if (Scene._keyDown)
+                return Common.DIR.DOWN;
+            else if (Scene._keyUp)
+                return Common.DIR.UP;
+            else if (Scene._keyRight)
+                return Common.DIR.RIGHT;
+            else if (Scene._keyLeft)
+                return Common.DIR.LEFT;
+            else null;
+        }
+
         static get keyA(): boolean {
             return Scene._keyA;
         }

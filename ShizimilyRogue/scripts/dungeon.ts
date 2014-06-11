@@ -1,7 +1,6 @@
 ﻿
 
 module ShizimilyRogue.Model {
-    declare var ROT;
 
     class DungeonObject {
         coord: Common.Coord = null;
@@ -24,11 +23,11 @@ module ShizimilyRogue.Model {
     }
 
     export class DungeonManager {
-        private _units: Unit[] = new Array<Unit>();
+        private _units: { [id: number]: Unit; } = {};
         private _player: Player;
         private _map: Map;
-
-        private queue: Unit[] = new Array<Unit>();
+        private _current: Unit;
+        private scheduler: ROT.Scheduler.Speed = new ROT.Scheduler.Speed();
 
         constructor(w: number, h: number) {
             this._map = new Map(w, h);
@@ -36,6 +35,9 @@ module ShizimilyRogue.Model {
             // Playerを配置
             this._player = new Player();
             this.addUnit(this._player);
+
+            // 一番最初のターンはプレイヤー
+            this._current = this.scheduler.next();
         }
 
         addEnemy(): Common.Unit {
@@ -47,19 +49,17 @@ module ShizimilyRogue.Model {
         private addUnit(unit: Unit) {
             var coord = this._map.getRandomPoint(Common.Layer.Unit);
             this._map.getCell(coord).object = unit;
-            this._units.push(unit);
+            this._units[unit.id] = unit;
+            this.scheduler.add(unit, true);
         }
 
         private removeUnit(unit: Unit) {
             this._map.deleteObject(unit);
-            for (var i = 0; i < this._units.length; i++) {
-                if (this._units[i] === unit) {
-                    this._units.splice(i, 1);
-                }
-            }
+            delete this._units[unit.id];
+            this.scheduler.remove(unit);
         }
 
-        get units(): Common.Unit[]{
+        get units(): { [id: number]: Common.Unit; } {
             return this._units;
         }
 
@@ -67,19 +67,12 @@ module ShizimilyRogue.Model {
             return this._player;
         }
 
-        getMap(layer: Common.Layer): Common.DungeonObjectType[][]{
-            return this._map.getTable(layer);
+        get current(): Common.Unit {
+            return this._current;
         }
 
-        next() : Common.Unit {
-            // フェーズが終わった
-            if (this.queue.length == 0) {
-                for (var i = 0; i < this._units.length; i++) {
-                    this.queue.push(this._units[i]);
-                }
-            }
-            var unit = this.queue.shift();
-            return unit;
+        getMap(layer: Common.Layer): Common.DungeonObjectType[][]{
+            return this._map.getTable(layer);
         }
 
         phase(unit: Common.Unit, input: Common.Action = null): { [id: number]: Common.Action } {
@@ -87,13 +80,9 @@ module ShizimilyRogue.Model {
             var _input = <Action>input;
             var action = _unit.phase(_input);
             var result = this.process(_unit, action);
-
-            if (result == null) {
-                return null;
-            } else {
-                this.queue.shift();
-                return result;
-            }
+            if (result == null)
+                this._current = this.scheduler.next();
+            return result;
         }
 
         private process(unit: Unit, action: Action): { [id: number]: Action } {
@@ -126,8 +115,12 @@ module ShizimilyRogue.Model {
         lv = 1;
         exp = 0;
         dir = 0;
-        speed = Common.SPEED[1];
+        speed = Common.Speed.NORMAL;
         state = Common.DungeonUnitState.Normal;
+
+        public getSpeed(): number {
+            return this.speed;
+        }
 
         get maxHp() {
             return this.lv * 10 + 100;
@@ -156,10 +149,10 @@ module ShizimilyRogue.Model {
     class Player extends Unit implements Common.Player {
         type = Common.DungeonObjectType.Player;
         id = Common.PLAYER_ID;
-        stomach = this.maxStomach;
         inventory = [];
         currentExp = 0;
         maxStomach = 100;
+        stomach = this.maxStomach;
 
         public phase(input:Action): Action {
             return input;
@@ -176,6 +169,7 @@ module ShizimilyRogue.Model {
 
     class Wall extends DungeonObject {
         type = Common.DungeonObjectType.Wall;
+        corner = true;
     }
 
     class Room extends DungeonObject {
@@ -309,18 +303,19 @@ module ShizimilyRogue.Model {
         }
 
         // すでに存在するオブジェクトを移動する。成功したらTrue
-        public moveObject(obj: DungeonObject, dir:number[]):boolean {
-            var coord = obj.coord;
-            var oldIndex = this.getIndex(coord.x, coord.y, coord.layer);
-            var newIndex = this.getIndex(coord.x + dir[0], coord.y + dir[1], coord.layer);
-            var oldCell = this.map[oldIndex];
-            var newCell = this.map[newIndex];
-            if (newCell.object == null) {
+        public moveObject(obj: DungeonObject, dir: number[]): boolean {
+            if (this.isMovable(obj, dir)) {
+                var coord = obj.coord;
+                var oldIndex = this.getIndex(coord.x, coord.y, coord.layer);
+                var newIndex = this.getIndex(coord.x + dir[0], coord.y + dir[1], coord.layer);
+                var oldCell = this.map[oldIndex];
+                var newCell = this.map[newIndex];
                 oldCell.object = null;
                 newCell.object = obj;
                 return true;
+            } else {
+                return false;
             }
-            return false;
         }
 
         // すでに存在するオブジェクトを削除する。成功したらTrue

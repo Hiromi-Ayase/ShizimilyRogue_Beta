@@ -12,25 +12,22 @@
 
         // フレームごとに呼ばれる
         private update(e): any {
-            if (!View.Scene.animating) {
-                var unit = this.dungeonManager.next();
-                var action: { [id: number]: Common.Action } = null;
-                if (unit.id == Common.PLAYER_ID) {
-                    if (View.Scene.keyDown) {
-                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.DOWN));
-                    } else if (View.Scene.keyLeft) {
-                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.LEFT));
-                    } else if (View.Scene.keyUp) {
-                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.UP));
-                    } else if (View.Scene.keyRight) {
-                        action = this.dungeonManager.phase(unit, Model.Action.Move(Common.DIR.RIGHT));
-                    }
 
-                } else {
-                    action = this.dungeonManager.phase(unit);
+            if (!View.Scene.animating) {
+                var dir = View.Scene.keyDirection;
+                var a = View.Scene.keyA;
+                var b = View.Scene.keyB;
+                if (dir != null) {
+                    var unit = this.dungeonManager.current;
+                    var action: { [id: number]: Common.Action } = null;
+                    if (unit.id == Common.PLAYER_ID) {
+                        action = this.dungeonManager.phase(unit, Model.Action.Move(dir));
+                    } else {
+                        action = this.dungeonManager.phase(unit);
+                    }
+                    if (action != null)
+                        this.gameScene.updateUnit(unit, action[0]);
                 }
-                if (action != null)
-                this.gameScene.updateUnit(unit,action[0]);
             }
         }
 
