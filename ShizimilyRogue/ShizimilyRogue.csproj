@@ -19,6 +19,9 @@
   <ItemGroup>
     <Content Include="docs\design.txt" />
     <Content Include="images\floor_01.png" />
+    <Content Include="images\message.png" />
+    <Content Include="images\messageIcon.png" />
+    <Content Include="images\title.png" />
     <Content Include="images\unit.png" />
     <Content Include="images\wall_01.png" />
     <Content Include="index.html" />
@@ -31,6 +34,7 @@
     <TypeScriptCompile Include="scripts\gameScene.ts" />
     <TypeScriptCompile Include="scripts\rot.d.ts" />
     <TypeScriptCompile Include="scripts\scene.ts" />
+    <TypeScriptCompile Include="scripts\titleScene.ts" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="scripts\dungeon.ts" />

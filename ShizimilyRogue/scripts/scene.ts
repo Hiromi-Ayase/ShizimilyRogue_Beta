@@ -6,10 +6,20 @@
 
     // シーン
     export class Scene extends enchant.Scene {
-        static IMAGES: string[] = ["./images/wall_01.png", "./images/floor_01.png", "./images/unit.png"];
+        static IMAGES: string[] = [
+            "./images/wall_01.png",
+            "./images/floor_01.png",
+            "./images/unit.png",
+            "./images/title.png",
+            "./images/message.png",
+            "./images/messageIcon.png",
+        ];
         static IMAGE_UNIT: enchant.Surface;
         static IMAGE_WALL: enchant.Surface;
         static IMAGE_FLOOR: enchant.Surface;
+        static IMAGE_TITLE: enchant.Surface;
+        static IMAGE_MESSAGE: enchant.Surface;
+        static IMAGE_MESSAGE_ICON: enchant.Surface;
         static game: enchant.Core;
 
         private static _keyUp: boolean = false;
@@ -20,7 +30,7 @@
         private static _keyB: boolean = false;
         private static _animating: number = 0;
 
-        static init(onloadHandler: () => void, updateHandler: (e) => void) {
+        static init(onloadHandler: () => void) {
             enchant();
             Scene.game = new enchant.Core(VIEW_WIDTH, VIEW_HEIGHT);
             Scene.game.fps = FPS;
@@ -30,8 +40,10 @@
                 Scene.IMAGE_WALL = Scene.game.assets[Scene.IMAGES[0]];
                 Scene.IMAGE_FLOOR = Scene.game.assets[Scene.IMAGES[1]];
                 Scene.IMAGE_UNIT = Scene.game.assets[Scene.IMAGES[2]];
+                Scene.IMAGE_TITLE = Scene.game.assets[Scene.IMAGES[3]];
+                Scene.IMAGE_MESSAGE = Scene.game.assets[Scene.IMAGES[4]];
+                Scene.IMAGE_MESSAGE_ICON = Scene.game.assets[Scene.IMAGES[5]];
                 onloadHandler();
-                Scene.game.addEventListener(enchant.Event.ENTER_FRAME, updateHandler);
             };
             Scene.game.start();
         }
@@ -129,8 +141,10 @@
             });
         }
 
-        static setScene(scene: Scene) {
+        static setScene(scene: Scene, updateHandler: (e) => void): void {
+            Scene.game.clearEventListener(enchant.Event.ENTER_FRAME);
             Scene.game.replaceScene(scene);
+            Scene.game.addEventListener(enchant.Event.ENTER_FRAME, updateHandler);
         }
     }
 

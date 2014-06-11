@@ -14,10 +14,24 @@ module ShizimilyRogue.Model {
         item1 = null;
         item2 = null;
 
-        static Move(dir:number): Action {
+        static Move(dir: number): Action {
             var action = new Action();
             action.dir = dir;
             action.type = Common.ActionType.Move;
+            return action;
+        }
+
+        static Attack(dir: number): Action {
+            var action = new Action();
+            action.dir = dir;
+            action.type = Common.ActionType.Attack;
+            return action;
+        }
+
+        static Damage(dir: number): Action {
+            var action = new Action();
+            action.dir = dir;
+            action.type = Common.ActionType.Damage;
             return action;
         }
     }
