@@ -25,6 +25,7 @@
     <Content Include="images\unit.png" />
     <Content Include="images\wall_01.png" />
     <Content Include="index.html" />
+    <TypeScriptCompile Include="data\units.ts" />
     <TypeScriptCompile Include="scripts\common.ts" />
     <Content Include="scripts\enchant.js" />
     <Content Include="scripts\rot.js" />

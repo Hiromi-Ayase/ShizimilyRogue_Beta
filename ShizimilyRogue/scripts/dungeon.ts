@@ -47,15 +47,15 @@ module ShizimilyRogue.Model {
             this._map = new Map(w, h);
 
             // Playerを配置
-            this._player = new Player();
+            this._player = new Player("しじみりちゃん");
             this.addUnit(this._player);
 
             // 一番最初のターンはプレイヤー
             this._current = this.scheduler.next();
         }
 
-        addEnemy(): Common.Unit {
-            var enemy = new Enemy();
+        addEnemy(data: Common.IEnemyData): Common.IUnit {
+            var enemy = new Enemy(data);
             this.addUnit(enemy);
             return enemy;
         }
@@ -73,15 +73,15 @@ module ShizimilyRogue.Model {
             this.scheduler.remove(unit);
         }
 
-        get units(): { [id: number]: Common.Unit; } {
+        get units(): { [id: number]: Common.IUnit; } {
             return this._units;
         }
 
-        get player(): Common.Player {
+        get player(): Common.IPlayer {
             return this._player;
         }
 
-        get current(): Common.Unit {
+        get current(): Common.IUnit {
             return this._current;
         }
 
@@ -89,7 +89,7 @@ module ShizimilyRogue.Model {
             return this._map.getTable(layer);
         }
 
-        phase(unit: Common.Unit, input: Common.Action = null): { [id: number]: Common.Action } {
+        phase(unit: Common.IUnit, input: Common.Action = null): { [id: number]: Common.Action } {
             var _unit = <Unit>unit;
             var _input = <Action>input;
             var action = _unit.phase(_input);
@@ -116,68 +116,103 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Item extends DungeonObject implements Common.Item {
+    class Item extends DungeonObject implements Common.IItem {
         name = null;
         num = 1;
     }
 
-    class Unit extends DungeonObject implements Common.Unit {
+    interface DungeonUnit extends Common.IUnit {
+        hp: number;
+        maxHp: number;
+        atk: number;
+        def: number;
+    }
+
+    class Unit extends DungeonObject implements DungeonUnit {
         private static currentId = 1;
 
-        id;
-        name = null;
-        lv = 1;
-        exp = 0;
+        id: number;
+        name: string;
+
+        hp: number;
+        maxHp: number;
+        atk: number;
+        def: number;
+        speed: Common.Speed;
+
         dir = 0;
-        speed = Common.Speed.NORMAL;
         state = Common.DungeonUnitState.Normal;
 
-        public getSpeed(): number {
+        public getSpeed() {
             return this.speed;
         }
 
-        get maxHp() {
-            return this.lv * 10 + 100;
-        }
-        get atk() {
-            return this.lv * 10;
-        }
-        get def() {
-            return this.lv * 10;
-        }
-
-        hp = this.maxHp;
-
         public phase(input:Action): Action {
-            // 1フェーズごとに呼ばれる
             return null;
         }
 
-        constructor() {
+        constructor(name:string, speed:Common.Speed ,maxHp:number, atk:number, def:number) {
             super();
+            this.name = name;
+            this.speed = speed;
+            this.hp = maxHp;
+            this.maxHp = maxHp;
+            this.atk = atk;
+            this.def = def;
             this.id = Unit.currentId;
             Unit.currentId++;
         }
     }
 
-    class Player extends Unit implements Common.Player {
+    class Player extends Unit implements Common.IPlayer {
         type = Common.DungeonObjectType.Player;
+        lv = 1;
         id = Common.PLAYER_ID;
         inventory = [];
         currentExp = 0;
         maxStomach = 100;
         stomach = this.maxStomach;
 
-        public phase(input:Action): Action {
+        get maxHp(): number {
+            return this.lv * 10 + 100;
+        }
+        get atk(): number {
+            return this.lv * 10 + 100;
+        }
+        get def(): number {
+            return this.lv * 10 + 100;
+        }
+
+        public phase(input: Action): Action {
             return input;
+        }
+
+        constructor(name: string) {
+            super(name, Common.Speed.NORMAL, null, null, null);
         }
     }
 
     class Enemy extends Unit {
         type = Common.DungeonObjectType.Enemy;
+        exp: number;
+        drop: Item;
+        dropProbability: number;
+        awakeProbabilityWhenAppear: number;
+        awakeProbabilityWhenEnterRoom: number;
+        awakeProbabilityWhenNeighbor: number;
 
         public phase(input: Action): Action {
             return null;
+        }
+
+        constructor(data: Common.IEnemyData) {
+            super(data.name, data.speed, data.maxHp, data.atk, data.def);
+            this.exp = data.exp;
+            this.drop = <Item>data.drop;
+            this.dropProbability = data.dropProbability;
+            this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
+            this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
+            this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
         }
     }
 

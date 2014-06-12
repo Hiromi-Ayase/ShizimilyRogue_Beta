@@ -6,12 +6,12 @@ module ShizimilyRogue.View {
 
     export class GameScene extends Scene {
         private map: Map;
-        private player: Common.Player;
+        private player: Common.IPlayer;
         private units: { [id: number]: Unit; } = {};
         private view: enchant.Group = new enchant.Group();
         private message: Message;
 
-        constructor(floorTable: Common.DungeonObjectType[][], groundTable: Common.DungeonObjectType[][], units: { [id: number]: Common.Unit; }) {
+        constructor(floorTable: Common.DungeonObjectType[][], groundTable: Common.DungeonObjectType[][], units: { [id: number]: Common.IUnit; }) {
             super();
 
             // mapの追加
@@ -22,7 +22,7 @@ module ShizimilyRogue.View {
             for (var id in units) {
                 this.addUnit(units[id]);
             }
-            this.player = <Common.Player>units[Common.PLAYER_ID];
+            this.player = <Common.IPlayer>units[Common.PLAYER_ID];
             this.addChild(this.view);
 
             // メッセージエリアの追加
@@ -42,7 +42,7 @@ module ShizimilyRogue.View {
             });
         }
 
-        updateUnit(unit: Common.Unit, action: Common.Action): void {
+        updateUnit(unit: Common.IUnit, action: Common.Action): void {
             if (action == null) {
                 return;
             }
@@ -50,12 +50,12 @@ module ShizimilyRogue.View {
             this.moveCamera();
         }
 
-        removeUnit(unit: Common.Unit): void {
+        removeUnit(unit: Common.IUnit): void {
             this.view.removeChild(this.units[unit.id]);
             delete this.units[unit.id];
         }
 
-        addUnit(unit: Common.Unit): void {
+        addUnit(unit: Common.IUnit): void {
             var _unit = new Unit(unit);
             this.units[unit.id] = _unit;
             this.view.addChild(_unit);
@@ -105,8 +105,8 @@ module ShizimilyRogue.View {
     }
 
     class Unit extends Element {
-        private _data: Common.Unit;
-        constructor(unit: Common.Unit) {
+        private _data: Common.IUnit;
+        constructor(unit: Common.IUnit) {
             super();
             this._data = unit;
 
