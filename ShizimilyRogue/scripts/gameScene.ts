@@ -42,11 +42,11 @@ module ShizimilyRogue.View {
             });
         }
 
-        updateUnit(unit: Common.IUnit, action: Common.Action): void {
-            if (action == null) {
-                return;
+        updateUnit(results: Common.Result[]): void {
+            for (var i = 0; i < results.length; i++) {
+                var result = results[i];
+                this.units[result.id].action(result);
             }
-            this.units[unit.id].action(action);
             this.moveCamera();
         }
 
@@ -118,8 +118,8 @@ module ShizimilyRogue.View {
             this.addChild(sprite);
         }
 
-        action(action: Common.Action): void {
-            if (action.type == Common.ActionType.Move) {
+        action(result: Common.Result): void {
+            if (result.type == Common.ResultType.Move) {
                 var coord = this._data.coord;
                 Scene.addAnimating();
                 this.tl.moveTo(coord.x * OBJECT_WIDTH, (coord.y - 0.5) * OBJECT_HEIGHT, 10).then(function() {

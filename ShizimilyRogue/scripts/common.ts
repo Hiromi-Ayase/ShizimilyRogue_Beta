@@ -19,7 +19,11 @@
     }
 
     export enum ActionType {
-        Move, Die, Attack, Damage, Use
+        Move, Attack, Use, Throw
+    }
+
+    export enum ResultType {
+        Move, Attack, Use, Input, Throw, Damage, Die, Recieve, None
     }
 
     export enum DungeonUnitState {
@@ -52,7 +56,83 @@
             this._index = index;
         }
     }
+    
+    export class Action {
+        dir: DIR;
+        type: ActionType;
+        item1: IItem;
+        item2: IItem;
 
+        constructor(type: ActionType, dir: DIR) {
+            this.type = type;
+            this.dir = dir;
+        }
+    }
+
+    export class MoveAction extends Action {
+        constructor(dir: number) {
+            super(ActionType.Move, dir);
+        }
+    }
+    
+    export class AttackAction extends Action {
+        constructor(dir: number) {
+            super(ActionType.Attack, dir);
+        }
+    }
+
+    export class UseAction extends Action {
+        constructor(dir: number, item1: IItem, item2: IItem = null) {
+            super(ActionType.Use, dir);
+            this.item1 = item1;
+            this.item2 = item2;
+        }
+    }
+
+    export class ThrowAction extends Action {
+        constructor(dir: number, item: IItem) {
+            super(ActionType.Throw, dir);
+            this.item1 = item;
+        }
+    }
+
+    export class Result {
+        id: number;
+        dir: DIR; 
+        type: ResultType;
+        item1: IItem;
+        item2: IItem;
+        amount: number;
+
+        constructor(id: number, type: ResultType, dir: DIR) {
+            this.id = id;
+            this.type = type;
+            this.dir = dir;
+        }
+
+        static fromAction(id: number, action: Action, amount: number = null ): Result {
+            var type: ResultType;
+            switch (action.type) {
+                case ActionType.Attack:
+                    type = ResultType.Attack;
+                    break;
+                case ActionType.Move:
+                    type = ResultType.Move;
+                    break;
+                case ActionType.Use:
+                    type = ResultType.Use;
+                    break;
+                case ActionType.Throw:
+                    type = ResultType.Throw;
+                    break;
+            }
+            var result = new Result(id, type, action.dir);
+            result.item1 = action.item1;
+            result.item2 = action.item2;
+            result.amount = amount;
+            return result;
+        }
+    }
 
     export interface IUnit {
         id: number;
@@ -78,15 +158,9 @@
     }
 
     export interface IItem {
+        id: number;
         name: string;
         num: number;
-    }
-
-    export interface Action {
-        dir: number;
-        type: ActionType;
-        item1: IItem;
-        item2: IItem;
     }
 
     export interface IEnemyData {

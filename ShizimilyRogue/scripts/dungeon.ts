@@ -3,38 +3,19 @@
 module ShizimilyRogue.Model {
 
     class DungeonObject {
+        private static currentId = 1;
+
         coord: Common.Coord = null;
         corner: boolean = false;
         type: Common.DungeonObjectType = null;
-    }
+        id;
 
-    export class Action implements Common.Action {
-        dir = 0;
-        type = null;
-        item1 = null;
-        item2 = null;
-
-        static Move(dir: number): Action {
-            var action = new Action();
-            action.dir = dir;
-            action.type = Common.ActionType.Move;
-            return action;
-        }
-
-        static Attack(dir: number): Action {
-            var action = new Action();
-            action.dir = dir;
-            action.type = Common.ActionType.Attack;
-            return action;
-        }
-
-        static Damage(dir: number): Action {
-            var action = new Action();
-            action.dir = dir;
-            action.type = Common.ActionType.Damage;
-            return action;
+        constructor() {
+            this.id = DungeonObject.currentId;
+            DungeonObject.currentId++;
         }
     }
+
 
     export class DungeonManager {
         private _units: { [id: number]: Unit; } = {};
@@ -42,6 +23,7 @@ module ShizimilyRogue.Model {
         private _map: Map;
         private _current: Unit;
         private scheduler: ROT.Scheduler.Speed = new ROT.Scheduler.Speed();
+        private inputRequired: boolean = false;
 
         constructor(w: number, h: number) {
             this._map = new Map(w, h);
@@ -89,36 +71,34 @@ module ShizimilyRogue.Model {
             return this._map.getTable(layer);
         }
 
-        phase(unit: Common.IUnit, input: Common.Action = null): { [id: number]: Common.Action } {
-            var _unit = <Unit>unit;
-            var _input = <Action>input;
-            var action = _unit.phase(_input);
-            var result = this.process(_unit, action);
-            if (result == null)
-                this._current = this.scheduler.next();
-            return result;
+        next(): Common.Result[]{
+            var _unit = this._current;
+            var action = _unit.phase();
+            var results = this.process(_unit, action);
+            this._current = this.scheduler.next();
+            return results;
         }
 
-        private process(unit: Unit, action: Action): { [id: number]: Action } {
-            if (action == null) {
-                return null;
-            }
-            var result: { [id: number]: Action } = {};
+        input(input: Common.Action): void {
+            this._current.input = input;
+        }
+        
+        private process(unit: Unit, action: Common.Action): Common.Result[] {
+            var results:Common.Result[] = [];
             if (action.type == Common.ActionType.Move) {
                 var ret = this._map.moveObject(unit, ROT.DIRS[8][action.dir]); 
                 if (ret) {
-                    result[unit.id] = action;
-                } else {
-                    return null;
+                    var result = Common.Result.fromAction(unit.id, action);
+                    results.push(result);
                 }
             }
-            return result;
+            return results;
         }
     }
 
     class Item extends DungeonObject implements Common.IItem {
-        name = null;
-        num = 1;
+        name;
+        num;
     }
 
     interface DungeonUnit extends Common.IUnit {
@@ -129,9 +109,6 @@ module ShizimilyRogue.Model {
     }
 
     class Unit extends DungeonObject implements DungeonUnit {
-        private static currentId = 1;
-
-        id: number;
         name: string;
 
         hp: number;
@@ -139,16 +116,17 @@ module ShizimilyRogue.Model {
         atk: number;
         def: number;
         speed: Common.Speed;
+        input: Common.Action = null;
 
         dir = 0;
         state = Common.DungeonUnitState.Normal;
 
-        public getSpeed() {
+        getSpeed() {
             return this.speed;
         }
 
-        public phase(input:Action): Action {
-            return null;
+        phase(): Common.Action {
+            throw new Error("Action not implemented");
         }
 
         constructor(name:string, speed:Common.Speed ,maxHp:number, atk:number, def:number) {
@@ -159,8 +137,6 @@ module ShizimilyRogue.Model {
             this.maxHp = maxHp;
             this.atk = atk;
             this.def = def;
-            this.id = Unit.currentId;
-            Unit.currentId++;
         }
     }
 
@@ -183,8 +159,10 @@ module ShizimilyRogue.Model {
             return this.lv * 10 + 100;
         }
 
-        public phase(input: Action): Action {
-            return input;
+        public phase(): Common.Action {
+            if (this.input == null)
+                throw new Error("Player input required");
+            return this.input;
         }
 
         constructor(name: string) {
@@ -192,7 +170,7 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Enemy extends Unit {
+    class Enemy extends Unit implements Common.IEnemyData {
         type = Common.DungeonObjectType.Enemy;
         exp: number;
         drop: Item;
@@ -201,8 +179,9 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
 
-        public phase(input: Action): Action {
-            return null;
+        public phase(): Common.Action {
+            var dir = Math.floor(ROT.RNG.getUniform() * 8);
+            return new Common.MoveAction(dir);
         }
 
         constructor(data: Common.IEnemyData) {

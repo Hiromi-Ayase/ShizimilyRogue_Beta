@@ -1,7 +1,7 @@
 ﻿module ShizimilyRogue.Controller {
     // ダンジョンの論理サイズ
-    var WIDTH = 25;
-    var HEIGHT = 25;
+    var WIDTH = 15;
+    var HEIGHT = 15;
 
     export class Game {
         private scene: Scene;
@@ -56,19 +56,19 @@
 
         update(e): Scene {
             if (!View.Scene.animating) {
-                var dir = View.Scene.keyDirection;
-                var a = View.Scene.keyA;
-                var b = View.Scene.keyB;
-                if (dir != null) {
-                    var unit = this.dungeonManager.current;
-                    var action: { [id: number]: Common.Action } = null;
-                    if (unit.id == Common.PLAYER_ID) {
-                        action = this.dungeonManager.phase(unit, Model.Action.Move(dir));
-                    } else {
-                        action = this.dungeonManager.phase(unit);
+                var unit = this.dungeonManager.current;
+                if (this.dungeonManager.current.id == Common.PLAYER_ID) {
+                    var dir = View.Scene.keyDirection;
+                    var a = View.Scene.keyA;
+                    var b = View.Scene.keyB;
+                    if (dir != null) {
+                        this.dungeonManager.input(new Common.MoveAction(dir));
+                        var results = this.dungeonManager.next();
+                        this._view.updateUnit(results);
                     }
-                    if (action != null)
-                        this._view.updateUnit(unit, action[0]);
+                } else {
+                    var results = this.dungeonManager.next();
+                    this._view.updateUnit(results);
                 }
             }
             return null;
@@ -81,6 +81,7 @@
         private init(): void {
             // Dungeon(Model)とSceneManager(View)の作成
             this.dungeonManager = new Model.DungeonManager(WIDTH, HEIGHT);
+            this.dungeonManager.addEnemy(new Model.Data.Ignore);
 
             // Map生成
             var floorTable = this.dungeonManager.getMap(Common.Layer.Floor);
