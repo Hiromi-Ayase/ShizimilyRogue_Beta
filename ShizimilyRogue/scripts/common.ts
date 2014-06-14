@@ -1,8 +1,10 @@
 ﻿module ShizimilyRogue.Common {
+    export var DEBUG = true;
     export var PLAYER_ID = 0;
+    export var NULL_ID = -1;
 
     export enum DungeonObjectType {
-        Null, Wall, Path, Room, Player, Enemy
+        Null, Wall, Path, Room, Unit, Item
     }
 
     // 4:Effect レイヤ  
@@ -11,7 +13,7 @@
     // 1:Ground レイヤ  ITEM ENTRANCE
     // 0:Floor レイヤ   PATH ROOM 
     export enum Layer {
-        Floor, Ground, Unit, Flying, Effect
+        Floor, Ground, Unit, Flying, Effect, MAX
     }
 
     export enum DIR {
@@ -42,18 +44,15 @@
         private _layer: number;
         private _x: number;
         private _y: number;
-        private _index: number;
 
         get layer(): number { return this._layer; }
         get x(): number { return this._x; }
         get y(): number { return this._y; }
-        get index(): number { return this._index; }
 
-        constructor(x: number, y: number, layer: number, index: number) {
+        constructor(x: number, y: number, layer: number) {
             this._x = x;
             this._y = y;
             this._layer = layer;
-            this._index = index;
         }
     }
     
@@ -134,14 +133,18 @@
         }
     }
 
-    export interface IUnit {
+    export interface IObject {
         id: number;
+        type: DungeonObjectType;
+        coord: Coord;
+    }
+
+    export interface IUnit extends IObject {
+        unitId: number;
         dir: number;
         speed: Speed;
         state: DungeonUnitState;
         name: string;
-        type: DungeonObjectType;
-        coord: Coord;
     }
 
     export interface IPlayer extends IUnit {
@@ -157,13 +160,13 @@
         inventory: IItem[];
     }
 
-    export interface IItem {
-        id: number;
+    export interface IItem extends IObject {
         name: string;
         num: number;
     }
 
     export interface IEnemyData {
+        unitId: number;
         name: string;
         speed: Common.Speed;
         maxHp: number;
@@ -175,6 +178,13 @@
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number
+    }
+
+    export interface IFOVData {
+        area: number[][];
+        movable: number[];
+        units: Common.IUnit[];
+        items: Common.IItem[];
     }
 }
 

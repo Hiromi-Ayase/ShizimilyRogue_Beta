@@ -1,6 +1,7 @@
 ﻿module ShizimilyRogue.Model.Data {
 
     export class Enemy implements Common.IEnemyData {
+        unitId = 1;
         name = null;
         speed = Common.Speed.NORMAL;
         maxHp = 100;

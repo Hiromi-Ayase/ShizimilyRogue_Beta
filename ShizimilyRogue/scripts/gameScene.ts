@@ -6,24 +6,40 @@ module ShizimilyRogue.View {
 
     export class GameScene extends Scene {
         private map: Map;
-        private player: Common.IPlayer;
         private units: { [id: number]: Unit; } = {};
+        private shadow: Shadow;
+
+        private player: Common.IPlayer;
         private view: enchant.Group = new enchant.Group();
         private message: Message;
 
-        constructor(floorTable: Common.DungeonObjectType[][], groundTable: Common.DungeonObjectType[][], units: { [id: number]: Common.IUnit; }) {
+        constructor(
+            private width: number,
+            private height: number,
+            floorTable: (x: number, y: number) => Common.IObject,
+            groundTable: (x: number, y: number) => Common.IObject,
+            units, items) {
             super();
 
+
             // mapの追加
-            this.map = new Map(floorTable, groundTable);
+            this.map = new Map(width, height, floorTable, groundTable);
             this.view.addChild(this.map);
 
             // unitの追加
             for (var id in units) {
                 this.addUnit(units[id]);
+                
             }
             this.player = <Common.IPlayer>units[Common.PLAYER_ID];
+
+            // Shadowの追加
+            this.shadow = new Shadow(width, height);
+            this.view.addChild(this.shadow);
+
+            // Viewの追加
             this.addChild(this.view);
+
 
             // メッセージエリアの追加
             this.message = new Message();
@@ -40,6 +56,10 @@ module ShizimilyRogue.View {
             this.view.tl.moveTo(x, y, 10).then(function () {
                 Scene.decAnimating();
             });
+        }
+
+        updateShadow(fov: Common.IFOVData): void {
+            this.shadow.update(fov);
         }
 
         updateUnit(results: Common.Result[]): void {
@@ -64,6 +84,33 @@ module ShizimilyRogue.View {
 
 
     class Element extends enchant.Group {
+    }
+
+    class Shadow extends Element {
+        private shadowMap: enchant.Map;
+        constructor(
+            private width: number,
+            private height: number) {
+            super();
+
+            this.shadowMap = new enchant.Map(OBJECT_WIDTH, OBJECT_HEIGHT);
+            this.shadowMap.image = Scene.IMAGE_SHADOW;
+            this.addChild(this.shadowMap);
+        }
+
+        public update(fov: Common.IFOVData) {
+            var map:number[][] = [];
+            for (var y = 0; y < this.height; y++) {
+                map.push(new Array<number>(this.width));
+                for (var x = 0; x < this.width; x++) {
+                    map[y][x] = 0;
+                }
+            }
+            for (var i = 0; i < fov.area.length; i++) {
+                map[fov.area[i][1]][fov.area[i][0]] = 1;
+            }
+            this.shadowMap.loadData(map);
+        }
     }
 
     class Message extends Element {
@@ -130,30 +177,58 @@ module ShizimilyRogue.View {
     }
     
     class Map extends Element {
-        constructor(floorTable: Common.DungeonObjectType[][], groundTable: Common.DungeonObjectType[][]) {
+        private floorMap: enchant.Map;
+        private groundMap: enchant.Map;
+
+        constructor(
+            private width: number,
+            private height: number,
+            private floorTable: (x: number, y: number) => Common.IObject,
+            private groundTable: (x: number, y: number) => Common.IObject) {
             super();
-            var groundViewTable = Map.getGroundViewTable(groundTable);
-            var floorViewTable = Map.getFloorViewTable(groundTable);
-            this.addMap(floorViewTable, Scene.IMAGE_FLOOR);
-            this.addMap(groundViewTable, Scene.IMAGE_WALL);
+
+            this.floorMap = new enchant.Map(OBJECT_WIDTH, OBJECT_HEIGHT);
+            this.groundMap = new enchant.Map(OBJECT_WIDTH, OBJECT_HEIGHT);
+            this.floorMap.image = Scene.IMAGE_FLOOR;
+            this.groundMap.image = Scene.IMAGE_WALL;
+
+            this.update();
+
+            this.addChild(this.floorMap);
+            this.addChild(this.groundMap);
+            if (Common.DEBUG) {
+                this.addCoord();
+            }
         }
 
-        private addMap(table: number[][], image:enchant.Surface): void {
-            var map = new enchant.Map(OBJECT_WIDTH, OBJECT_HEIGHT);
-            map.image = image;
-            map.loadData(table);
-            this.addChild(map)
+        public update() {
+            var floorViewTable = this.getFloorViewTable();
+            var groundViewTable = this.getGroundViewTable();
+            this.floorMap.loadData(floorViewTable);
+            this.groundMap.loadData(groundViewTable);
         }
 
-        private static getFloorViewTable(table: Common.DungeonObjectType[][]): Array<Array<number>> {
+        private addCoord(): void {
+            for (var x = 0; x < this.width; x++) {
+                for (var y = 0; y < this.height; y++) {
+                    var label = new enchant.Label();
+                    label.text = "[" + x + ", " + y + ", " + this.floorTable(x, y).type +"]";
+                    label.color = "white";
+                    label.x = x * OBJECT_WIDTH;
+                    label.y = y * OBJECT_HEIGHT;
+                    this.addChild(label);
+                }
+            }
+        }
+
+        private getFloorViewTable(): Array<Array<number>> {
             var map = [];
 
-            var w = table[0].length;
-            var h = table.length;
+            var w = this.width;
+            var h = this.height;
 
             var flg = 0;
             for (var y = 0; y < h; y++) {
-                var line = table[y];
                 map.push(new Array(w));
                 for (var x = 0; x < w; x++) {
                     map[y][x] = flg;
@@ -163,7 +238,10 @@ module ShizimilyRogue.View {
             return map;
         }
 
-        private static getGroundViewTable(table: Common.DungeonObjectType[][]): Array<Array<number>> {
+        private getGroundViewTable(): Array<Array<number>> {
+            var w = this.width;
+            var h = this.height;
+
             var blockTable = [
                 0, 17, 4, 4, 16, 36, 4, 4, // 0 - 7
                 7, 26, 9, 9, 7, 26, 9, 9, // 8 - 15
@@ -199,29 +277,28 @@ module ShizimilyRogue.View {
                 13, 13, 3, 3, 13, 13, 3, 3, // 248 - 255
             ];
             var map = [];
-
-            var w = table[0].length;
-            var h = table.length;
-            var wall = Common.DungeonObjectType.Wall;
+            var WALL = Common.DungeonObjectType.Wall;
+            var ITEM = Common.DungeonObjectType.Wall;
 
             for (var y = 0; y < h; y++) {
-                var line = table[y];
                 map.push(new Array(w));
                 for (var x = 0; x < w; x++) {
-                    var type = line[x];
-                    if (type == wall) {
+                    var type = this.floorTable(x, y).type;
+                    if (type == WALL) {
                         var blockId = 0;
-                        blockId |= (x == 0 || y == 0 || table[y - 1][x - 1] == wall) ? 0 : 1;
-                        blockId |= (y == 0 || table[y - 1][x] == wall) ? 0 : 2;
-                        blockId |= (x == w - 1 || y == 0 || table[y - 1][x + 1] == wall) ? 0 : 4;
-                        blockId |= (x == w - 1 || table[y][x + 1] == wall) ? 0 : 8;
-                        blockId |= (x == w - 1 || y == h - 1 || table[y + 1][x + 1] == wall) ? 0 : 16;
-                        blockId |= (y == h - 1 || table[y + 1][x] == wall) ? 0 : 32;
-                        blockId |= (x == 0 || y == h - 1 || table[y + 1][x - 1] == wall) ? 0 : 64;
-                        blockId |= (x == 0 || table[y][x - 1] == wall) ? 0 : 128;
+                        blockId |= (x == 0 || y == 0 || this.floorTable(x - 1, y - 1).type == WALL) ? 0 : 1;
+                        blockId |= (y == 0 || this.floorTable(x, y - 1).type == WALL) ? 0 : 2;
+                        blockId |= (x == w - 1 || y == 0 || this.floorTable(x + 1, y - 1).type == WALL) ? 0 : 4;
+                        blockId |= (x == w - 1 || this.floorTable(x + 1, y).type == WALL) ? 0 : 8;
+                        blockId |= (x == w - 1 || y == h - 1 || this.floorTable(x + 1, y + 1).type == WALL) ? 0 : 16;
+                        blockId |= (y == h - 1 || this.floorTable(x, y + 1).type == WALL) ? 0 : 32;
+                        blockId |= (x == 0 || y == h - 1 || this.floorTable(x - 1, y + 1).type == WALL) ? 0 : 64;
+                        blockId |= (x == 0 || this.floorTable(x - 1, y).type == WALL) ? 0 : 128;
 
                         var mapId = blockTable[blockId];
                         map[y][x] = mapId;
+                    } else if (type == ITEM) {
+
                     } else {
                         map[y][x] = 35;
                     }

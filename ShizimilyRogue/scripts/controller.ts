@@ -60,9 +60,12 @@
                 var a = View.Scene.keyA;
                 var b = View.Scene.keyB;
                 if (dir != null) {
+                    View.Scene.resetKeys();
                     var action = new Common.MoveAction(dir);
                     var results = this.dungeonManager.next(action);
                     this._view.updateUnit(results);
+                    var fov = this.dungeonManager.getFOV();
+                    this._view.updateShadow(fov);
                 }
             }
             return null;
@@ -75,14 +78,17 @@
         private init(): void {
             // Dungeon(Model)とSceneManager(View)の作成
             this.dungeonManager = new Model.DungeonManager(WIDTH, HEIGHT);
-            this.dungeonManager.addEnemy(new Model.Data.Ignore);
 
             // Map生成
+            var fov = this.dungeonManager.getFOV();
+            var units = this.dungeonManager.units;
+            var items = this.dungeonManager.items;
             var floorTable = this.dungeonManager.getMap(Common.Layer.Floor);
             var groundTable = this.dungeonManager.getMap(Common.Layer.Ground);
-            var units = this.dungeonManager.units;
+            var width = this.dungeonManager.width;
+            var height = this.dungeonManager.height;
 
-            this._view = new View.GameScene(floorTable, groundTable, units);
+            this._view = new View.GameScene(width, height, floorTable, groundTable, units, items);
         }
     }
 } 

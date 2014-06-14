@@ -13,6 +13,7 @@
             "./images/title.png",
             "./images/message.png",
             "./images/messageIcon.png",
+            "./images/shadow.png",
         ];
         static IMAGE_UNIT: enchant.Surface;
         static IMAGE_WALL: enchant.Surface;
@@ -20,6 +21,7 @@
         static IMAGE_TITLE: enchant.Surface;
         static IMAGE_MESSAGE: enchant.Surface;
         static IMAGE_MESSAGE_ICON: enchant.Surface;
+        static IMAGE_SHADOW: enchant.Surface;
         static game: enchant.Core;
 
         private static _keyUp: boolean = false;
@@ -43,6 +45,7 @@
                 Scene.IMAGE_TITLE = Scene.game.assets[Scene.IMAGES[3]];
                 Scene.IMAGE_MESSAGE = Scene.game.assets[Scene.IMAGES[4]];
                 Scene.IMAGE_MESSAGE_ICON = Scene.game.assets[Scene.IMAGES[5]];
+                Scene.IMAGE_SHADOW = Scene.game.assets[Scene.IMAGES[6]];
                 onloadHandler();
             };
             Scene.game.start();
@@ -96,6 +99,15 @@
         }
         static get keyB(): boolean {
             return Scene._keyB;
+        }
+
+        static resetKeys(): void {
+            this._keyUp = false;
+            this._keyDown = false;
+            this._keyLeft = false;
+            this._keyRight = false;
+            this._keyA = false;
+            this._keyB = false;
         }
 
         private static eventInit() {

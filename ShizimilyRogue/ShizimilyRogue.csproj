@@ -21,6 +21,7 @@
     <Content Include="images\floor_01.png" />
     <Content Include="images\message.png" />
     <Content Include="images\messageIcon.png" />
+    <Content Include="images\shadow.png" />
     <Content Include="images\title.png" />
     <Content Include="images\unit.png" />
     <Content Include="images\wall_01.png" />
