@@ -56,18 +56,12 @@
 
         update(e): Scene {
             if (!View.Scene.animating) {
-                var unit = this.dungeonManager.current;
-                if (this.dungeonManager.current.id == Common.PLAYER_ID) {
-                    var dir = View.Scene.keyDirection;
-                    var a = View.Scene.keyA;
-                    var b = View.Scene.keyB;
-                    if (dir != null) {
-                        this.dungeonManager.input(new Common.MoveAction(dir));
-                        var results = this.dungeonManager.next();
-                        this._view.updateUnit(results);
-                    }
-                } else {
-                    var results = this.dungeonManager.next();
+                var dir = View.Scene.keyDirection;
+                var a = View.Scene.keyA;
+                var b = View.Scene.keyB;
+                if (dir != null) {
+                    var action = new Common.MoveAction(dir);
+                    var results = this.dungeonManager.next(action);
                     this._view.updateUnit(results);
                 }
             }

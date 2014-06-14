@@ -113,11 +113,13 @@ declare module ROT.FOV {
     export class DiscreteShadowcasting implements IFOV {
         compute(x: number, y: number, R: number, callback: (x: number, y: number, r: number) => void );
         constructor(lightPassesCallback: Function, options: any);
+        constructor(lightPassesCallback: Function);
     }
 
     export class PreciseShadowcasting implements IFOV {
         compute(x: number, y: number, R: number, callback: (x: number, y: number, r: number, visibility: number) => void );
         constructor(lightPassesCallback: Function, options: any);
+        constructor(lightPassesCallback: Function);
     }
 }
 

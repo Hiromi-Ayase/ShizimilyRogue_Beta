@@ -44,7 +44,7 @@ module ShizimilyRogue.Model {
 
         private addUnit(unit: Unit) {
             var coord = this._map.getRandomPoint(Common.Layer.Unit);
-            this._map.getCell(coord).object = unit;
+            this._map.setObject(unit, coord);
             this._units[unit.id] = unit;
             this.scheduler.add(unit, true);
         }
@@ -71,20 +71,18 @@ module ShizimilyRogue.Model {
             return this._map.getTable(layer);
         }
 
-        next(): Common.Result[]{
-            var _unit = this._current;
-            var action = _unit.phase();
-            var results = this.process(_unit, action);
-            this._current = this.scheduler.next();
+        next(input: Common.Action): Common.Result[]{
+            var results: Common.Result[] = [];
+            var action = input;
+            while (action != null) {
+                this.process(this._current, action, results);
+                this._current = this.scheduler.next();
+                action = this._current.phase();
+            }
             return results;
         }
 
-        input(input: Common.Action): void {
-            this._current.input = input;
-        }
-        
-        private process(unit: Unit, action: Common.Action): Common.Result[] {
-            var results:Common.Result[] = [];
+        private process(unit: Unit, action: Common.Action, results: Common.Result[]) {
             if (action.type == Common.ActionType.Move) {
                 var ret = this._map.moveObject(unit, ROT.DIRS[8][action.dir]); 
                 if (ret) {
@@ -92,7 +90,6 @@ module ShizimilyRogue.Model {
                     results.push(result);
                 }
             }
-            return results;
         }
     }
 
@@ -116,7 +113,6 @@ module ShizimilyRogue.Model {
         atk: number;
         def: number;
         speed: Common.Speed;
-        input: Common.Action = null;
 
         dir = 0;
         state = Common.DungeonUnitState.Normal;
@@ -129,7 +125,7 @@ module ShizimilyRogue.Model {
             throw new Error("Action not implemented");
         }
 
-        constructor(name:string, speed:Common.Speed ,maxHp:number, atk:number, def:number) {
+        constructor(name: string, speed: Common.Speed, maxHp: number, atk: number, def: number) {
             super();
             this.name = name;
             this.speed = speed;
@@ -160,9 +156,7 @@ module ShizimilyRogue.Model {
         }
 
         public phase(): Common.Action {
-            if (this.input == null)
-                throw new Error("Player input required");
-            return this.input;
+            return null;
         }
 
         constructor(name: string) {
@@ -247,18 +241,17 @@ module ShizimilyRogue.Model {
             this.height = h;
             this.map = [];
             // Generate Map
-            var t = this;
             var rotMap = new ROT.Map.DividedMaze(w, h);
-            var mapCallback = function (x, y, value) {
+            var mapCallback = (x, y, value) => {
                 for (var layer in Common.Layer) {
                     var index = layer * w * h + y * w + x;
                     var coord = new Common.Coord(x, y, layer, index);
                     var cell = new Cell(coord);
-                    t.map[index] = cell;
-                    if (layer == Common.Layer.Floor) {
-                        cell.object = new Path();
-                    } else if (layer < Map.WALL_HEIGHT && value) {
+                    this.map[index] = cell;
+                    if (layer < Map.WALL_HEIGHT && value) {
                         cell.object = new Wall();
+                    } else if (layer == Common.Layer.Floor) {
+                        cell.object = new Path();
                     }
                 }
             }
@@ -279,6 +272,26 @@ module ShizimilyRogue.Model {
             }
         }
 
+        private getView(unit: Unit): Array<Cell> {
+            /* input callback */
+            var lightPasses = (x, y) => {
+                var cell = this.map[this.getIndex(x, y, Common.Layer.Floor)];
+                if (cell.object.type == Common.DungeonObjectType.Room) {
+                    return true;
+                }
+                return false;
+            }
+
+            var fov = new ROT.FOV.PreciseShadowcasting(lightPasses);
+            var coord = unit.coord;
+            var units: Unit[] = [];
+            fov.compute(coord.x, coord.y, 10, (x, y, r, visibility) => {
+//                this.map
+//                var color = (data[x + "," + y] ? "#aa0" : "#660");
+            });
+            return null;
+        }
+
         // あるレイヤのインデックスを取得
         private getIndex(x: number, y: number, layer: Common.Layer):number {
             return layer * this.width * this.height + y * this.width + x;
@@ -296,8 +309,8 @@ module ShizimilyRogue.Model {
         }
 
             // セルを取得
-        public getCell(coord: Common.Coord):Cell {
-                return this.map[this.getIndex(coord.x, coord.y, coord.layer)];
+        private getCell(x, y, layer):Cell {
+                return this.map[this.getIndex(x, y, layer)];
         }
 
         // 移動できるかどうか
@@ -347,7 +360,7 @@ module ShizimilyRogue.Model {
         }
 
         // すでに存在するオブジェクトを削除する。成功したらTrue
-        public deleteObject(obj: DungeonObject):boolean {
+        public deleteObject(obj: DungeonObject): boolean {
             var coord = obj.coord;
             if (obj.coord != null) {
                 var cell = this.map[this.getIndex(coord.x, coord.y, coord.layer)];
@@ -355,6 +368,20 @@ module ShizimilyRogue.Model {
                 return true;
             }
             return false;
+        }
+
+        // オブジェクトの追加
+        public setObject(obj: DungeonObject, coord: Common.Coord, force: boolean = true): boolean {
+            var cell = this.map[this.getIndex(coord.x, coord.y, coord.layer)];
+            if (cell.object != null) {
+                if (force) {
+                    this.deleteObject(cell.object);
+                } else {
+                    return false;
+                }
+            }
+            cell.object = obj;
+            return true;
         }
 
         // あるレイヤのランダムな場所を取得

@@ -9,7 +9,7 @@
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob
     // 1:Ground レイヤ  ITEM ENTRANCE
-    // 0:Floor レイヤ   PATH ROOM ITEM ENTERANCE 
+    // 0:Floor レイヤ   PATH ROOM 
     export enum Layer {
         Floor, Ground, Unit, Flying, Effect
     }
