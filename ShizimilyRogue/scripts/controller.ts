@@ -64,9 +64,8 @@
                         View.Scene.resetKeys();
                     var action = new Common.MoveAction(dir);
                     var results = this.dungeonManager.next(action);
-                    this._view.updateUnit(results);
                     var fov = this.dungeonManager.getFOV();
-                    this._view.updateShadow(fov);
+                    this._view.update(fov, results);
                 }
             }
             return null;
@@ -82,15 +81,16 @@
 
             // Map生成
             var fov = this.dungeonManager.getFOV();
-            var units = this.dungeonManager.units;
-            var items = this.dungeonManager.items;
-            var floorTable = this.dungeonManager.getMap(Common.Layer.Floor);
-            var groundTable = this.dungeonManager.getMap(Common.Layer.Ground);
-            var width = this.dungeonManager.width;
-            var height = this.dungeonManager.height;
-            var fov = this.dungeonManager.getFOV();
+            var data = new View.GameSceneData(
+                    this.dungeonManager.width,
+                    this.dungeonManager.height,
+                    this.dungeonManager.units,
+                    this.dungeonManager.items,
+                    null, // effects
+                    this.dungeonManager.getMap()
+                );
 
-            this._view = new View.GameScene(width, height, floorTable, groundTable, units, items, fov);
+            this._view = new View.GameScene(data, fov);
         }
     }
 } 

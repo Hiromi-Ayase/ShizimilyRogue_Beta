@@ -81,8 +81,8 @@ module ShizimilyRogue.Model {
             return this._current;
         }
 
-        public getMap(layer: Common.Layer): (x: number, y: number) => Common.IObject {
-            return this.map.getTable(layer);
+        public getMap(): (x: number, y: number, layer: Common.Layer) => Common.IObject {
+            return this.map.getTable();
         }
 
         public getFOV(): Common.IFOVData {
@@ -131,12 +131,14 @@ module ShizimilyRogue.Model {
     }
 
     class FOVData implements Common.IFOVData {
-        getObjectFunction: (x: number, y: number, layer: Common.Layer) => Common.IObject;
+        getObjectFunction: (place: number[], layer: Common.Layer) => Common.IObject;
+        neighbor: number[][] = [];
         area: number[][] = [];
         movable: number[] = [];
-        getObject(x: number, y: number, layer: Common.Layer): Common.IObject {
-            return this.getObjectFunction(x, y, layer);
+        getObject(place: number[], layer: Common.Layer): Common.IObject {
+            return this.getObjectFunction(place, layer);
         }
+        coord: Common.Coord;
     }
 
     class Unit extends DungeonObject implements DungeonUnit {
@@ -200,10 +202,10 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
+        _phase: (fov: Common.IFOVData) => Common.Action;
 
         public phase(fov: Common.IFOVData): Common.Action {
-            var dir = Math.floor(ROT.RNG.getUniform() * 8);
-            return new Common.MoveAction(dir);
+            return this._phase(fov);
         }
 
         constructor(data: Common.IEnemyData) {
@@ -214,6 +216,7 @@ module ShizimilyRogue.Model {
             this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
             this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
             this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
+            this._phase = data.phase;
         }
     }
 
@@ -329,10 +332,21 @@ module ShizimilyRogue.Model {
             fov.compute(coord.x, coord.y, 10, (x, y, r, visibility) => {
                 result.area.push([x, y]);
             });
-            result.getObjectFunction = (x, y, layer) => {
-                return this.map[y][x][layer].object;
+            result.getObjectFunction = (place, layer) => {
+                return this.map[place[1]][place[0]][layer].object;
             };
+            result.neighbor.push([coord.x + 1, coord.y - 1]);
+            result.neighbor.push([coord.x + 1, coord.y]);
+            result.neighbor.push([coord.x + 1, coord.y + 1]);
+            result.neighbor.push([coord.x, coord.y - 1]);
+            result.neighbor.push([coord.x, coord.y]);
+            result.neighbor.push([coord.x, coord.y + 1]);
+            result.neighbor.push([coord.x - 1, coord.y - 1]);
+            result.neighbor.push([coord.x - 1, coord.y]);
+            result.neighbor.push([coord.x - 1, coord.y + 1]);
+
             result.movable = this.getMovableDirs(unit);
+            result.coord = unit.coord;
             return result;
         }
 
@@ -342,15 +356,15 @@ module ShizimilyRogue.Model {
             var dirY = ROT.DIRS[8][dir][1];
             var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
 
-            if (dirX == 0 || dirY == 0) {
-                if (newCell.object.type == Common.DungeonObjectType.Null) {
+            if (newCell.object.type == Common.DungeonObjectType.Null) {
+                if (dirX == 0 || dirY == 0) {
                     return true;
-                }
-            } else {
-                var cornerCell1 = this.map[coord.y][coord.x + dirX][coord.layer];
-                var cornerCell2 = this.map[coord.y + dirY][coord.x][coord.layer];
-                if (newCell.object == obj && cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
-                    return true;
+                } else {
+                    var cornerCell1 = this.map[coord.y][coord.x + dirX][coord.layer];
+                    var cornerCell2 = this.map[coord.y + dirY][coord.x][coord.layer];
+                    if (cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -421,8 +435,8 @@ module ShizimilyRogue.Model {
         }
 
         // あるレイヤの[オブジェクトタイプ,オブジェクトID]を取得
-        public getTable(layer: Common.Layer): (x: number, y: number) => Common.IObject {
-            return (x: number, y: number) => {
+        public getTable(): (x: number, y: number, layer: Common.Layer) => Common.IObject {
+            return (x: number, y: number, layer: Common.Layer) => {
                 return this.map[y][x][layer].object;
             };
         }

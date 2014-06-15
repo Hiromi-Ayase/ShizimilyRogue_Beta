@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = false;
+    export var DEBUG = true;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -11,7 +11,7 @@
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob
     // 1:Ground レイヤ  ITEM ENTRANCE
-    // 0:Floor レイヤ   PATH ROOM 
+    // 0:Floor レイヤ   PATH ROOM WALL
     export enum Layer {
         Floor, Ground, Unit, Flying, Effect, MAX
     }
@@ -48,6 +48,7 @@
         get layer(): number { return this._layer; }
         get x(): number { return this._x; }
         get y(): number { return this._y; }
+        get place(): number[] { return [this._x, this._y]; } 
 
         constructor(x: number, y: number, layer: number) {
             this._x = x;
@@ -177,13 +178,19 @@
         dropProbability: number;
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
-        awakeProbabilityWhenNeighbor: number
+        awakeProbabilityWhenNeighbor: number;
+        phase(fov: Common.IFOVData): Common.Action;
     }
 
     export interface IFOVData {
+        coord: Coord;
         area: number[][];
+        neighbor: number[][];
         movable: number[];
-        getObject(x: number, y: number, Layer): IObject;
+        getObject(place: number[], Layer: Layer): IObject;
+    }
+
+    export interface IEffect {
     }
 }
 
