@@ -60,7 +60,8 @@
                 var a = View.Scene.keyA;
                 var b = View.Scene.keyB;
                 if (dir != null) {
-                    View.Scene.resetKeys();
+                    if (Common.DEBUG)
+                        View.Scene.resetKeys();
                     var action = new Common.MoveAction(dir);
                     var results = this.dungeonManager.next(action);
                     this._view.updateUnit(results);
@@ -87,8 +88,9 @@
             var groundTable = this.dungeonManager.getMap(Common.Layer.Ground);
             var width = this.dungeonManager.width;
             var height = this.dungeonManager.height;
+            var fov = this.dungeonManager.getFOV();
 
-            this._view = new View.GameScene(width, height, floorTable, groundTable, units, items);
+            this._view = new View.GameScene(width, height, floorTable, groundTable, units, items, fov);
         }
     }
 } 

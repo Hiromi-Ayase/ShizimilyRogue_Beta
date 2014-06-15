@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = true;
+    export var DEBUG = false;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -183,8 +183,7 @@
     export interface IFOVData {
         area: number[][];
         movable: number[];
-        units: Common.IUnit[];
-        items: Common.IItem[];
+        getObject(x: number, y: number, Layer): IObject;
     }
 }
 

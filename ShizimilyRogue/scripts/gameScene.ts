@@ -4,21 +4,26 @@ module ShizimilyRogue.View {
     var OBJECT_WIDTH = 64;
     var OBJECT_HEIGHT = 64;
 
+    enum Node { ROOT, VIEW }
+
     export class GameScene extends Scene {
         private map: Map;
         private units: { [id: number]: Unit; } = {};
-        private shadow: Shadow;
+        private roomShadow: Shadow;
+        private pathShadow: Shadow;
 
         private player: Common.IPlayer;
         private view: enchant.Group = new enchant.Group();
         private message: Message;
+
+        private NODE: { [id: string]: enchant.Node; }
 
         constructor(
             private width: number,
             private height: number,
             floorTable: (x: number, y: number) => Common.IObject,
             groundTable: (x: number, y: number) => Common.IObject,
-            units, items) {
+            units, items, fov) {
             super();
 
 
@@ -33,19 +38,41 @@ module ShizimilyRogue.View {
             }
             this.player = <Common.IPlayer>units[Common.PLAYER_ID];
 
-            // Shadowの追加
-            this.shadow = new Shadow(width, height);
-            this.view.addChild(this.shadow);
+            // 部屋のShadowの追加
+            this.roomShadow = new Shadow(width, height);
+            this.view.addChild(this.roomShadow);
 
             // Viewの追加
             this.addChild(this.view);
 
+            // PathのShadowの追加
+            this.pathShadow = new Shadow(VIEW_WIDTH / OBJECT_WIDTH, VIEW_HEIGHT / OBJECT_HEIGHT);
+            this.initPathShadow();
+            this.addChild(this.pathShadow);
 
             // メッセージエリアの追加
             this.message = new Message();
             this.addChild(this.message);
 
+            this.updateShadow(fov);
             this.moveCamera();
+        }
+
+        private initPathShadow() {
+            var map: number[][] = [];
+
+            var x = Math.floor(VIEW_WIDTH / OBJECT_WIDTH / 2);
+            var y = Math.floor(VIEW_HEIGHT / OBJECT_HEIGHT / 2);
+            map.push([x + 1, y - 1]);
+            map.push([x + 1, y]);
+            map.push([x + 1, y + 1]);
+            map.push([x, y - 1]);
+            map.push([x, y]);
+            map.push([x, y + 1]);
+            map.push([x - 1, y - 1]);
+            map.push([x - 1, y]);
+            map.push([x - 1, y + 1]);
+            this.pathShadow.update(map);
         }
 
         private moveCamera(): void {
@@ -59,7 +86,17 @@ module ShizimilyRogue.View {
         }
 
         updateShadow(fov: Common.IFOVData): void {
-            this.shadow.update(fov);
+            var x = this.player.coord.x;
+            var y = this.player.coord.y;
+            if (fov.getObject(x, y, Common.Layer.Floor).type == Common.DungeonObjectType.Room) {
+                this.pathShadow.visible = false;
+                this.roomShadow.visible = true;
+                this.roomShadow.update(fov.area);
+            } else {
+                this.pathShadow.visible = true;
+                this.roomShadow.visible = false;
+                this.initPathShadow();
+            }
         }
 
         updateUnit(results: Common.Result[]): void {
@@ -83,37 +120,34 @@ module ShizimilyRogue.View {
     }
 
 
-    class Element extends enchant.Group {
+    interface Element {
+        node: enchant.Node;
     }
 
-    class Shadow extends Element {
-        private shadowMap: enchant.Map;
+    class Shadow extends enchant.Map {
         constructor(
-            private width: number,
-            private height: number) {
-            super();
-
-            this.shadowMap = new enchant.Map(OBJECT_WIDTH, OBJECT_HEIGHT);
-            this.shadowMap.image = Scene.IMAGE_SHADOW;
-            this.addChild(this.shadowMap);
+            private w: number,
+            private h: number) {
+            super(OBJECT_WIDTH, OBJECT_HEIGHT);
+            this.image = Scene.IMAGE_SHADOW;
         }
 
-        public update(fov: Common.IFOVData) {
+        public update(area: number[][]) {
             var map:number[][] = [];
-            for (var y = 0; y < this.height; y++) {
-                map.push(new Array<number>(this.width));
-                for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.h; y++) {
+                map.push(new Array<number>(this.w));
+                for (var x = 0; x < this.w; x++) {
                     map[y][x] = 0;
                 }
             }
-            for (var i = 0; i < fov.area.length; i++) {
-                map[fov.area[i][1]][fov.area[i][0]] = 1;
+            for (var i = 0; i < area.length; i++) {
+                map[area[i][1]][area[i][0]] = 1;
             }
-            this.shadowMap.loadData(map);
+            this.loadData(map);
         }
     }
 
-    class Message extends Element {
+    class Message extends enchant.Group {
         private static MESSAGE_TOP = 380;
         private static MESSAGE_LEFT = 250;
         private static MESSAGE_WIDTH = VIEW_WIDTH - Message.MESSAGE_LEFT;
@@ -126,7 +160,6 @@ module ShizimilyRogue.View {
 
         constructor() {
             super();
-
             this.messageArea = new enchant.Sprite(VIEW_WIDTH, VIEW_HEIGHT);
             this.messageArea.image = Scene.IMAGE_MESSAGE; 
             this.messageArea.opacity = Message.MESSAGE_AREA_OPACITY;
@@ -151,7 +184,7 @@ module ShizimilyRogue.View {
         }
     }
 
-    class Unit extends Element {
+    class Unit extends enchant.Group {
         private _data: Common.IUnit;
         constructor(unit: Common.IUnit) {
             super();
@@ -176,7 +209,7 @@ module ShizimilyRogue.View {
         }
     }
     
-    class Map extends Element {
+    class Map extends enchant.Group {
         private floorMap: enchant.Map;
         private groundMap: enchant.Map;
 
