@@ -185,8 +185,7 @@
     export interface IFOVData {
         coord: Coord;
         area: number[][];
-        neighbor: number[][];
-        movable: number[];
+        movable: boolean[];
         getObject(place: number[], Layer: Layer): IObject;
     }
 

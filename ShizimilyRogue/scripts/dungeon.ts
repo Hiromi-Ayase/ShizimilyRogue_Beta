@@ -132,9 +132,8 @@ module ShizimilyRogue.Model {
 
     class FOVData implements Common.IFOVData {
         getObjectFunction: (place: number[], layer: Common.Layer) => Common.IObject;
-        neighbor: number[][] = [];
         area: number[][] = [];
-        movable: number[] = [];
+        movable: boolean[] = [];
         getObject(place: number[], layer: Common.Layer): Common.IObject {
             return this.getObjectFunction(place, layer);
         }
@@ -335,15 +334,16 @@ module ShizimilyRogue.Model {
             result.getObjectFunction = (place, layer) => {
                 return this.map[place[1]][place[0]][layer].object;
             };
-            result.neighbor.push([coord.x + 1, coord.y - 1]);
-            result.neighbor.push([coord.x + 1, coord.y]);
-            result.neighbor.push([coord.x + 1, coord.y + 1]);
-            result.neighbor.push([coord.x, coord.y - 1]);
-            result.neighbor.push([coord.x, coord.y]);
-            result.neighbor.push([coord.x, coord.y + 1]);
-            result.neighbor.push([coord.x - 1, coord.y - 1]);
-            result.neighbor.push([coord.x - 1, coord.y]);
-            result.neighbor.push([coord.x - 1, coord.y + 1]);
+            if (result.area.length == 1) {
+                result.area.push([coord.x + 1, coord.y - 1]);
+                result.area.push([coord.x + 1, coord.y]);
+                result.area.push([coord.x + 1, coord.y + 1]);
+                result.area.push([coord.x, coord.y - 1]);
+                result.area.push([coord.x, coord.y + 1]);
+                result.area.push([coord.x - 1, coord.y - 1]);
+                result.area.push([coord.x - 1, coord.y]);
+                result.area.push([coord.x - 1, coord.y + 1]);
+            }
 
             result.movable = this.getMovableDirs(unit);
             result.coord = unit.coord;
@@ -371,11 +371,10 @@ module ShizimilyRogue.Model {
         }
 
         // 移動可能な近隣の方向を取得
-        private getMovableDirs(obj: DungeonObject): number[] {
-            var result: number[] = [];
+        private getMovableDirs(obj: DungeonObject): boolean[] {
+            var result: boolean[] = [];
             for (var dir = 0; dir < ROT.DIRS[8].length; dir++) {
-                if (this.isMovable(obj, dir))
-                    result.push(dir);
+                result[dir] = this.isMovable(obj, dir);
             }
             return result;
         }

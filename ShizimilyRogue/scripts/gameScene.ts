@@ -149,10 +149,6 @@ module ShizimilyRogue.View {
                 var id: number = fov.getObject(fov.area[i], Common.Layer.Unit).id;
                 visible[id] = true;
             }
-            for (var i = 0; i < fov.neighbor.length; i++) {
-                var id: number = fov.getObject(fov.neighbor[i], Common.Layer.Unit).id;
-                visible[id] = true;
-            }
 
             // ユニットが新規作成された
             for (var id in this.data.units) {
