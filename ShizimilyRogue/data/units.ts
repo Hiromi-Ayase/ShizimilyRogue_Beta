@@ -14,7 +14,7 @@
         awakeProbabilityWhenEnterRoom = 100;
         awakeProbabilityWhenNeighbor = 100;
 
-        static CANDIDATE = [
+        private static CANDIDATE = [
             [Common.DIR.UP, Common.DIR.UP_RIGHT, Common.DIR.UP_LEFT, Common.DIR.RIGHT, Common.DIR.LEFT],
             [Common.DIR.UP_RIGHT, Common.DIR.RIGHT, Common.DIR.UP, Common.DIR.DOWN_RIGHT, Common.DIR.UP_LEFT],
             [Common.DIR.RIGHT, Common.DIR.DOWN_RIGHT, Common.DIR.UP_RIGHT, Common.DIR.DOWN, Common.DIR.UP],
@@ -25,55 +25,116 @@
             [Common.DIR.UP_LEFT, Common.DIR.UP, Common.DIR.LEFT, Common.DIR.UP_RIGHT, Common.DIR.DOWN_LEFT],
         ];
 
-        private lastDir: number = 0;
-        private lastPlayer: number[];
-        public phase(fov: Common.IFOVData): Common.Action {
-            // 移動AI
-            var dir: number = null;
-            var enter: number[][] = [];
-            var player: number[] = null;
-            var me: number[] = fov.coord.place;
-            var inRoom = fov.getObject(me, Common.Layer.Floor).type == Common.DungeonObjectType.Room;
-
-            if (!inRoom) {
-                for (var i = 0; i < fov.area.length; i++) {
-                    var place = fov.area[i];
-                    if (fov.getObject(place, Common.Layer.Unit).id == Common.PLAYER_ID) {
-                        player = place;
-                    }
-                }
-                if (player != null) {
-                    dir = Enemy.getDir(me, player, fov.movable);
-                } else if (fov.movable[this.lastDir]) {
-                    dir = this.lastDir;
-                }
-            } else {
-                // プレイヤーの位置と出入口を探す
-                for (var i = 0; i < fov.area.length; i++) {
-                    var place = fov.area[i];
-                    if (fov.getObject(place, Common.Layer.Unit).id == Common.PLAYER_ID) {
-                        player = place;
-                    } else if (fov.getObject(place, Common.Layer.Floor).type == Common.DungeonObjectType.Path) {
-                        enter.push(place);
-                    }
-                }
-
-                if (player != null) {
-                    dir = Enemy.getDir(me, player, fov.movable);
-                } else if (enter.length > 0) {
-                    var id = Math.floor(enter.length * ROT.RNG.getUniform());
-                    dir = Enemy.getDir(me, enter[id], fov.movable);
+        private lastMe: number[] = null;
+        private player: number[] = null;
+        public phase = (fov: Common.IFOVData): Common.Action => {
+            var me = fov.coord.place;
+            var action: Common.Action = null;
+            for (var i = 0; i < fov.units.length; i++) {
+                if (fov.units[i].id == Common.PLAYER_ID) {
+                    this.player = fov.units[i].coord.place;
                 }
             }
-            if (dir == null) {
+
+            if (this.player != null) {
+                var attackable = Enemy.getAttackable(me, this.player);
+                if (attackable != null) {
+                    action = new Common.AttackAction(attackable);
+                }
+            }
+
+            if (action == null) {
+                var dir = Enemy.move(me, this.player, this.lastMe, fov);
+                if (dir != null)
+                    action = new Common.MoveAction(dir);
+            }
+
+            if (action == null) {
+                this.player = null;
                 var dirs: number[] = [];
                 fov.movable.map((value, index, array) => {
                     if (value) dirs.push(index);
                 });
-                dir = Math.floor(dirs.length * ROT.RNG.getUniform());
+                var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
+                action = new Common.MoveAction(dir);
             }
-            this.lastDir = dir;
-            return new Common.MoveAction(dir);
+            this.lastMe = me;
+            return action;
+        }
+
+        public event = (results: Common.Result[]): void => {
+            this.player = null;
+            for (var i = 0; i < results.length; i++) {
+                if (results[i].obj.id == Common.PLAYER_ID) {
+                    this.player = results[i].obj.coord.place;
+                    break;
+                }
+            }
+        }
+
+        private static getAttackable(src: number[], dst: number[], neighbor: boolean = true): number {
+            var diffX = dst[0] - src[0];
+            var diffY = dst[1] - src[0];
+
+            if (neighbor && (Math.abs(diffX) > 1 || Math.abs(diffY) > 1)) {
+                    return null;
+            }
+
+            if (diffX == 0 && diffY > 0) {
+                return Common.DIR.DOWN;
+            } else if (diffX == 0 && diffY < 0) {
+                return Common.DIR.UP;
+            } else if (diffX > 0 && diffY == 0) {
+                return Common.DIR.RIGHT;
+            } else if (diffX < 0 && diffY == 0) {
+                return Common.DIR.LEFT;
+            } else if (diffX > 0 && diffY > 0) {
+                return Common.DIR.DOWN_RIGHT;
+            } else if (diffX > 0 && diffY < 0) {
+                return Common.DIR.UP_RIGHT;
+            } else if (diffX < 0 && diffY > 0) {
+                return Common.DIR.DOWN_LEFT;
+            } else if (diffX < 0 && diffY < 0) {
+                return Common.DIR.UP_LEFT;
+            }
+            return null;
+        }
+        
+        private static move(me: number[], player: number[], lastMe: number[], fov: Common.IFOVData): number {
+            // 移動AI
+            var dir: number = null;
+            var inRoom = fov.getObject(me, Common.Layer.Floor).type == Common.DungeonObjectType.Room;
+
+            if (!inRoom) {
+                // 通路の時
+                if (player != null) {
+                    //プレイヤーを探す
+                    dir = Enemy.getDir(me, player, fov.movable);
+                } else if (lastMe != null) {
+                    // そのまま進む
+                    dir = Enemy.getDir(lastMe, me, fov.movable);
+                }
+            } else {
+                // 部屋の時
+                if (player != null) {
+                    // プレイヤーを探す
+                    dir = Enemy.getDir(me, player, fov.movable);
+                } else {
+                    var enter: number[][] = [];
+                    // 出入口を探す
+                    for (var i = 0; i < fov.area.length; i++) {
+                        var place = fov.area[i];
+                        if (fov.getObject(place, Common.Layer.Floor).type == Common.DungeonObjectType.Path) {
+                            enter.push(place);
+                        }
+                    }
+                    if (enter.length > 0) {
+                        var id = Math.floor(enter.length * ROT.RNG.getUniform());
+                        dir = Enemy.getDir(me, enter[id], fov.movable);
+                    }
+                }
+            }
+            return dir;
         }
 
         private static getDir(me: number[], target: number[], movable: boolean[]): number {
@@ -97,6 +158,8 @@
                 cand = Enemy.CANDIDATE[Common.DIR.LEFT];
             } else if (vecX < 0 && vecY > 0) {
                 cand = Enemy.CANDIDATE[Common.DIR.DOWN_LEFT];
+            } else if (vecX == 0 && vecY == 0) {
+                return null;
             }
 
             for (var i = 0; i < cand.length; i++) {

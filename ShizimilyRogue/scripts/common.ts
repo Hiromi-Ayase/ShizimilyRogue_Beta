@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = true;
+    export var DEBUG = false;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -97,20 +97,20 @@
     }
 
     export class Result {
-        id: number;
+        obj: IObject;
         dir: DIR; 
         type: ResultType;
         item1: IItem;
         item2: IItem;
         amount: number;
 
-        constructor(id: number, type: ResultType, dir: DIR) {
-            this.id = id;
+        constructor(obj: IObject, type: ResultType, dir: DIR) {
+            this.obj = obj;
             this.type = type;
             this.dir = dir;
         }
 
-        static fromAction(id: number, action: Action, amount: number = null ): Result {
+        static fromAction(obj: IObject, action: Action, amount: number = null ): Result {
             var type: ResultType;
             switch (action.type) {
                 case ActionType.Attack:
@@ -126,7 +126,7 @@
                     type = ResultType.Throw;
                     break;
             }
-            var result = new Result(id, type, action.dir);
+            var result = new Result(obj, type, action.dir);
             result.item1 = action.item1;
             result.item2 = action.item2;
             result.amount = amount;
@@ -146,6 +146,8 @@
         speed: Speed;
         state: DungeonUnitState;
         name: string;
+        phase: (fov: Common.IFOVData) => Common.Action;
+        event: (results: Common.Result[]) => void;
     }
 
     export interface IPlayer extends IUnit {
@@ -180,6 +182,7 @@
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
         phase(fov: Common.IFOVData): Common.Action;
+        event(results: Common.Result[]): void;
     }
 
     export interface IFOVData {
@@ -187,6 +190,7 @@
         area: number[][];
         movable: boolean[];
         getObject(place: number[], Layer: Layer): IObject;
+        units: IUnit[];
     }
 
     export interface IEffect {

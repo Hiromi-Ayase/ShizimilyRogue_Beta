@@ -31,7 +31,7 @@ module ShizimilyRogue.View {
 
             this.addChild(this.view);
             this.addChild(this.pathShadow);
-            //this.addChild(this.message);
+            this.addChild(this.message);
 
             this.update(fov, []);
         }
@@ -67,6 +67,13 @@ module ShizimilyRogue.View {
                 this.pathShadow.visible = true;
             }
             this.view.update(fov, results);
+            for (var i = 0; i < results.length; i++) {
+                if (results[i].type == Common.ResultType.Attack) {
+                    var unit = (<Common.IUnit>results[i].obj);
+                    this.message.setText(unit.name + "はこうげきした！");
+                } else {
+                }
+            }
         }
     }
 
@@ -172,7 +179,7 @@ module ShizimilyRogue.View {
             // ユニットに行動を起こさせる
             for (var i = 0; i < results.length; i++) {
                 var result = results[i];
-                var id = result.id;
+                var id = result.obj.id;
                 var unit = this.units[id];
                 // FOVにあるものだけを表示
                 unit.action(result);

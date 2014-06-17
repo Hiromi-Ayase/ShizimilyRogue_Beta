@@ -90,11 +90,18 @@ module ShizimilyRogue.Model {
         }
 
         public next(input: Common.Action): Common.Result[]{
-            var results: Common.Result[] = [];
+            var allResults: Common.Result[] = [];
             var action = input;
+            var fov = this.map.getFOV(this._current);
             while (action != null) {
-                this.process(this._current, action, results);
+                var r = this.process(this._current, action);
+                allResults = allResults.concat(r);
                 var unit: Unit = this.scheduler.next();
+
+                // 視界範囲内のユニットに情報伝達
+                for (var i = 0; i < fov.units.length; i++) {
+                    fov.units[i].event(r);
+                }
 
                 // ユニットに必要な情報を渡す
                 var fov = this.map.getFOV(unit);
@@ -103,17 +110,29 @@ module ShizimilyRogue.Model {
                 // 現在行動中のユニットの更新
                 this._current = unit;
             }
-            return results;
+            return allResults;
         }
 
-        private process(unit: Unit, action: Common.Action, results: Common.Result[]) {
+        private process(unit: Unit, action: Common.Action): Common.Result[]{
+            var results: Common.Result[] = [];
             if (action.type == Common.ActionType.Move) {
                 var ret = this.map.moveObject(unit, action.dir);
                 if (ret) {
-                    var result = Common.Result.fromAction(unit.id, action);
+                    var result = Common.Result.fromAction(unit, action);
                     results.push(result);
                 }
+            } else if (action.type == Common.ActionType.Attack) {
+                var x = unit.coord.x + ROT.DIRS[8][action.dir][0];
+                var y = unit.coord.y + ROT.DIRS[8][action.dir][1];
+                var target = this.getMap()(x, y, Common.Layer.Unit);
+                var result = Common.Result.fromAction(unit, action);
+                results.push(result);
+                if (target.type == Common.DungeonObjectType.Unit) {
+                    result = new Common.Result(target, Common.ResultType.Damage, (action.dir + 4) % 8);
+                }
+                results.push(result);
             }
+            return results;
         }
     }
 
@@ -138,6 +157,7 @@ module ShizimilyRogue.Model {
             return this.getObjectFunction(place, layer);
         }
         coord: Common.Coord;
+        units: Common.IUnit[] = [];
     }
 
     class Unit extends DungeonObject implements DungeonUnit {
@@ -151,9 +171,8 @@ module ShizimilyRogue.Model {
             return this.speed;
         }
 
-        phase(fov: Common.IFOVData): Common.Action {
-            throw new Error("Action not implemented");
-        }
+        phase: (fov: Common.IFOVData) => Common.Action;
+        event: (results: Common.Result[]) => void;
 
         constructor(
             public unitId: number,
@@ -185,8 +204,11 @@ module ShizimilyRogue.Model {
             return this.lv * 10 + 100;
         }
 
-        public phase(fov: Common.IFOVData): Common.Action {
+        phase = (fov: Common.IFOVData) => {
             return null;
+        }
+
+        event = (results: Common.Result[]) => {
         }
 
         constructor(name: string) {
@@ -201,11 +223,9 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
-        _phase: (fov: Common.IFOVData) => Common.Action;
 
-        public phase(fov: Common.IFOVData): Common.Action {
-            return this._phase(fov);
-        }
+        phase: (fov: Common.IFOVData) => Common.Action;
+        event: (results: Common.Result[]) => void; 
 
         constructor(data: Common.IEnemyData) {
             super(data.unitId, data.name, data.speed, data.maxHp, data.atk, data.def);
@@ -215,7 +235,8 @@ module ShizimilyRogue.Model {
             this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
             this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
             this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
-            this._phase = data.phase;
+            this.phase = data.phase;
+            this.event = data.event;
         }
     }
 
@@ -343,6 +364,17 @@ module ShizimilyRogue.Model {
                 result.area.push([coord.x - 1, coord.y - 1]);
                 result.area.push([coord.x - 1, coord.y]);
                 result.area.push([coord.x - 1, coord.y + 1]);
+            }
+
+            for (var i = 0; i < result.area.length; i++) {
+                var x = result.area[i][0];
+                var y = result.area[i][1];
+                for (var layer = 0; layer < Common.Layer.MAX; layer++) {
+                    var obj = this.map[y][x][layer].object;
+                    if (obj instanceof Unit && obj.id != unit.id) {
+                        result.units.push(<Unit>obj);
+                    }
+                }
             }
 
             result.movable = this.getMovableDirs(unit);
