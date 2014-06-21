@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = false;
+    export var DEBUG = true;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -191,6 +191,7 @@
         movable: boolean[];
         getObject(place: number[], Layer: Layer): IObject;
         units: IUnit[];
+        attackable: { [id: number]: boolean };
     }
 
     export interface IEffect {

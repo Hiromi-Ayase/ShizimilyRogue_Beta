@@ -92,23 +92,22 @@ module ShizimilyRogue.Model {
         public next(input: Common.Action): Common.Result[]{
             var allResults: Common.Result[] = [];
             var action = input;
-            var fov = this.map.getFOV(this._current);
             while (action != null) {
                 var r = this.process(this._current, action);
                 allResults = allResults.concat(r);
-                var unit: Unit = this.scheduler.next();
+
+                // ユニットの行動後の視界を取得
+                var afterFov = this.map.getFOV(this._current);
 
                 // 視界範囲内のユニットに情報伝達
-                for (var i = 0; i < fov.units.length; i++) {
-                    fov.units[i].event(r);
+                for (var i = 0; i < afterFov.units.length; i ++) {
+                    afterFov.units[i].event(r);
                 }
 
-                // ユニットに必要な情報を渡す
-                var fov = this.map.getFOV(unit);
-                action = unit.phase(fov);
-
-                // 現在行動中のユニットの更新
-                this._current = unit;
+                // 次に行動するユニットのアクションを取り出す
+                this._current = this.scheduler.next();
+                var beforeFov = this.map.getFOV(this._current); 
+                action = this._current.phase(beforeFov);
             }
             return allResults;
         }
@@ -157,7 +156,8 @@ module ShizimilyRogue.Model {
             return this.getObjectFunction(place, layer);
         }
         coord: Common.Coord;
-        units: Common.IUnit[] = [];
+        units: Unit[] = [];
+        attackable: { [id: number]: boolean } = {};
     }
 
     class Unit extends DungeonObject implements DungeonUnit {
@@ -299,16 +299,18 @@ module ShizimilyRogue.Model {
             }
 
             // Generate Map
-            var rotMap = new ROT.Map.Digger(w, h, null);
+            var rotMap = new ROT.Map.Dungeon(w, h);
             var mapCallback = (x, y, value) => {
                 for (var layer = 0; layer < Common.Layer.MAX; layer++) {
                     var coord = new Common.Coord(x, y, layer);
                     var cell = new Cell(coord);
                     this.map[y][x][layer] = cell;
-                    if (layer < Map.WALL_HEIGHT && value) {
-                        cell.object = new Wall();
-                    } else if (layer == Common.Layer.Floor) {
-                        cell.object = new Path();
+                    if (layer == Common.Layer.Floor) {
+                        if (value) {
+                            cell.object = new Wall();
+                        } else {
+                            cell.object = new Path();
+                        }
                     } else {
                         cell.object = new Null();
                     }
@@ -373,27 +375,40 @@ module ShizimilyRogue.Model {
                     var obj = this.map[y][x][layer].object;
                     if (obj instanceof Unit && obj.id != unit.id) {
                         result.units.push(<Unit>obj);
+                        result.attackable[obj.id] = this.isAttackable(unit, obj);
                     }
                 }
             }
 
-            result.movable = this.getMovableDirs(unit);
+            result.movable = [];
+            for (var dir = 0; dir < ROT.DIRS[8].length; dir++) {
+                var movable = this.isMovable(unit, dir);
+                result.movable.push(movable);
+            }
+
             result.coord = unit.coord;
             return result;
         }
 
-        // 移動できるかどうか
-        private isMovable(obj: DungeonObject, dir: number, coord: Common.Coord = obj.coord): boolean {
-            var dirX = ROT.DIRS[8][dir][0];
-            var dirY = ROT.DIRS[8][dir][1];
-            var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
+        // 攻撃できるかどうか
+        private isAttackable(obj: DungeonObject, target: DungeonObject): boolean {
+            var dirX: number = target.coord.x - obj.coord.x;
+            var dirY: number = target.coord.y - obj.coord.y;
 
-            if (newCell.object.type == Common.DungeonObjectType.Null) {
+            if (Math.abs(dirX) > 1 || Math.abs(dirY) > 1) {
+                return false;
+            }
+
+            var coord = obj.coord;
+            var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
+            var floorCell = this.map[coord.y + dirY][coord.x + dirX][Common.Layer.Floor];
+
+            if (floorCell.object.type != Common.DungeonObjectType.Wall) {
                 if (dirX == 0 || dirY == 0) {
                     return true;
                 } else {
-                    var cornerCell1 = this.map[coord.y][coord.x + dirX][coord.layer];
-                    var cornerCell2 = this.map[coord.y + dirY][coord.x][coord.layer];
+                    var cornerCell1 = this.map[coord.y][coord.x + dirX][Common.Layer.Floor];
+                    var cornerCell2 = this.map[coord.y + dirY][coord.x][Common.Layer.Floor];
                     if (cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
                         return true;
                     }
@@ -402,13 +417,26 @@ module ShizimilyRogue.Model {
             return false;
         }
 
-        // 移動可能な近隣の方向を取得
-        private getMovableDirs(obj: DungeonObject): boolean[] {
-            var result: boolean[] = [];
-            for (var dir = 0; dir < ROT.DIRS[8].length; dir++) {
-                result[dir] = this.isMovable(obj, dir);
+        // 移動できるかどうか
+        private isMovable(obj: DungeonObject, dir: number): boolean {
+            var dirX = ROT.DIRS[8][dir][0];
+            var dirY = ROT.DIRS[8][dir][1];
+            var coord = obj.coord;
+            var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
+            var floorCell = this.map[coord.y + dirY][coord.x + dirX][Common.Layer.Floor];
+
+            if (newCell.object.type == Common.DungeonObjectType.Null && floorCell.object.type != Common.DungeonObjectType.Wall) {
+                if (dirX == 0 || dirY == 0) {
+                    return true;
+                } else {
+                    var cornerCell1 = this.map[coord.y][coord.x + dirX][Common.Layer.Floor];
+                    var cornerCell2 = this.map[coord.y + dirY][coord.x][Common.Layer.Floor];
+                    if (cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
+                        return true;
+                    }
+                }
             }
-            return result;
+            return false;
         }
 
         // すでに存在するオブジェクトを移動する。成功したらTrue
@@ -456,7 +484,8 @@ module ShizimilyRogue.Model {
             for (var y = 0; y < this.height; y++) {
                 for (var x = 0; x < this.width; x++) {
                     var cell: Cell = this.map[y][x][layer];
-                    if (cell.object.type == Common.DungeonObjectType.Null) {
+                    var floorCell: Cell = this.map[y][x][Common.Layer.Floor];
+                    if (cell.object.type == Common.DungeonObjectType.Null && floorCell.object.type == Common.DungeonObjectType.Room) {
                         currentFreeCells.push(cell);
                     }
                 }

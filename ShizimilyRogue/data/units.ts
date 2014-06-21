@@ -26,31 +26,30 @@
         ];
 
         private lastMe: number[] = null;
-        private player: number[] = null;
+        private lastPlayer: number[] = null;
         public phase = (fov: Common.IFOVData): Common.Action => {
             var me = fov.coord.place;
+            var player: number[] = null;
             var action: Common.Action = null;
-            for (var i = 0; i < fov.units.length; i++) {
-                if (fov.units[i].id == Common.PLAYER_ID) {
-                    this.player = fov.units[i].coord.place;
-                }
+            if (Common.PLAYER_ID in fov.units) {
+                player = fov.units[Common.PLAYER_ID].coord.place;
             }
 
-            if (this.player != null) {
-                var attackable = Enemy.getAttackable(me, this.player);
-                if (attackable != null) {
-                    action = new Common.AttackAction(attackable);
+            if (player != null) {
+                if (fov.attackable[Common.PLAYER_ID]) {
+                    var dir = Enemy.getAttackDir(fov.coord.place, player);
+                    action = new Common.AttackAction(dir);
                 }
             }
 
             if (action == null) {
-                var dir = Enemy.move(me, this.player, this.lastMe, fov);
+                var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
                 if (dir != null)
                     action = new Common.MoveAction(dir);
             }
 
             if (action == null) {
-                this.player = null;
+                this.lastPlayer = null;
                 var dirs: number[] = [];
                 fov.movable.map((value, index, array) => {
                     if (value) dirs.push(index);
@@ -58,27 +57,24 @@
                 var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
                 action = new Common.MoveAction(dir);
             }
+            this.lastPlayer = player;
             this.lastMe = me;
             return action;
         }
 
         public event = (results: Common.Result[]): void => {
-            this.player = null;
+            this.lastPlayer = null;
             for (var i = 0; i < results.length; i++) {
                 if (results[i].obj.id == Common.PLAYER_ID) {
-                    this.player = results[i].obj.coord.place;
+                    this.lastPlayer = results[i].obj.coord.place;
                     break;
                 }
             }
         }
 
-        private static getAttackable(src: number[], dst: number[], neighbor: boolean = true): number {
+        private static getAttackDir(src: number[], dst: number[], neighbor: boolean = true): number {
             var diffX = dst[0] - src[0];
-            var diffY = dst[1] - src[0];
-
-            if (neighbor && (Math.abs(diffX) > 1 || Math.abs(diffY) > 1)) {
-                    return null;
-            }
+            var diffY = dst[1] - src[1];
 
             if (diffX == 0 && diffY > 0) {
                 return Common.DIR.DOWN;
