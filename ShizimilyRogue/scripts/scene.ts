@@ -4,24 +4,21 @@
     export var VIEW_HEIGHT = 480;
     var FPS = 30;
 
+
     // シーン
     export class Scene extends enchant.Scene {
-        static IMAGES: string[] = [
-            "./images/wall_01.png",
-            "./images/floor_01.png",
-            "./images/unit.png",
-            "./images/title.png",
-            "./images/message.png",
-            "./images/messageIcon.png",
-            "./images/shadow.png",
-        ];
-        static IMAGE_UNIT: enchant.Surface;
-        static IMAGE_WALL: enchant.Surface;
-        static IMAGE_FLOOR: enchant.Surface;
-        static IMAGE_TITLE: enchant.Surface;
-        static IMAGE_MESSAGE: enchant.Surface;
-        static IMAGE_MESSAGE_ICON: enchant.Surface;
-        static IMAGE_SHADOW: enchant.Surface;
+        static IMAGE = {
+            WALL: { URL: "./images/wall_01.png", DATA: <enchant.Surface>null },
+            FLOOR: { URL: "./images/floor_01.png", DATA: <enchant.Surface>null },
+            UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
+            TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
+            MESSAGE: { URL: "./images/message.png", DATA: <enchant.Surface>null },
+            MESSAGE_ICON: { URL: "./images/messageIcon.png", DATA: <enchant.Surface>null },
+            SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
+            MEMU_MAIN: { URL: "./images/MainMenu.png", DATA: <enchant.Surface>null },
+            CURSOR: { URL: "./images/cursor.png", DATA: <enchant.Surface>null },
+        };
+
         static game: enchant.Core;
 
         private static _keyUp: boolean = false;
@@ -31,21 +28,22 @@
         private static _keyA: boolean = false;
         private static _keyB: boolean = false;
         private static _animating: number = 0;
+        private static _keyLock: boolean = false;
 
         static init(onloadHandler: () => void) {
             enchant();
             Scene.game = new enchant.Core(VIEW_WIDTH, VIEW_HEIGHT);
             Scene.game.fps = FPS;
-            Scene.game.preload(Scene.IMAGES);
+
+            var imageUrl: string[] = [];
+            for (var id in Scene.IMAGE)
+                imageUrl.push(Scene.IMAGE[id].URL);
+
+            Scene.game.preload(imageUrl);
             Scene.eventInit();
             Scene.game.onload = () => {
-                Scene.IMAGE_WALL = Scene.game.assets[Scene.IMAGES[0]];
-                Scene.IMAGE_FLOOR = Scene.game.assets[Scene.IMAGES[1]];
-                Scene.IMAGE_UNIT = Scene.game.assets[Scene.IMAGES[2]];
-                Scene.IMAGE_TITLE = Scene.game.assets[Scene.IMAGES[3]];
-                Scene.IMAGE_MESSAGE = Scene.game.assets[Scene.IMAGES[4]];
-                Scene.IMAGE_MESSAGE_ICON = Scene.game.assets[Scene.IMAGES[5]];
-                Scene.IMAGE_SHADOW = Scene.game.assets[Scene.IMAGES[6]];
+                for (var id in Scene.IMAGE)
+                    Scene.IMAGE[id].DATA = Scene.game.assets[Scene.IMAGE[id].URL];
                 onloadHandler();
             };
             Scene.game.start();
@@ -110,27 +108,36 @@
             this._keyB = false;
         }
 
+        static set keyLock(value: boolean) {
+            Scene._keyLock = value;
+            if (value)
+                Scene.resetKeys();
+        }
+        static get keyLock(): boolean {
+            return Scene._keyLock;
+        }
+
         private static eventInit() {
             Scene.game.keybind('Z'.charCodeAt(0), "a");
             Scene.game.keybind('X'.charCodeAt(0), "b");
 
             Scene.game.addEventListener(enchant.Event.UP_BUTTON_DOWN, function (e) {
-                Scene._keyUp = true;
+                Scene._keyUp = !Scene.keyLock && true;
             });
             Scene.game.addEventListener(enchant.Event.DOWN_BUTTON_DOWN, function (e) {
-                Scene._keyDown = true;
+                Scene._keyDown = !Scene.keyLock && true;
             });
             Scene.game.addEventListener(enchant.Event.RIGHT_BUTTON_DOWN, function (e) {
-                Scene._keyRight = true;
+                Scene._keyRight = !Scene.keyLock && true;
             });
             Scene.game.addEventListener(enchant.Event.LEFT_BUTTON_DOWN, function (e) {
-                Scene._keyLeft = true;
+                Scene._keyLeft = !Scene.keyLock && true;
             });
             Scene.game.addEventListener(enchant.Event.A_BUTTON_DOWN, function (e) {
-                Scene._keyA = true;
+                Scene._keyA = !Scene.keyLock && true;
             });
             Scene.game.addEventListener(enchant.Event.B_BUTTON_DOWN, function (e) {
-                Scene._keyB = true;
+                Scene._keyB = !Scene.keyLock && true;
             });
 
             Scene.game.addEventListener(enchant.Event.UP_BUTTON_UP, function (e) {

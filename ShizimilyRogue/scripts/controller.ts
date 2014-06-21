@@ -66,6 +66,8 @@
                     var results = this.dungeonManager.next(action);
                     var fov = this.dungeonManager.getFOV();
                     this._view.update(fov, results);
+                } else if (b == true) {
+                    this._view.showMenu(View.MenuType.Main, ["aaa", "bbb", "ccc", "ddd"], n => { }, false);
                 }
             }
             return null;
@@ -82,6 +84,7 @@
             // Map生成
             var fov = this.dungeonManager.getFOV();
             var data = new View.GameSceneData(
+                    this.dungeonManager.player,
                     this.dungeonManager.width,
                     this.dungeonManager.height,
                     this.dungeonManager.units,

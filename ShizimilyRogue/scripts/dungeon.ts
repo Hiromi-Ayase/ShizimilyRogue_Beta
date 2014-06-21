@@ -19,10 +19,11 @@ module ShizimilyRogue.Model {
 
     export class DungeonManager {
         private _current: Unit;
-        private _units: { [id: number]: Unit; } = {};
-        private _items: { [id: number]: Item; } = {};
+        private _units: Unit[] = [];
+        private _items: Item[] = [];
         private _width;
         private _height;
+        private _player: Player;
         private map: Map;
         private scheduler: ROT.Scheduler.Speed = new ROT.Scheduler.Speed();
 
@@ -32,8 +33,8 @@ module ShizimilyRogue.Model {
             this.map = new Map(w, h);
 
             // Playerを配置
-            var player = new Player("しじみりちゃん");
-            this.addUnit(player);
+            this._player = new Player("しじみりちゃん");
+            this.addUnit(this._player);
 
             // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
@@ -51,13 +52,13 @@ module ShizimilyRogue.Model {
         private addUnit(unit: Unit) {
             var coord = this.map.getRandomPoint(Common.Layer.Unit);
             this.map.setObject(unit, coord);
-            this.units[unit.id] = unit;
+            this._units.push(unit);
             this.scheduler.add(unit, true);
         }
 
         private removeUnit(unit: Unit) {
             this.map.deleteObject(unit);
-            delete this.units[unit.id];
+            this._units = this._units.filter(v => v.id != unit.id);
             this.scheduler.remove(unit);
         }
 
@@ -69,16 +70,20 @@ module ShizimilyRogue.Model {
             return this._height;
         }
 
-        public get units(): { [id: number]: Common.IUnit; } {
+        public get units(): Common.IUnit[] {
             return this._units;
         }
 
-        public get items(): { [id: number]: Common.IItem; } {
+        public get items(): Common.IItem[]{
             return this._items;
         }
 
         public get current(): Common.IUnit {
             return this._current;
+        }
+
+        public get player(): Common.IPlayer {
+            return this._player;
         }
 
         public getMap(): (x: number, y: number, layer: Common.Layer) => Common.IObject {
@@ -89,7 +94,7 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(this._current);
         }
 
-        public next(input: Common.Action): Common.Result[]{
+        public next(input: Common.Action): Common.Result[] {
             var allResults: Common.Result[] = [];
             var action = input;
             while (action != null) {
@@ -100,24 +105,26 @@ module ShizimilyRogue.Model {
                 var afterFov = this.map.getFOV(this._current);
 
                 // 視界範囲内のユニットに情報伝達
-                for (var i = 0; i < afterFov.units.length; i ++) {
-                    afterFov.units[i].event(r);
-                }
+                afterFov.units.forEach(unit => {
+                    unit.event(r);
+                });
 
                 // 次に行動するユニットのアクションを取り出す
                 this._current = this.scheduler.next();
-                var beforeFov = this.map.getFOV(this._current); 
+                var beforeFov = this.map.getFOV(this._current);
                 action = this._current.phase(beforeFov);
             }
             return allResults;
         }
 
-        private process(unit: Unit, action: Common.Action): Common.Result[]{
+        private process(unit: Unit, action: Common.Action): Common.Result[] {
             var results: Common.Result[] = [];
             if (action.type == Common.ActionType.Move) {
                 var ret = this.map.moveObject(unit, action.dir);
                 if (ret) {
+                    // 移動成功
                     var result = Common.Result.fromAction(unit, action);
+                    unit.dir = action.dir;
                     results.push(result);
                 }
             } else if (action.type == Common.ActionType.Attack) {
@@ -127,7 +134,10 @@ module ShizimilyRogue.Model {
                 var result = Common.Result.fromAction(unit, action);
                 results.push(result);
                 if (target.type == Common.DungeonObjectType.Unit) {
-                    result = new Common.Result(target, Common.ResultType.Damage, (action.dir + 4) % 8);
+                    // 攻撃対象がいた
+                    unit.dir = (action.dir + 4) % 8;
+                    result = new Common.Result(target, Common.ResultType.Damage, unit.dir);
+                    result.amount = Math.floor(ROT.RNG.getUniform() * 100);
                 }
                 results.push(result);
             }
@@ -225,7 +235,7 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenNeighbor: number;
 
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.Result[]) => void; 
+        event: (results: Common.Result[]) => void;
 
         constructor(data: Common.IEnemyData) {
             super(data.unitId, data.name, data.speed, data.maxHp, data.atk, data.def);
@@ -287,7 +297,7 @@ module ShizimilyRogue.Model {
         private height: number;
         private map: Cell[][][];
 
-        public constructor(w:number, h:number) {
+        public constructor(w: number, h: number) {
             this.width = w;
             this.height = h;
             this.map = new Array<Cell[][]>(h);
@@ -299,8 +309,8 @@ module ShizimilyRogue.Model {
             }
 
             // Generate Map
-            var rotMap = new ROT.Map.Dungeon(w, h);
-            var mapCallback = (x, y, value) => {
+            var rotMap = new ROT.Map.Digger(w, h);
+            rotMap.create((x, y, value) => {
                 for (var layer = 0; layer < Common.Layer.MAX; layer++) {
                     var coord = new Common.Coord(x, y, layer);
                     var cell = new Cell(coord);
@@ -315,22 +325,17 @@ module ShizimilyRogue.Model {
                         cell.object = new Null();
                     }
                 }
-            }
-            rotMap.create(mapCallback);
+            });
 
             // 通路と部屋を分ける
             if (typeof rotMap.getRooms !== "undefined") {
-                for (var y = 0; y < h; y++) {
-                    for (var x = 0; x < w; x++) {
-                        for (var j = 0; j < rotMap.getRooms().length; j++) {
-                            var room = rotMap.getRooms()[j];
-                            if (room.getLeft() <= x && x <= room.getRight() && room.getTop() <= y && y <= room.getBottom()) {
-                                this.map[y][x][Common.Layer.Floor].object = new Room();
-                                break;
-                            }
+                rotMap.getRooms().forEach(room => {
+                    for (var x = room.getLeft(); x <= room.getRight(); x++) {
+                        for (var y = room.getTop(); y <= room.getBottom(); y++) {
+                            this.map[y][x][Common.Layer.Floor].object = new Room();
                         }
                     }
-                }
+                });
             }
         }
 
@@ -368,9 +373,9 @@ module ShizimilyRogue.Model {
                 result.area.push([coord.x - 1, coord.y + 1]);
             }
 
-            for (var i = 0; i < result.area.length; i++) {
-                var x = result.area[i][0];
-                var y = result.area[i][1];
+            result.area.forEach(area => {
+                var x = area[0];
+                var y = area[1];
                 for (var layer = 0; layer < Common.Layer.MAX; layer++) {
                     var obj = this.map[y][x][layer].object;
                     if (obj instanceof Unit && obj.id != unit.id) {
@@ -378,7 +383,7 @@ module ShizimilyRogue.Model {
                         result.attackable[obj.id] = this.isAttackable(unit, obj);
                     }
                 }
-            }
+            });
 
             result.movable = [];
             for (var dir = 0; dir < ROT.DIRS[8].length; dir++) {
@@ -480,7 +485,7 @@ module ShizimilyRogue.Model {
 
         // あるレイヤのランダムな場所を取得
         public getRandomPoint(layer: number): Common.Coord {
-            var currentFreeCells:Array<Cell> = [];
+            var currentFreeCells: Array<Cell> = [];
             for (var y = 0; y < this.height; y++) {
                 for (var x = 0; x < this.width; x++) {
                     var cell: Cell = this.map[y][x][layer];

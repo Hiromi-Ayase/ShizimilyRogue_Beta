@@ -148,13 +148,13 @@ declare module ROT.Map {
     }
 
     export class Cellular extends Dungeon implements IMap {
-        constructor(width: number, height: number, options: any);
+        constructor(width: number, height: number, options?: any);
         randomize(probability: number);
         set(x: number, y: number, value: number);
     }
 
     export class Digger extends Dungeon implements IMap {
-        constructor(width: number, height: number, options: any);
+        constructor(width: number, height: number, options?: any);
     }
 
     export class DividedMaze extends Dungeon implements IMap {
@@ -201,12 +201,12 @@ declare module ROT.Map.Feature {
         clearDoors();
         static createRandom(availWidth: number, availHeight: number, options: any);
         static createRandomCenter(cx: number, cy: number, options: any);
-        getBottom();
-        getCenter();
+        getBottom(): number;
+        getCenter(): number;
         getDoors();
-        getLeft();
-        getRight();
-        getTop();
+        getLeft(): number;
+        getRight(): number;
+        getTop(): number;
         isValid(isWallCallback: Function, canBeDugCallback: Function);
     }
 }

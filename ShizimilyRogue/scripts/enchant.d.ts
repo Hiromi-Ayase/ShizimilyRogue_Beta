@@ -329,7 +329,7 @@ declare module enchant {
         constructor();
 
         // field
-        childNodes: any;
+        childNodes: any[];
         firstChild: any;
         lastChild: any;
         originX: any;
