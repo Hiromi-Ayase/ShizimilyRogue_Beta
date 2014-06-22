@@ -1,6 +1,6 @@
 ﻿module ShizimilyRogue.Model.Data {
 
-    export class Enemy implements Common.IEnemyData {
+    export class Enemy implements IEnemyData {
         unitId = 1;
         name = null;
         speed = Common.Speed.NORMAL;
@@ -28,7 +28,7 @@
         private lastMe: number[] = null;
         private lastPlayer: number[] = null;
         public phase = (fov: Common.IFOVData): Common.Action => {
-            var me = fov.coord.place;
+            var me = fov.me.coord.place;
             var player: number[] = null;
             var action: Common.Action = null;
             if (Common.PLAYER_ID in fov.units) {
@@ -37,15 +37,15 @@
 
             if (player != null) {
                 if (fov.attackable[Common.PLAYER_ID]) {
-                    var dir = Enemy.getAttackDir(fov.coord.place, player);
-                    action = new Common.AttackAction(dir);
+                    var dir = Enemy.getAttackDir(fov.me.coord.place, player);
+                    action = new Common.Action(fov.me, Common.ActionType.Attack, dir);
                 }
             }
 
             if (action == null) {
                 var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
                 if (dir != null)
-                    action = new Common.MoveAction(dir);
+                    action = new Common.Action(fov.me, Common.ActionType.Move, dir);
             }
 
             if (action == null) {
@@ -55,18 +55,18 @@
                     if (value) dirs.push(index);
                 });
                 var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = new Common.MoveAction(dir);
+                action = new Common.Action(fov.me, Common.ActionType.Attack, dir);
             }
             this.lastPlayer = player;
             this.lastMe = me;
             return action;
         }
 
-        public event = (results: Common.Result[]): void => {
+        public event = (actions: Common.Action[]): void => {
             this.lastPlayer = null;
-            for (var i = 0; i < results.length; i++) {
-                if (results[i].obj.id == Common.PLAYER_ID) {
-                    this.lastPlayer = results[i].obj.coord.place;
+            for (var i = 0; i < actions.length; i++) {
+                if (actions[i].obj.id == Common.PLAYER_ID) {
+                    this.lastPlayer = actions[i].obj.coord.place;
                     break;
                 }
             }

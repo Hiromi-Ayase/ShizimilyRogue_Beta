@@ -2,6 +2,38 @@
 
 module ShizimilyRogue.Model {
 
+    export enum TargetType {
+        Me, To, Line, Area
+    }
+    export enum ItemEffectType {
+        StatusChange, CoordChange, 
+    }
+
+    export interface IItemData {
+        itemId: number;
+        name: string;
+        num: number;
+        targetType: TargetType;
+        use: (unit: Common.IObject[]) => Common.Action[];
+    }
+
+    export interface IEnemyData {
+        unitId: number;
+        name: string;
+        speed: Common.Speed;
+        maxHp: number;
+        atk: number;
+        def: number;
+        exp: number;
+        drop: Common.IItem;
+        dropProbability: number;
+        awakeProbabilityWhenAppear: number;
+        awakeProbabilityWhenEnterRoom: number;
+        awakeProbabilityWhenNeighbor: number;
+        phase(fov: Common.IFOVData): Common.Action;
+        event(results: Common.Action[]): void;
+    }
+
     class DungeonObject implements Common.IObject {
         private static currentId = 1;
 
@@ -15,7 +47,6 @@ module ShizimilyRogue.Model {
             DungeonObject.currentId++;
         }
     }
-
 
     export class DungeonManager {
         private _current: Unit;
@@ -39,11 +70,14 @@ module ShizimilyRogue.Model {
             // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
 
+            // アイテムを配置
+            this.addItem(new Model.Data.Sweet);
+
             // 一番最初のターンはプレイヤー
             this._current = this.scheduler.next();
         }
 
-        private addEnemy(data: Common.IEnemyData): Common.IUnit {
+        private addEnemy(data: IEnemyData): Common.IUnit {
             var enemy = new Enemy(data);
             this.addUnit(enemy);
             return enemy;
@@ -54,6 +88,13 @@ module ShizimilyRogue.Model {
             this.map.setObject(unit, coord);
             this._units.push(unit);
             this.scheduler.add(unit, true);
+        }
+
+        private addItem(data: IItemData) {
+            var item = new Item(data);
+            var coord = this.map.getRandomPoint(Common.Layer.Ground);
+            this.map.setObject(item, coord);
+            this._items.push(item);
         }
 
         private removeUnit(unit: Unit) {
@@ -94,8 +135,8 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(this._current);
         }
 
-        public next(input: Common.Action): Common.Result[] {
-            var allResults: Common.Result[] = [];
+        public next(input: Common.Action): Common.Action[] {
+            var allResults: Common.Action[] = [];
             var action = input;
             while (action != null) {
                 var r = this.process(this._current, action);
@@ -117,29 +158,27 @@ module ShizimilyRogue.Model {
             return allResults;
         }
 
-        private process(unit: Unit, action: Common.Action): Common.Result[] {
-            var results: Common.Result[] = [];
+        private process(unit: Unit, action: Common.Action): Common.Action[] {
+            var results: Common.Action[] = [];
             if (action.type == Common.ActionType.Move) {
                 var ret = this.map.moveObject(unit, action.dir);
                 if (ret) {
                     // 移動成功
-                    var result = Common.Result.fromAction(unit, action);
                     unit.dir = action.dir;
-                    results.push(result);
+                    results.push(action);
                 }
             } else if (action.type == Common.ActionType.Attack) {
                 var x = unit.coord.x + ROT.DIRS[8][action.dir][0];
                 var y = unit.coord.y + ROT.DIRS[8][action.dir][1];
                 var target = this.getMap()(x, y, Common.Layer.Unit);
-                var result = Common.Result.fromAction(unit, action);
-                results.push(result);
+                results.push(action);
                 if (target.type == Common.DungeonObjectType.Unit) {
                     // 攻撃対象がいた
                     unit.dir = (action.dir + 4) % 8;
-                    result = new Common.Result(target, Common.ResultType.Damage, unit.dir);
-                    result.amount = Math.floor(ROT.RNG.getUniform() * 100);
+                    var damageAction = new Common.Action(target, Common.ActionType.HpChange, unit.dir);
+                    damageAction.amount = Math.floor(ROT.RNG.getUniform() * 100);
+                    results.push(damageAction);
                 }
-                results.push(result);
             }
             return results;
         }
@@ -147,8 +186,20 @@ module ShizimilyRogue.Model {
 
     class Item extends DungeonObject implements Common.IItem {
         type = Common.DungeonObjectType.Item;
-        name;
-        num;
+        name: string;
+        num: number;
+        itemId: number;
+        targetType: TargetType;
+        use: (unit: Common.IObject[]) => Common.Action[];
+
+        constructor(data: IItemData) {
+            super();
+            this.name = data.name;
+            this.num = data.num;
+            this.itemId = data.itemId;
+            this.use = data.use;
+            this.targetType = data.targetType;
+        }
     }
 
     interface DungeonUnit extends Common.IUnit {
@@ -165,9 +216,9 @@ module ShizimilyRogue.Model {
         getObject(place: number[], layer: Common.Layer): Common.IObject {
             return this.getObjectFunction(place, layer);
         }
-        coord: Common.Coord;
         units: Unit[] = [];
         attackable: { [id: number]: boolean } = {};
+        me: Unit;
     }
 
     class Unit extends DungeonObject implements DungeonUnit {
@@ -182,7 +233,7 @@ module ShizimilyRogue.Model {
         }
 
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.Result[]) => void;
+        event: (results: Common.Action[]) => void;
 
         constructor(
             public unitId: number,
@@ -218,7 +269,7 @@ module ShizimilyRogue.Model {
             return null;
         }
 
-        event = (results: Common.Result[]) => {
+        event = (results: Common.Action[]) => {
         }
 
         constructor(name: string) {
@@ -226,7 +277,7 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Enemy extends Unit implements Common.IEnemyData {
+    class Enemy extends Unit {
         exp: number;
         drop: Item;
         dropProbability: number;
@@ -235,9 +286,9 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenNeighbor: number;
 
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.Result[]) => void;
+        event: (results: Common.Action[]) => void;
 
-        constructor(data: Common.IEnemyData) {
+        constructor(data: IEnemyData) {
             super(data.unitId, data.name, data.speed, data.maxHp, data.atk, data.def);
             this.exp = data.exp;
             this.drop = <Item>data.drop;
@@ -391,7 +442,7 @@ module ShizimilyRogue.Model {
                 result.movable.push(movable);
             }
 
-            result.coord = unit.coord;
+            result.me = unit;
             return result;
         }
 

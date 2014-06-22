@@ -1,7 +1,7 @@
 ﻿module ShizimilyRogue.Controller {
     // ダンジョンの論理サイズ
-    var WIDTH = 15;
-    var HEIGHT = 15;
+    var WIDTH = 25;
+    var HEIGHT = 25;
 
     export class Game {
         private scene: Scene;
@@ -62,7 +62,7 @@
                 if (dir != null) {
                     if (Common.DEBUG)
                         View.Scene.resetKeys();
-                    var action = new Common.MoveAction(dir);
+                    var action = new Common.Action(this.dungeonManager.player, Common.ActionType.Move, dir);
                     var results = this.dungeonManager.next(action);
                     var fov = this.dungeonManager.getFOV();
                     this._view.update(fov, results);

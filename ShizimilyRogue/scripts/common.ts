@@ -3,10 +3,6 @@
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
-    export enum DungeonObjectType {
-        Null, Wall, Path, Room, Unit, Item
-    }
-
     // 4:Effect レイヤ  
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob
@@ -20,12 +16,14 @@
         UP, UP_RIGHT, RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT
     }
 
-    export enum ActionType {
-        Move, Attack, Use, Throw
+    export enum DungeonObjectType {
+        Null, Wall, Path, Room, Unit, Item
     }
 
-    export enum ResultType {
-        Move, Attack, Use, Input, Throw, Damage, Die, Recieve, None
+    export enum ActionType {
+        Move, Attack, Use, Input, Throw, // 能動的アクション
+        Die, Recieve, HpChange, Swap, Blown,// 受動的アクション
+        AddObject, None
     }
 
     export enum DungeonUnitState {
@@ -58,79 +56,17 @@
     }
     
     export class Action {
-        dir: DIR;
-        type: ActionType;
-        item1: IItem;
-        item2: IItem;
-
-        constructor(type: ActionType, dir: DIR) {
-            this.type = type;
-            this.dir = dir;
-        }
-    }
-
-    export class MoveAction extends Action {
-        constructor(dir: number) {
-            super(ActionType.Move, dir);
-        }
-    }
-    
-    export class AttackAction extends Action {
-        constructor(dir: number) {
-            super(ActionType.Attack, dir);
-        }
-    }
-
-    export class UseAction extends Action {
-        constructor(dir: number, item1: IItem, item2: IItem = null) {
-            super(ActionType.Use, dir);
-            this.item1 = item1;
-            this.item2 = item2;
-        }
-    }
-
-    export class ThrowAction extends Action {
-        constructor(dir: number, item: IItem) {
-            super(ActionType.Throw, dir);
-            this.item1 = item;
-        }
-    }
-
-    export class Result {
         obj: IObject;
         dir: DIR; 
-        type: ResultType;
-        item1: IItem;
-        item2: IItem;
+        type: ActionType;
+        target1: IObject[];
+        target2: IObject[];
         amount: number;
 
-        constructor(obj: IObject, type: ResultType, dir: DIR) {
+        constructor(obj: IObject, type: ActionType, dir?: DIR) {
             this.obj = obj;
             this.type = type;
             this.dir = dir;
-        }
-
-        static fromAction(obj: IObject, action: Action, amount: number = null ): Result {
-            var type: ResultType;
-            switch (action.type) {
-                case ActionType.Attack:
-                    type = ResultType.Attack;
-                    break;
-                case ActionType.Move:
-                    type = ResultType.Move;
-                    break;
-                case ActionType.Use:
-                    type = ResultType.Use;
-                    break;
-                case ActionType.Throw:
-                    type = ResultType.Throw;
-                    break;
-            }
-            var result = new Result(obj, type, action.dir);
-            result.item1 = action.item1;
-            result.item2 = action.item2;
-            result.amount = amount;
-            return result;
         }
     }
 
@@ -147,7 +83,7 @@
         state: DungeonUnitState;
         name: string;
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.Result[]) => void;
+        event: (results: Common.Action[]) => void;
     }
 
     export interface IPlayer extends IUnit {
@@ -166,27 +102,11 @@
     export interface IItem extends IObject {
         name: string;
         num: number;
-    }
-
-    export interface IEnemyData {
-        unitId: number;
-        name: string;
-        speed: Common.Speed;
-        maxHp: number;
-        atk: number;
-        def: number;
-        exp: number;
-        drop: IItem;
-        dropProbability: number;
-        awakeProbabilityWhenAppear: number;
-        awakeProbabilityWhenEnterRoom: number;
-        awakeProbabilityWhenNeighbor: number;
-        phase(fov: Common.IFOVData): Common.Action;
-        event(results: Common.Result[]): void;
+        itemId: number;
     }
 
     export interface IFOVData {
-        coord: Coord;
+        me: IUnit;
         area: number[][];
         movable: boolean[];
         getObject(place: number[], Layer: Layer): IObject;
@@ -201,6 +121,7 @@
 module ShizimilyRogue {
     export function start() {
         window.onload = function (e) {
+            window.focus();
             var game = new ShizimilyRogue.Controller.Game();
             game.start();
         };
