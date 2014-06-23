@@ -21,7 +21,7 @@
     }
 
     export enum ActionType {
-        Move, Attack, Use, Input, Throw, // 能動的アクション
+        Move, Attack, Use, Input, Throw, Pick, // 能動的アクション
         Die, Recieve, HpChange, Swap, Blown,// 受動的アクション
         AddObject, None
     }
@@ -54,20 +54,18 @@
             this._layer = layer;
         }
     }
-    
-    export class Action {
-        obj: IObject;
-        dir: DIR; 
-        type: ActionType;
-        target1: IObject[];
-        target2: IObject[];
-        amount: number;
 
-        constructor(obj: IObject, type: ActionType, dir?: DIR) {
-            this.obj = obj;
-            this.type = type;
-            this.dir = dir;
-        }
+    export class Action {
+        constructor(
+            public type: Common.ActionType,
+            public params?: number[],
+            public objects?: IObject[]) { }
+    }
+
+    export interface IResult {
+        object: IObject;
+        sender: IObject;
+        action: Action;
     }
 
     export interface IObject {
@@ -83,7 +81,7 @@
         state: DungeonUnitState;
         name: string;
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.Action[]) => void;
+        event: (results: Common.IResult[]) => void;
     }
 
     export interface IPlayer extends IUnit {
@@ -110,7 +108,7 @@
         area: number[][];
         movable: boolean[];
         getObject(place: number[], Layer: Layer): IObject;
-        units: IUnit[];
+        objects: IObject[];
         attackable: { [id: number]: boolean };
     }
 

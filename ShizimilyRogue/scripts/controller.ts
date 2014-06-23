@@ -62,7 +62,7 @@
                 if (dir != null) {
                     if (Common.DEBUG)
                         View.Scene.resetKeys();
-                    var action = new Common.Action(this.dungeonManager.player, Common.ActionType.Move, dir);
+                    var action = new Common.Action(Common.ActionType.Move, [dir]);
                     var results = this.dungeonManager.next(action);
                     var fov = this.dungeonManager.getFOV();
                     this._view.update(fov, results);
@@ -87,9 +87,7 @@
                     this.dungeonManager.player,
                     this.dungeonManager.width,
                     this.dungeonManager.height,
-                    this.dungeonManager.units,
-                    this.dungeonManager.items,
-                    null, // effects
+                    this.dungeonManager.objects,
                     this.dungeonManager.getMap()
                 );
 

@@ -31,21 +31,21 @@
             var me = fov.me.coord.place;
             var player: number[] = null;
             var action: Common.Action = null;
-            if (Common.PLAYER_ID in fov.units) {
-                player = fov.units[Common.PLAYER_ID].coord.place;
+            if (Common.PLAYER_ID in fov.objects) {
+                player = fov.objects[Common.PLAYER_ID].coord.place;
             }
 
             if (player != null) {
                 if (fov.attackable[Common.PLAYER_ID]) {
                     var dir = Enemy.getAttackDir(fov.me.coord.place, player);
-                    action = new Common.Action(fov.me, Common.ActionType.Attack, dir);
+                    action = new Common.Action(Common.ActionType.Attack, [dir]);
                 }
             }
 
             if (action == null) {
                 var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
                 if (dir != null)
-                    action = new Common.Action(fov.me, Common.ActionType.Move, dir);
+                    action = new Common.Action(Common.ActionType.Move, [dir]);
             }
 
             if (action == null) {
@@ -55,18 +55,18 @@
                     if (value) dirs.push(index);
                 });
                 var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = new Common.Action(fov.me, Common.ActionType.Attack, dir);
+                action = new Common.Action(Common.ActionType.Attack, [dir]);
             }
             this.lastPlayer = player;
             this.lastMe = me;
             return action;
         }
 
-        public event = (actions: Common.Action[]): void => {
+        public event = (results: Common.IResult[]): void => {
             this.lastPlayer = null;
-            for (var i = 0; i < actions.length; i++) {
-                if (actions[i].obj.id == Common.PLAYER_ID) {
-                    this.lastPlayer = actions[i].obj.coord.place;
+            for (var i = 0; i < results.length; i++) {
+                if (results[i].object.id == Common.PLAYER_ID) {
+                    this.lastPlayer = results[i].object.coord.place;
                     break;
                 }
             }
