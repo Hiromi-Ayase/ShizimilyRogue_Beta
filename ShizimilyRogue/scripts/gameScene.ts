@@ -71,19 +71,19 @@ module ShizimilyRogue.View {
         }
 
         private static getPathShadow() {
-            var map: number[][] = [];
+            var map: Common.Coord[] = [];
 
             var x = Math.floor(VIEW_WIDTH / OBJECT_WIDTH / 2);
             var y = Math.floor(VIEW_HEIGHT / OBJECT_HEIGHT / 2) + 1;
-            map.push([x + 1, y - 1]);
-            map.push([x + 1, y]);
-            map.push([x + 1, y + 1]);
-            map.push([x, y - 1]);
-            map.push([x, y]);
-            map.push([x, y + 1]);
-            map.push([x - 1, y - 1]);
-            map.push([x - 1, y]);
-            map.push([x - 1, y + 1]);
+            map.push(new Common.Coord(x + 1, y - 1));
+            map.push(new Common.Coord(x + 1, y));
+            map.push(new Common.Coord(x + 1, y + 1));
+            map.push(new Common.Coord(x, y - 1));
+            map.push(new Common.Coord(x, y));
+            map.push(new Common.Coord(x, y + 1));
+            map.push(new Common.Coord(x - 1, y - 1));
+            map.push(new Common.Coord(x - 1, y));
+            map.push(new Common.Coord(x - 1, y + 1));
             var pathShadow = new Shadow(VIEW_WIDTH / OBJECT_WIDTH + 2, VIEW_HEIGHT / OBJECT_HEIGHT + 2);
 
             pathShadow.x = 0;
@@ -104,7 +104,7 @@ module ShizimilyRogue.View {
 
         update(fov: Common.IFOVData, results: Common.IResult[]): void {
             var player = this.data.player;
-            if (fov.getObject(player.coord.place, Common.Layer.Floor).type == Common.DungeonObjectType.Room) {
+            if (fov.getObject(player.coord)[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
                 this.pathShadow.visible = false;
             } else {
                 this.pathShadow.visible = true;
@@ -227,7 +227,7 @@ module ShizimilyRogue.View {
                 var u: ViewObject;
                 if (ret.length == 0) {
                     // Viewの情報としてないが、Dataにはある＝新規ユニット
-                    u = new ViewObject(unit);
+                    u = ViewObjectFactory.getInstance(unit);
                     this.layer[u.layer].addChild(u);
                 } else {
                     // 元からある
@@ -261,7 +261,8 @@ module ShizimilyRogue.View {
 
         // 部屋にいる時の影
         private updateShadow(fov: Common.IFOVData): void {
-            if (fov.getObject(fov.me.coord.place, Common.Layer.Floor).type == Common.DungeonObjectType.Room) {
+            var objs = fov.getObject(fov.me.coord);
+            if (fov.getObject(fov.me.coord)[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
                 this.roomShadow.visible = true;
                 this.roomShadow.update(fov.area);
             } else {
@@ -357,7 +358,7 @@ module ShizimilyRogue.View {
             this.image = Scene.IMAGE.SHADOW.DATA;
         }
 
-        public update(area: number[][]) {
+        public update(area: Common.Coord[]) {
             var map:number[][] = [];
             for (var y = 0; y < this.h; y++) {
                 map.push(new Array<number>(this.w));
@@ -365,36 +366,56 @@ module ShizimilyRogue.View {
                     map[y][x] = 0;
                 }
             }
-            area.forEach(a => { map[a[1]][a[0]] = 1; });
+            area.forEach(a => { map[a.y][a.x] = 1; });
             this.loadData(map);
         }
     }
 
+    class ViewObjectFactory {
+        static getInstance(object: Common.IObject): ViewObject {
+            switch (object.type) {
+                case Common.DungeonObjectType.Unit:
+                    return ViewObjectFactory.getUnitInstance(object);
+                case Common.DungeonObjectType.Item:
+                    return ViewObjectFactory.getItemInstance(object);
+            }
+        }
+
+        private static getUnitInstance(obj: Common.IObject): ViewObject {
+            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1);
+        }
+
+        private static getItemInstance(obj: Common.IObject): ViewObject {
+            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1);
+        }
+    }
+
     class ViewObject extends enchant.Group {
+        private static marginY = - 0.3;
         private data: Common.IObject;
         private sprite: enchant.Sprite;
-        constructor(object: Common.IObject) {
+        constructor(object: Common.IObject, image: enchant.Surface, frame: number) {
             super();
             this.data = object;
 
             this.sprite = new enchant.Sprite(OBJECT_WIDTH, OBJECT_HEIGHT);
-            this.sprite.image = Scene.IMAGE.UNIT.DATA;
-            this.sprite.frame = 1;
+            this.sprite.image = image;
+            this.sprite.frame = frame;
             var coord = this.data.coord;
-            this.moveTo(coord.x * OBJECT_WIDTH, (coord.y - 0.5) * OBJECT_HEIGHT);
+            this.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
         }
 
         action(result: Common.IResult): void {
             if (this.sprite.visible == false) {
                 var coord = this.data.coord;
-                this.moveTo(coord.x * OBJECT_WIDTH, (coord.y - 0.5) * OBJECT_HEIGHT);
+                this.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT);
                 return;
             }
             if (result.action.type == Common.ActionType.Move) {
                 var coord = this.data.coord;
                 Scene.addAnimating();
-                this.tl.moveTo(coord.x * OBJECT_WIDTH, (coord.y - 0.5) * OBJECT_HEIGHT, 10).then(function() {
+                this.tl.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT, 10).then(function() {
                     Scene.decAnimating();
                 });
             }
@@ -409,7 +430,7 @@ module ShizimilyRogue.View {
         }
 
         get layer(): Common.Layer {
-            return this.data.coord.layer;
+            return this.data.layer;
         }
     }
     
@@ -471,7 +492,6 @@ module ShizimilyRogue.View {
             ];
             var map: number[][] = [];
             var WALL = Common.DungeonObjectType.Wall;
-            var ITEM = Common.DungeonObjectType.Wall;
             var flg = true;
 
             for (var y = 0; y < h; y++) {

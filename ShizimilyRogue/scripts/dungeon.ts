@@ -10,7 +10,7 @@ module ShizimilyRogue.Model {
     }
 
     export interface IItemData {
-        itemId: number;
+        category: number;
         name: string;
         num: number;
         targetType: TargetType;
@@ -18,7 +18,7 @@ module ShizimilyRogue.Model {
     }
 
     export interface IEnemyData {
-        unitId: number;
+        category: number;
         name: string;
         speed: Common.Speed;
         maxHp: number;
@@ -54,10 +54,12 @@ module ShizimilyRogue.Model {
     class DungeonObject implements Common.IObject {
         private static currentId = 1;
 
+        category = 0;
         coord: Common.Coord = null;
         corner: boolean = false;
         type: Common.DungeonObjectType = null;
-        id;
+        id: number;
+        layer: Common.Layer = null;
 
         constructor() {
             this.id = DungeonObject.currentId;
@@ -180,7 +182,7 @@ module ShizimilyRogue.Model {
                     results.push(result);
                     var dst = DungeonManager.getDst(unit, action.params[0]);
                     var ground = this.map.getTable()(dst[0], dst[1], Common.Layer.Ground);
-                    if (ground.type == Common.DungeonObjectType.Item) {
+                    if (unit.id == Common.PLAYER_ID && ground.type == Common.DungeonObjectType.Item) {
                         results.push(Result.getInstance(unit, ground, Common.ActionType.Pick));
                     }
                 }
@@ -245,10 +247,10 @@ module ShizimilyRogue.Model {
     }
 
     class Item extends DungeonObject implements Common.IItem {
+        layer = Common.Layer.Ground;
         type = Common.DungeonObjectType.Item;
         name: string;
         num: number;
-        itemId: number;
         targetType: TargetType;
         use: (unit: Common.IObject) => Common.Action[];
 
@@ -256,32 +258,27 @@ module ShizimilyRogue.Model {
             super();
             this.name = data.name;
             this.num = data.num;
-            this.itemId = data.itemId;
+            this.category = data.category;
             this.use = data.use;
             this.targetType = data.targetType;
         }
     }
 
-    interface DungeonUnit extends Common.IUnit {
-        hp: number;
-        maxHp: number;
-        atk: number;
-        def: number;
-    }
-
     class FOVData implements Common.IFOVData {
-        getObjectFunction: (place: number[], layer: Common.Layer) => Common.IObject;
-        area: number[][] = [];
+        getObjectFunction: (coord: Common.Coord) => Common.IObject[];
+        area: Common.Coord[] = [];
         movable: boolean[] = [];
-        getObject(place: number[], layer: Common.Layer): Common.IObject {
-            return this.getObjectFunction(place, layer);
+        getObject(coord: Common.Coord): Common.IObject[] {
+            return this.getObjectFunction(coord);
         }
         objects: DungeonObject[] = [];
         attackable: { [id: number]: boolean } = {};
         me: Unit;
     }
 
-    class Unit extends DungeonObject implements DungeonUnit {
+    class Unit extends DungeonObject implements Common.IUnit {
+        lv = 1;
+        layer = Common.Layer.Unit;
         type = Common.DungeonObjectType.Unit;
         hp: number;
 
@@ -296,7 +293,7 @@ module ShizimilyRogue.Model {
         event: (results: Common.IResult[]) => void;
 
         constructor(
-            public unitId: number,
+            public category: number,
             public name: string,
             public speed: Common.Speed,
             public maxHp: number,
@@ -308,7 +305,6 @@ module ShizimilyRogue.Model {
     }
 
     class Player extends Unit implements Common.IPlayer {
-        lv = 1;
         id = Common.PLAYER_ID;
         inventory = [];
         currentExp = 0;
@@ -349,7 +345,7 @@ module ShizimilyRogue.Model {
         event: (results: Common.IResult[]) => void;
 
         constructor(data: IEnemyData) {
-            super(data.unitId, data.name, data.speed, data.maxHp, data.atk, data.def);
+            super(data.category, data.name, data.speed, data.maxHp, data.atk, data.def);
             this.exp = data.exp;
             this.drop = <Item>data.drop;
             this.dropProbability = data.dropProbability;
@@ -363,15 +359,18 @@ module ShizimilyRogue.Model {
 
     class Wall extends DungeonObject {
         type = Common.DungeonObjectType.Wall;
+        layer = Common.Layer.Floor;
         corner = true;
     }
 
     class Room extends DungeonObject {
         type = Common.DungeonObjectType.Room;
+        layer = Common.Layer.Floor;
     }
 
     class Path extends DungeonObject {
         type = Common.DungeonObjectType.Path;
+        layer = Common.Layer.Floor;
     }
 
     class Null extends DungeonObject {
@@ -380,20 +379,27 @@ module ShizimilyRogue.Model {
     }
 
     class Cell {
-        private _object: DungeonObject;
+        private _objects: DungeonObject[] = new Array<DungeonObject>(Common.Layer.MAX);
         private _coord: Common.Coord;
 
         constructor(coord: Common.Coord) {
             this._coord = coord;
+            for (var layer = 0; layer < Common.Layer.MAX; layer++)
+                this.del(layer);
+        }
+
+        del(layer: Common.Layer): void {
+            this._objects[layer] = new Null();
+            this._objects[layer].coord = this._coord;
         }
 
         set object(obj: DungeonObject) {
-            this._object = obj;
-            this._object.coord = this._coord;
+            this._objects[obj.layer] = obj;
+            obj.coord = this._coord;
         }
 
-        get object() {
-            return this._object;
+        get objects() {
+            return this._objects;
         }
 
         get coord() {
@@ -406,36 +412,24 @@ module ShizimilyRogue.Model {
 
         private width: number;
         private height: number;
-        private map: Cell[][][];
+        private map: Cell[][];
 
         public constructor(w: number, h: number) {
             this.width = w;
             this.height = h;
-            this.map = new Array<Cell[][]>(h);
+            this.map = new Array<Cell[]>(h);
             for (var y = 0; y < h; y++) {
-                this.map[y] = new Array<Cell[]>(w);
+                this.map[y] = new Array<Cell>(w);
                 for (var x = 0; x < w; x++) {
-                    this.map[y][x] = new Array<Cell>(Common.Layer.MAX);
+                    var coord = new Common.Coord(x, y);
+                    this.map[y][x] = new Cell(coord);
                 }
             }
 
             // Generate Map
             var rotMap = new ROT.Map.Digger(w, h);
             rotMap.create((x, y, value) => {
-                for (var layer = 0; layer < Common.Layer.MAX; layer++) {
-                    var coord = new Common.Coord(x, y, layer);
-                    var cell = new Cell(coord);
-                    this.map[y][x][layer] = cell;
-                    if (layer == Common.Layer.Floor) {
-                        if (value) {
-                            cell.object = new Wall();
-                        } else {
-                            cell.object = new Path();
-                        }
-                    } else {
-                        cell.object = new Null();
-                    }
-                }
+                this.map[y][x].object = value ? new Wall() : new Path();
             });
 
             // 通路と部屋を分ける
@@ -443,7 +437,7 @@ module ShizimilyRogue.Model {
                 rotMap.getRooms().forEach(room => {
                     for (var x = room.getLeft(); x <= room.getRight(); x++) {
                         for (var y = room.getTop(); y <= room.getBottom(); y++) {
-                            this.map[y][x][Common.Layer.Floor].object = new Room();
+                            this.map[y][x].object = new Room();
                         }
                     }
                 });
@@ -456,8 +450,8 @@ module ShizimilyRogue.Model {
                 if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
                     return false;
                 }
-                var cell = this.map[y][x][Common.Layer.Floor];
-                if (cell.object.type == Common.DungeonObjectType.Room) {
+                var cell = this.map[y][x];
+                if (cell.objects[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
                     return true;
                 }
                 return false;
@@ -468,27 +462,25 @@ module ShizimilyRogue.Model {
             var coords: Common.Coord[] = [];
             var result: FOVData = new FOVData();
             fov.compute(coord.x, coord.y, 10, (x, y, r, visibility) => {
-                result.area.push([x, y]);
+                result.area.push(this.map[y][x].coord);
             });
-            result.getObjectFunction = (place, layer) => {
-                return this.map[place[1]][place[0]][layer].object;
+            result.getObjectFunction = (place) => {
+                return this.map[place.y][place.x].objects;
             };
             if (result.area.length == 1) {
-                result.area.push([coord.x + 1, coord.y - 1]);
-                result.area.push([coord.x + 1, coord.y]);
-                result.area.push([coord.x + 1, coord.y + 1]);
-                result.area.push([coord.x, coord.y - 1]);
-                result.area.push([coord.x, coord.y + 1]);
-                result.area.push([coord.x - 1, coord.y - 1]);
-                result.area.push([coord.x - 1, coord.y]);
-                result.area.push([coord.x - 1, coord.y + 1]);
+                result.area.push(this.map[coord.y + 1][coord.x - 1].coord);
+                result.area.push(this.map[coord.y + 1][coord.x].coord);
+                result.area.push(this.map[coord.y + 1][coord.x + 1].coord);
+                result.area.push(this.map[coord.y][coord.x - 1].coord);
+                result.area.push(this.map[coord.y][coord.x + 1].coord);
+                result.area.push(this.map[coord.y - 1][coord.x - 1].coord);
+                result.area.push(this.map[coord.y - 1][coord.x].coord);
+                result.area.push(this.map[coord.y - 1][coord.x + 1].coord);
             }
 
             result.area.forEach(area => {
-                var x = area[0];
-                var y = area[1];
                 for (var layer = Common.Layer.Ground; layer < Common.Layer.MAX; layer++) {
-                    var obj = this.map[y][x][layer].object;
+                    var obj = this.map[area.y][area.x].objects[layer];
                     if (obj.type != Common.DungeonObjectType.Null && obj.id != unit.id) {
                         result.objects.push(obj);
                         result.attackable[obj.id] = this.isAttackable(unit, obj);
@@ -516,17 +508,17 @@ module ShizimilyRogue.Model {
             }
 
             var coord = obj.coord;
-            var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
-            var floorCell = this.map[coord.y + dirY][coord.x + dirX][Common.Layer.Floor];
+            var newCell = this.map[coord.y + dirY][coord.x + dirX];
 
-            if (floorCell.object.type != Common.DungeonObjectType.Wall) {
+            if (newCell.objects[Common.Layer.Floor].type != Common.DungeonObjectType.Wall) {
                 if (dirX == 0 || dirY == 0) {
                     return true;
                 } else {
-                    var cornerCell1 = this.map[coord.y][coord.x + dirX][Common.Layer.Floor];
-                    var cornerCell2 = this.map[coord.y + dirY][coord.x][Common.Layer.Floor];
-                    if (cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
-                        return true;
+                    var cornerCell1 = this.map[coord.y][coord.x + dirX];
+                    var cornerCell2 = this.map[coord.y + dirY][coord.x];
+                    if (cornerCell1.objects[Common.Layer.Floor].corner == false
+                        && cornerCell2.objects[Common.Layer.Floor].corner == false) {
+                            return true;
                     }
                 }
             }
@@ -538,16 +530,17 @@ module ShizimilyRogue.Model {
             var dirX = ROT.DIRS[8][dir][0];
             var dirY = ROT.DIRS[8][dir][1];
             var coord = obj.coord;
-            var newCell = this.map[coord.y + dirY][coord.x + dirX][coord.layer];
-            var floorCell = this.map[coord.y + dirY][coord.x + dirX][Common.Layer.Floor];
+            var newCell = this.map[coord.y + dirY][coord.x + dirX];
 
-            if (newCell.object.type == Common.DungeonObjectType.Null && floorCell.object.type != Common.DungeonObjectType.Wall) {
+            if (newCell.objects[obj.layer].type == Common.DungeonObjectType.Null
+                && newCell.objects[Common.Layer.Floor].type != Common.DungeonObjectType.Wall) {
                 if (dirX == 0 || dirY == 0) {
                     return true;
                 } else {
-                    var cornerCell1 = this.map[coord.y][coord.x + dirX][Common.Layer.Floor];
-                    var cornerCell2 = this.map[coord.y + dirY][coord.x][Common.Layer.Floor];
-                    if (cornerCell1.object.corner == false && cornerCell2.object.corner == false) {
+                    var cornerCell1 = this.map[coord.y][coord.x + dirX];
+                    var cornerCell2 = this.map[coord.y + dirY][coord.x];
+                    if (cornerCell1.objects[Common.Layer.Floor].corner == false
+                        && cornerCell2.objects[Common.Layer.Floor].corner == false) {
                         return true;
                     }
                 }
@@ -559,9 +552,9 @@ module ShizimilyRogue.Model {
         public moveObject(obj: DungeonObject, dir: number): boolean {
             if (this.isMovable(obj, dir)) {
                 var coord = obj.coord;
-                var oldCell = this.map[coord.y][coord.x][coord.layer];
-                var newCell = this.map[coord.y + ROT.DIRS[8][dir][1]][coord.x + ROT.DIRS[8][dir][0]][coord.layer];
-                oldCell.object = new Null();
+                var oldCell = this.map[coord.y][coord.x];
+                var newCell = this.map[coord.y + ROT.DIRS[8][dir][1]][coord.x + ROT.DIRS[8][dir][0]];
+                this.deleteObject(obj);
                 newCell.object = obj;
                 return true;
             } else {
@@ -573,8 +566,8 @@ module ShizimilyRogue.Model {
         public deleteObject(obj: DungeonObject): boolean {
             var coord = obj.coord;
             if (obj.coord != null) {
-                var cell = this.map[coord.y][coord.x][coord.layer];
-                cell.object = new Null();
+                var cell = this.map[coord.y][coord.x];
+                cell.del(obj.layer);
                 return true;
             }
             return false;
@@ -582,10 +575,10 @@ module ShizimilyRogue.Model {
 
         // オブジェクトの追加
         public setObject(obj: DungeonObject, coord: Common.Coord, force: boolean = true): boolean {
-            var cell = this.map[coord.y][coord.x][coord.layer];
-            if (cell.object.type == Common.DungeonObjectType.Null) {
+            var cell = this.map[coord.y][coord.x];
+            if (cell.objects[obj.layer].type == Common.DungeonObjectType.Null) {
                 if (force) {
-                    this.deleteObject(cell.object);
+                    this.deleteObject(cell.objects[obj.layer]);
                 } else {
                     return false;
                 }
@@ -599,9 +592,9 @@ module ShizimilyRogue.Model {
             var currentFreeCells: Array<Cell> = [];
             for (var y = 0; y < this.height; y++) {
                 for (var x = 0; x < this.width; x++) {
-                    var cell: Cell = this.map[y][x][layer];
-                    var floorCell: Cell = this.map[y][x][Common.Layer.Floor];
-                    if (cell.object.type == Common.DungeonObjectType.Null && floorCell.object.type == Common.DungeonObjectType.Room) {
+                    var cell: Cell = this.map[y][x];
+                    if (cell.objects[layer].type == Common.DungeonObjectType.Null
+                        && cell.objects[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
                         currentFreeCells.push(cell);
                     }
                 }
@@ -613,7 +606,7 @@ module ShizimilyRogue.Model {
         // あるレイヤの[オブジェクトタイプ,オブジェクトID]を取得
         public getTable(): (x: number, y: number, layer: Common.Layer) => DungeonObject {
             return (x: number, y: number, layer: Common.Layer) => {
-                return this.map[y][x][layer].object;
+                return this.map[y][x].objects[layer];
             };
         }
     }

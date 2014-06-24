@@ -1,7 +1,7 @@
 ﻿module ShizimilyRogue.Model.Data {
 
     export class Enemy implements IEnemyData {
-        unitId = 1;
+        category = 0;
         name = null;
         speed = Common.Speed.NORMAL;
         maxHp = 100;
@@ -25,19 +25,19 @@
             [Common.DIR.UP_LEFT, Common.DIR.UP, Common.DIR.LEFT, Common.DIR.UP_RIGHT, Common.DIR.DOWN_LEFT],
         ];
 
-        private lastMe: number[] = null;
-        private lastPlayer: number[] = null;
+        private lastMe: Common.Coord = null;
+        private lastPlayer: Common.Coord = null;
         public phase = (fov: Common.IFOVData): Common.Action => {
-            var me = fov.me.coord.place;
-            var player: number[] = null;
+            var me = fov.me.coord;
+            var player:Common.Coord = null;
             var action: Common.Action = null;
             if (Common.PLAYER_ID in fov.objects) {
-                player = fov.objects[Common.PLAYER_ID].coord.place;
+                player = fov.objects[Common.PLAYER_ID].coord;
             }
 
             if (player != null) {
                 if (fov.attackable[Common.PLAYER_ID]) {
-                    var dir = Enemy.getAttackDir(fov.me.coord.place, player);
+                    var dir = Enemy.getAttackDir(fov.me.coord, player);
                     action = new Common.Action(Common.ActionType.Attack, [dir]);
                 }
             }
@@ -66,15 +66,15 @@
             this.lastPlayer = null;
             for (var i = 0; i < results.length; i++) {
                 if (results[i].object.id == Common.PLAYER_ID) {
-                    this.lastPlayer = results[i].object.coord.place;
+                    this.lastPlayer = results[i].object.coord;
                     break;
                 }
             }
         }
 
-        private static getAttackDir(src: number[], dst: number[], neighbor: boolean = true): number {
-            var diffX = dst[0] - src[0];
-            var diffY = dst[1] - src[1];
+        private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {
+            var diffX = dst.x - src.x;
+            var diffY = dst.x - src.y;
 
             if (diffX == 0 && diffY > 0) {
                 return Common.DIR.DOWN;
@@ -96,10 +96,10 @@
             return null;
         }
         
-        private static move(me: number[], player: number[], lastMe: number[], fov: Common.IFOVData): number {
+        private static move(me: Common.Coord, player: Common.Coord, lastMe: Common.Coord, fov: Common.IFOVData): number {
             // 移動AI
             var dir: number = null;
-            var inRoom = fov.getObject(me, Common.Layer.Floor).type == Common.DungeonObjectType.Room;
+            var inRoom = fov.getObject(me)[Common.Layer.Floor].type == Common.DungeonObjectType.Room;
 
             if (!inRoom) {
                 // 通路の時
@@ -116,11 +116,11 @@
                     // プレイヤーを探す
                     dir = Enemy.getDir(me, player, fov.movable);
                 } else {
-                    var enter: number[][] = [];
+                    var enter: Common.Coord[] = [];
                     // 出入口を探す
                     for (var i = 0; i < fov.area.length; i++) {
                         var place = fov.area[i];
-                        if (fov.getObject(place, Common.Layer.Floor).type == Common.DungeonObjectType.Path) {
+                        if (fov.getObject(place)[Common.Layer.Floor].type == Common.DungeonObjectType.Path) {
                             enter.push(place);
                         }
                     }
@@ -133,9 +133,9 @@
             return dir;
         }
 
-        private static getDir(me: number[], target: number[], movable: boolean[]): number {
-            var vecX = target[0] - me[0];
-            var vecY = target[1] - me[1];
+        private static getDir(me: Common.Coord, target: Common.Coord, movable: boolean[]): number {
+            var vecX = target.x - me.x;
+            var vecY = target.y - me.y;
 
             var cand: number[];
             if (vecX == 0 && vecY > 0) {
@@ -168,5 +168,6 @@
 
     export class Ignore extends Enemy {
         name = "Ignore";
+        category = 1;
     }
 }

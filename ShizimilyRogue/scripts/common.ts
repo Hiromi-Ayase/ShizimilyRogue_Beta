@@ -39,19 +39,15 @@
 
     //export enum ObjectType
     export class Coord {
-        private _layer: number;
         private _x: number;
         private _y: number;
 
-        get layer(): number { return this._layer; }
         get x(): number { return this._x; }
         get y(): number { return this._y; }
-        get place(): number[] { return [this._x, this._y]; } 
 
-        constructor(x: number, y: number, layer: number) {
+        constructor(x: number, y: number) {
             this._x = x;
             this._y = y;
-            this._layer = layer;
         }
     }
 
@@ -71,11 +67,18 @@
     export interface IObject {
         id: number;
         type: DungeonObjectType;
+        category: number;
         coord: Coord;
+        layer: Layer;
     }
 
     export interface IUnit extends IObject {
-        unitId: number;
+        lv: number;
+        hp: number;
+        maxHp: number;
+        atk: number;
+        def: number;
+
         dir: number;
         speed: Speed;
         state: DungeonUnitState;
@@ -85,12 +88,6 @@
     }
 
     export interface IPlayer extends IUnit {
-        lv: number;
-        hp: number;
-        maxHp: number;
-        atk: number;
-        def: number;
-
         currentExp: number;
         stomach: number;
         maxStomach: number;
@@ -100,14 +97,13 @@
     export interface IItem extends IObject {
         name: string;
         num: number;
-        itemId: number;
     }
 
     export interface IFOVData {
         me: IUnit;
-        area: number[][];
+        area: Coord[];
         movable: boolean[];
-        getObject(place: number[], Layer: Layer): IObject;
+        getObject(coord: Coord): IObject[];
         objects: IObject[];
         attackable: { [id: number]: boolean };
     }

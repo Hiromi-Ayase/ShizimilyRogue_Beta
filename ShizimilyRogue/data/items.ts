@@ -2,7 +2,7 @@
     export class Item implements IItemData {
         constructor(
             public targetType: TargetType,
-            public itemId: number,
+            public category: number,
             public name: string,
             public num: number) {
         }
