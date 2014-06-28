@@ -18,8 +18,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="docs\design.txt" />
+    <Content Include="images\cake.png" />
     <Content Include="images\cursor.png" />
     <Content Include="images\floor_01.png" />
+    <Content Include="images\ItemWindow.png" />
     <Content Include="images\MainMenu.png" />
     <Content Include="images\message.png" />
     <Content Include="images\messageIcon.png" />

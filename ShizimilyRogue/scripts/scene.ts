@@ -11,13 +11,14 @@
             WALL: { URL: "./images/wall_01.png", DATA: <enchant.Surface>null },
             FLOOR: { URL: "./images/floor_01.png", DATA: <enchant.Surface>null },
             UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
-            ITEM: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
             TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
-            MESSAGE: { URL: "./images/messageWindow.png", DATA: <enchant.Surface>null },
+            MESSAGE: { URL: "./images/MessageWindow.png", DATA: <enchant.Surface>null },
+            ITEM_WINDOW: { URL: "./images/ItemWindow.png", DATA: <enchant.Surface>null },
             MESSAGE_ICON: { URL: "./images/shizimily_faceIcon.png", DATA: <enchant.Surface>null },
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
             MEMU_MAIN: { URL: "./images/MainMenu.png", DATA: <enchant.Surface>null },
             CURSOR: { URL: "./images/cursor.png", DATA: <enchant.Surface>null },
+            ITEM: { URL: "./images/cake.png", DATA: <enchant.Surface>null },
         };
 
         static game: enchant.Core;

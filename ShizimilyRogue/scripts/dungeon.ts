@@ -31,7 +31,7 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
         phase(fov: Common.IFOVData): Common.Action;
-        event(results: Common.IResult[]): void;
+        event(results: Common.IResult[]): Common.Action;
     }
 
     class Result implements Common.IResult {
@@ -290,7 +290,7 @@ module ShizimilyRogue.Model {
         }
 
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.IResult[]) => void;
+        event: (results: Common.IResult[]) => Common.Action;
 
         constructor(
             public category: number,
@@ -326,6 +326,7 @@ module ShizimilyRogue.Model {
         }
 
         event = (results: Common.IResult[]) => {
+            return null;
         }
 
         constructor(name: string) {
@@ -342,7 +343,7 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenNeighbor: number;
 
         phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.IResult[]) => void;
+        event: (results: Common.IResult[]) => Common.Action;
 
         constructor(data: IEnemyData) {
             super(data.category, data.name, data.speed, data.maxHp, data.atk, data.def);

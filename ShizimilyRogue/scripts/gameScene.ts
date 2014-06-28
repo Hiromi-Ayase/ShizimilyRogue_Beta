@@ -382,7 +382,7 @@ module ShizimilyRogue.View {
         }
 
         private static getUnitInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1);
+            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1, 0, -0.5);
         }
 
         private static getItemInstance(obj: Common.IObject): ViewObject {
@@ -391,31 +391,33 @@ module ShizimilyRogue.View {
     }
 
     class ViewObject extends enchant.Group {
-        private static marginY = - 0.3;
-        private data: Common.IObject;
         private sprite: enchant.Sprite;
-        constructor(object: Common.IObject, image: enchant.Surface, frame: number) {
+        constructor(
+            private data: Common.IObject,
+            image: enchant.Surface,
+            frame: number,
+            private marginX: number = 0,
+            private marginY: number = 0) {
             super();
-            this.data = object;
 
             this.sprite = new enchant.Sprite(OBJECT_WIDTH, OBJECT_HEIGHT);
             this.sprite.image = image;
             this.sprite.frame = frame;
             var coord = this.data.coord;
-            this.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT);
+            this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
         }
 
         action(result: Common.IResult): void {
             if (this.sprite.visible == false) {
                 var coord = this.data.coord;
-                this.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT);
+                this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
                 return;
             }
             if (result.action.type == Common.ActionType.Move) {
                 var coord = this.data.coord;
                 Scene.addAnimating();
-                this.tl.moveTo(coord.x * OBJECT_WIDTH, (coord.y + ViewObject.marginY) * OBJECT_HEIGHT, 10).then(function() {
+                this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, 10).then(function() {
                     Scene.decAnimating();
                 });
             }

@@ -62,7 +62,7 @@
             return action;
         }
 
-        public event = (results: Common.IResult[]): void => {
+        public event = (results: Common.IResult[]): Common.Action => {
             this.lastPlayer = null;
             for (var i = 0; i < results.length; i++) {
                 if (results[i].object.id == Common.PLAYER_ID) {
@@ -70,6 +70,7 @@
                     break;
                 }
             }
+            return null;
         }
 
         private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {
@@ -167,7 +168,7 @@
     }
 
     export class Ignore extends Enemy {
-        name = "Ignore";
+        name = "いぐー";
         category = 1;
     }
 }
