@@ -386,7 +386,7 @@ module ShizimilyRogue.View {
         }
 
         private static getItemInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1);
+            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, 0);
         }
     }
 
