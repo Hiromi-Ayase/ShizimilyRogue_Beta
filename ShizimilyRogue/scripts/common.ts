@@ -2,7 +2,7 @@
     export var DEBUG = false;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
-
+    // igu--
     // 4:Effect レイヤ  
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob
