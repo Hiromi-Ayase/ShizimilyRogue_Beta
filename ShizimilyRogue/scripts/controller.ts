@@ -49,6 +49,9 @@
     class GameScene implements Scene {
         private dungeonManager: Model.DungeonManager;
         private _view: View.GameScene;
+        private get fov(): Common.IFOVData {
+            return this.dungeonManager.getFOV();
+        }
 
         constructor() {
             this.init();
@@ -62,24 +65,24 @@
                 if (dir != null) {
                     if (Common.DEBUG)
                         View.Scene.resetKeys();
-                    var fov = this.dungeonManager.getFOV();
-                    if (fov.movable[dir]) {
-                        var action = new Common.Action(Common.ActionType.Move, [dir]);
+                    if (this.fov.movable[dir]) {
+                        var action = Common.Action.Move(dir);
                         var results = this.dungeonManager.next(action);
-                        fov = this.dungeonManager.getFOV();
-                        this._view.update(fov, results);
+                        this._view.update(this.fov, results);
                     } else {
                         this.dungeonManager.player.dir = dir;
-                        var fov = this.dungeonManager.getFOV();
-                        this._view.update(fov, []);
+                        this._view.update(this.fov, []);
                     }
                 } else if (a == true) {
-                    var fov = this.dungeonManager.getFOV();
                     var action = new Common.Action(Common.ActionType.Attack, [this.dungeonManager.player.dir]);
                     var results = this.dungeonManager.next(action);
-                    this._view.update(fov, results);
+                    this._view.update(this.fov, results);
                 } else if (b == true) {
-                    this._view.showMenu(View.MenuType.Main, ["aaa", "bbb", "ccc", "ddd"], n => { }, false);
+                    this._view.showMenu(View.MenuType.Main, ["攻撃", "アイテム"], n => {
+                        if (n == 1) {
+                            
+                        }
+                    }, false);
                 }
             }
             return null;

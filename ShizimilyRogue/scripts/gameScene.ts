@@ -133,12 +133,11 @@ module ShizimilyRogue.View {
                     message += unit.name + "は" + result.action.params[0] + "のダメージ！<br/>";
                 } else if (result.action.type == Common.ActionType.Pick) {
                     var unit = (<Common.IUnit>result.object);
-                    var item = (<Common.IItem>result.object);
+                    var item = (<Common.IItem>result.targets[0]);
                     message += unit.name + "は" + item.name + "を拾った！<br/>";
                 } else if (result.action.type == Common.ActionType.Die) {
                     var unit = (<Common.IUnit>result.object);
-                    var item = (<Common.IItem>result.object);
-                    message += unit.name + "は" + item.name + "を拾った！<br/>";
+                    message += unit.name + "をやっつけた！";
                 }
             });
             this.message.show(message);
@@ -443,6 +442,7 @@ module ShizimilyRogue.View {
 
     class ViewObject extends enchant.Group {
         private sprite: enchant.Sprite;
+        private info: enchant.Label;
         constructor(
             private data: Common.IObject,
             image: enchant.Surface,
@@ -457,9 +457,21 @@ module ShizimilyRogue.View {
             var coord = this.data.coord;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
+
+            if (Common.DEBUG) {
+                this.info = new enchant.Label();
+                this.addChild(this.info);
+            }
         }
 
         action(result: Common.IResult): void {
+            if (Common.DEBUG) {
+                if (result.object.type == Common.DungeonObjectType.Unit) {
+                    var unit = <Common.IUnit>result.object;
+                    this.info.text = "[dir:" + unit.dir + "]";
+                }
+            }
+
             if (this.sprite.visible == false) {
                 var coord = this.data.coord;
                 this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);

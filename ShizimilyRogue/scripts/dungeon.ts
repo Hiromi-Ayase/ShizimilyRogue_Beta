@@ -207,7 +207,7 @@ module ShizimilyRogue.Model {
                 var item = this.map.getTable(object.coord.x, object.coord.y)[Common.Layer.Ground];
                 if (item.type == Common.DungeonObjectType.Item) {
                     this.removeObject(item);
-                    result = new Result(object, action, [object]);
+                    result = new Result(object, action, [item]);
                 }
             } else if (action.type == Common.ActionType.Damage) {
                 result = new Result(object, action, [object]);
@@ -299,6 +299,8 @@ module ShizimilyRogue.Model {
                 if (this.hp <= 0) {
                     return Common.Action.Die();
                 }
+            } else if (result.action.type == Common.ActionType.Move) {
+                this.dir = result.action.params[0];
             }
             return null;
         }
@@ -311,7 +313,7 @@ module ShizimilyRogue.Model {
             public atk: number,
             public def: number) {
             super();
-            this.hp = maxHp;
+            this.hp = this.maxHp;
         }
     }
 
@@ -334,6 +336,7 @@ module ShizimilyRogue.Model {
 
         event(result: Common.IResult): Common.Action {
             if (result.action.type == Common.ActionType.Move) {
+                this.dir = result.action.params[0];
                 return new Common.Action(Common.ActionType.Pick);
             } else {
                 return super.event(result);
@@ -362,7 +365,10 @@ module ShizimilyRogue.Model {
             this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
             this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
             this.phase = () => data.phase(this.getFov(this));
-            this.event = (result) => data.event(result, this.getFov(this));
+            this.event = (result) => {
+                var action = data.event(result, this.getFov(this));
+                return action == null ? super.event(result) : action;
+            };
         }
     }
 

@@ -73,7 +73,7 @@
         }
 
         static Damage(amount: number): Common.Action {
-            return new Action(ActionType.Move, [amount]);
+            return new Action(ActionType.Damage, [amount]);
         }
 
         static Die(): Common.Action {
