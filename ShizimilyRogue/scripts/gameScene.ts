@@ -468,7 +468,7 @@ module ShizimilyRogue.View {
             if (Common.DEBUG) {
                 if (result.object.type == Common.DungeonObjectType.Unit) {
                     var unit = <Common.IUnit>result.object;
-                    this.info.text = "[dir:" + unit.dir + "]";
+                    this.info.text = "[dir:" + unit.dir + ", turn:" + unit.turn + "]";
                 }
             }
 

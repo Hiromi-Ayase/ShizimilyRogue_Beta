@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = false;
+    export var DEBUG = true;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -101,6 +101,7 @@
         maxHp: number;
         atk: number;
         def: number;
+        turn: number;
 
         dir: number;
         speed: Speed;

@@ -275,6 +275,7 @@ module ShizimilyRogue.Model {
         layer = Common.Layer.Unit;
         type = Common.DungeonObjectType.Unit;
         hp: number;
+        turn = 0;
 
         dir = 0;
         state = Common.DungeonUnitState.Normal;
@@ -284,6 +285,7 @@ module ShizimilyRogue.Model {
         }
 
         phase(): Common.Action {
+            this.turn ++
             return null;
         }
 
@@ -364,7 +366,10 @@ module ShizimilyRogue.Model {
             this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
             this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
             this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
-            this.phase = () => data.phase(this.getFov(this));
+            this.phase = () => {
+                this.turn++;
+                return data.phase(this.getFov(this));
+            };
             this.event = (result) => {
                 var action = data.event(result, this.getFov(this));
                 return action == null ? super.event(result) : action;
