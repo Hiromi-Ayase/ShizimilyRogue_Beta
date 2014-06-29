@@ -9,7 +9,6 @@
         return damage < 0 ? 1 : damage;
     };
     
-        // igu--
     // 4:Effect レイヤ  
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob

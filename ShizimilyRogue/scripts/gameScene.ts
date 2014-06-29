@@ -24,6 +24,7 @@ module ShizimilyRogue.View {
         private menuGroup: enchant.Group;
         private pathShadow: Shadow;
         private playerHp: PlayerHp;
+        private clock: Clock;
         private view: View;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
@@ -34,12 +35,14 @@ module ShizimilyRogue.View {
             this.view = new View(data, fov);
             this.menuGroup = new enchant.Group();
             this.playerHp = new PlayerHp();
+            this.clock = new Clock();
 
             this.addChild(this.view);
             this.addChild(this.pathShadow);
             this.addChild(this.message);
             this.addChild(this.menuGroup);
             this.addChild(this.playerHp);
+            this.addChild(this.clock);
 
             this.addMenuKeyHandler();
             this.update(fov, []);
@@ -115,11 +118,10 @@ module ShizimilyRogue.View {
             }
 
             // プレイヤーHPの表示
-            //var playerHp = player.hp;
-            //var playerMaxHp = player.maxHp;
-            this.playerHp.show(player.hp, player.maxHp);
+            this.playerHp.show(player.hp, player.maxHp, player.stomach);
 
             // 時間の表示
+            this.clock.show(player.turn);
 
             // メッセージウィンドウのメッセージ表示
             var message = "";
@@ -209,12 +211,40 @@ module ShizimilyRogue.View {
             this.addChild(this.hpText);
         }
 
-        show(hp: number, maxHp: number): void {
-            this.hpText.text = hp + " / " + maxHp;
+        show(hp: number, maxHp: number, stomach: number): void {
+            this.hpText.text = hp + " / " + maxHp + " (" + stomach + ")";
         }
 
         set visible(flg: boolean) {
             this.hpText.visible = flg;
+        }
+    }
+
+    class Clock extends enchant.Group {
+        private static CLOCK_TOP = 10;
+        private static CLOCK_LEFT = 550;
+
+        private clockText: enchant.Label;
+
+        constructor() {
+            super();
+            this.clockText = new enchant.Label();
+            this.clockText.x = Clock.CLOCK_LEFT;
+            this.clockText.y = Clock.CLOCK_TOP;
+            this.clockText.font = "24px cursive";
+            this.clockText.color = "red";
+
+            this.addChild(this.clockText);
+        }
+
+        show(turn: number): void {
+            var second = turn % 60;
+            var hour = (turn - second) / 60 + 17;
+            this.clockText.text = hour + " : " + (second < 10 ? "0" + String(second) : String(second));
+        }
+
+        set visible(flg: boolean) {
+            this.clockText.visible = flg;
         }
     }
 
