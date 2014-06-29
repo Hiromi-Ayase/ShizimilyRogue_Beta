@@ -7,7 +7,7 @@ module ShizimilyRogue.View {
     // メニューオープン時のキーロック開放処理フレーム数
     var KEY_LOCK_RELEASE = 10;
 
-    export enum MenuType { Main }
+    export enum MenuType { Main, Item }
 
     export class GameSceneData {
         constructor(
@@ -96,11 +96,13 @@ module ShizimilyRogue.View {
             return pathShadow;
         }
 
-        showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean): void {
+        showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean = false): void {
             Scene.keyLock = true;
             if (type == MenuType.Main) {
-                data[0] = "" + ROT.RNG.getUniform();
-                var menu = new MainMenu(data, selectHandler, multiple);
+                var menu = Menu.Main(data, selectHandler, multiple);
+                this.menuGroup.addChild(menu);
+            } else if (type == MenuType.Item) {
+                var menu = Menu.Item(data, selectHandler, multiple);
                 this.menuGroup.addChild(menu);
             }
         }
@@ -331,6 +333,14 @@ module ShizimilyRogue.View {
         private cursor: enchant.Sprite;
         private cursorIndex = 0;
 
+        static Main(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.MEMU_MAIN.DATA, 10, 10, 3);
+        }
+
+        static Item(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.ITEM_WINDOW.DATA, 10, 10, 10);
+        }
+
         constructor(
             data: string[],
             private selectHandler: (n: number) => void,
@@ -391,12 +401,6 @@ module ShizimilyRogue.View {
 
         public select(): void {
             this.selectHandler(this.cursorIndex);
-        }
-    }
-
-    class MainMenu extends Menu {
-        constructor(data: string[], selectHandler: (n: number) => void, multiple: boolean) {
-            super(data, selectHandler, multiple, Scene.IMAGE.MEMU_MAIN.DATA, 10, 10, 3);
         }
     }
 

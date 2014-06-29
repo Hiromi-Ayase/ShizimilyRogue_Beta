@@ -530,14 +530,14 @@ module ShizimilyRogue.Model {
             var coord = obj.coord;
             var newCell = this.map[coord.y + dirY][coord.x + dirX];
 
-            if (newCell.objects[Common.Layer.Floor].type != Common.DungeonObjectType.Wall) {
+            if (newCell.objects[Common.Layer.Ground].type != Common.DungeonObjectType.Wall) {
                 if (dirX == 0 || dirY == 0) {
                     return true;
                 } else {
                     var cornerCell1 = this.map[coord.y][coord.x + dirX];
                     var cornerCell2 = this.map[coord.y + dirY][coord.x];
-                    if (cornerCell1.objects[Common.Layer.Floor].corner == false
-                        && cornerCell2.objects[Common.Layer.Floor].corner == false) {
+                    if (cornerCell1.objects[Common.Layer.Ground].corner == false
+                        && cornerCell2.objects[Common.Layer.Ground].corner == false) {
                             return true;
                     }
                 }

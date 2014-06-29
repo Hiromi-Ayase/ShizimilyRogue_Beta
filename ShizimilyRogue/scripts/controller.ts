@@ -49,6 +49,7 @@
     class GameScene implements Scene {
         private dungeonManager: Model.DungeonManager;
         private _view: View.GameScene;
+        private player: Common.IPlayer;
         private get fov(): Common.IFOVData {
             return this.dungeonManager.getFOV();
         }
@@ -67,25 +68,32 @@
                         View.Scene.resetKeys();
                     if (this.fov.movable[dir]) {
                         var action = Common.Action.Move(dir);
-                        var results = this.dungeonManager.next(action);
-                        this._view.update(this.fov, results);
+                        this.viewUpdate(action);
                     } else {
-                        this.dungeonManager.player.dir = dir;
-                        this._view.update(this.fov, []);
+                        this.player.dir = dir;
+                        this.viewUpdate();
                     }
                 } else if (a == true) {
-                    var action = new Common.Action(Common.ActionType.Attack, [this.dungeonManager.player.dir]);
-                    var results = this.dungeonManager.next(action);
-                    this._view.update(this.fov, results);
+                    var action = Common.Action.Attack(this.player.dir);
+                    this.viewUpdate(action);
                 } else if (b == true) {
                     this._view.showMenu(View.MenuType.Main, ["攻撃", "アイテム"], n => {
                         if (n == 1) {
-                            
+                            var itemNames = this.player.inventory.map(item => item.name);
+                            this._view.showMenu(View.MenuType.Item, itemNames, m => {
+                                var action = Common.Action.Use(this.player.inventory[m]);
+                                this.viewUpdate(action);
+                            });
                         }
                     }, false);
                 }
             }
             return null;
+        }
+
+        private viewUpdate(action: Common.Action = null): void {
+            var results = action != null ? this.dungeonManager.next(action): [];
+            this._view.update(this.fov, results);
         }
 
         get view() {
@@ -105,7 +113,7 @@
                     this.dungeonManager.objects,
                     this.dungeonManager.getMap()
                 );
-
+            this.player = this.dungeonManager.player;
             this._view = new View.GameScene(data, fov);
         }
     }

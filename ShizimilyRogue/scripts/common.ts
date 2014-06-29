@@ -61,8 +61,8 @@
     export class Action {
         constructor(
             public type: Common.ActionType,
-            public params?: number[],
-            public objects?: IObject[]) { }
+            public params: number[] = [],
+            public objects: IObject[] = []) { }
 
         static Move(dir: number): Common.Action {
             return new Action(ActionType.Move, [dir]);
@@ -78,6 +78,10 @@
 
         static Die(): Common.Action {
             return new Action(ActionType.Die, []);
+        }
+
+        static Use(item: IItem): Common.Action {
+            return new Action(ActionType.Use, [], [item]);
         }
     }
 
