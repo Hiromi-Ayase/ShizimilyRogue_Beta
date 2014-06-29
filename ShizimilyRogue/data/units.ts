@@ -31,25 +31,31 @@
             var me = fov.me.coord;
             var player:Common.Coord = null;
             var action: Common.Action = null;
-            if (Common.PLAYER_ID in fov.objects) {
-                player = fov.objects[Common.PLAYER_ID].coord;
-            }
-
-            if (player != null) {
-                if (fov.attackable[Common.PLAYER_ID]) {
-                    var dir = Enemy.getAttackDir(fov.me.coord, player);
-                    action = new Common.Action(Common.ActionType.Attack, [dir]);
+            for (var i = 0; i < fov.objects.length; i++) {
+                if (fov.objects[i].id == Common.PLAYER_ID) {
+                    player = fov.objects[i].coord;
+                    break;
                 }
             }
 
-            if (action == null) {
+            if (player != null) {
+                // 視界内にプレイヤーがいた
+                if (fov.attackable[Common.PLAYER_ID]) {
+                    var dir = Enemy.getAttackDir(fov.me.coord, player);
+                    action = new Common.Action(Common.ActionType.Attack, [dir]);
+                } else {
+                    var dir = Enemy.move(me, player, this.lastMe, fov);
+                    if (dir != null)
+                        action = new Common.Action(Common.ActionType.Move, [dir]);
+                }
+            } else {
                 var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
                 if (dir != null)
                     action = new Common.Action(Common.ActionType.Move, [dir]);
             }
 
             if (action == null) {
-                this.lastPlayer = null;
+                // 何もできない場合はランダムに移動
                 var dirs: number[] = [];
                 fov.movable.map((value, index, array) => {
                     if (value) dirs.push(index);
@@ -62,20 +68,18 @@
             return action;
         }
 
-        public event = (results: Common.IResult[]): Common.Action => {
-            this.lastPlayer = null;
-            for (var i = 0; i < results.length; i++) {
-                if (results[i].object.id == Common.PLAYER_ID) {
-                    this.lastPlayer = results[i].object.coord;
-                    break;
+        public event = (result: Common.IResult, fov: Common.IFOVData): Common.Action => {
+            fov.objects.forEach(obj => {
+                if (obj.id == Common.PLAYER_ID) {
+                    this.lastPlayer = obj.coord;
                 }
-            }
+            });
             return null;
         }
 
         private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {
             var diffX = dst.x - src.x;
-            var diffY = dst.x - src.y;
+            var diffY = dst.y - src.y;
 
             if (diffX == 0 && diffY > 0) {
                 return Common.DIR.DOWN;

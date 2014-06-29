@@ -60,8 +60,8 @@
 
     export interface IResult {
         object: IObject;
-        sender: IObject;
         action: Action;
+        targets: IObject[];
     }
 
     export interface IObject {
@@ -83,8 +83,6 @@
         speed: Speed;
         state: DungeonUnitState;
         name: string;
-        phase: (fov: Common.IFOVData) => Common.Action;
-        event: (results: Common.IResult[]) => void;
     }
 
     export interface IPlayer extends IUnit {

@@ -15,7 +15,7 @@ module ShizimilyRogue.View {
             public width: number,
             public height: number,
             public objects: Common.IObject[],
-            public getTable: (x: number, y: number, layer: Common.Layer) => Common.IObject) {
+            public getTable: (x: number, y: number) => Common.IObject[]) {
         }
     }
 
@@ -149,7 +149,7 @@ module ShizimilyRogue.View {
             this.message = new enchant.Label();
             this.message.x = Message.MESSAGE_LEFT;
             this.message.y = Message.MESSAGE_TOP;
-            this.message.font = "25px cursive";
+            this.message.font = "16px cursive";
             this.message.color = "white";
 
             this.message.width = Message.MESSAGE_WIDTH;
@@ -175,7 +175,8 @@ module ShizimilyRogue.View {
         private objects: ViewObject[] = [];
 
         private roomShadow: Shadow;
-        private map: Map;
+        private floorMap: Map;
+        private groundMap: Map;
         private layer: enchant.Group[];
         private fov: Common.IFOVData;
 
@@ -183,10 +184,12 @@ module ShizimilyRogue.View {
             super();
             this.fov = fov;
             this.roomShadow = new Shadow(data.width, data.height);
-            this.map = Map.floor(data.width, data.height, data.getTable); 
+            this.floorMap = Map.floor(data.width, data.height, data.getTable); 
+            this.groundMap = Map.ground(data.width, data.height, data.getTable); 
             this.layer = new Array<enchant.Group>(Common.Layer.MAX);
 
-            this.addChild(this.map);
+            this.addChild(this.floorMap);
+            this.addChild(this.groundMap);
             for (var i = Common.Layer.Ground; i < Common.Layer.MAX; i++) {
                 this.layer[i] = new enchant.Group();
                 this.addChild(this.layer[i]);
@@ -445,10 +448,16 @@ module ShizimilyRogue.View {
             this.update();
         }
 
-        public static floor(width: number, height: number, getTable: (x: number, y: number, layer: Common.Layer) => Common.IObject) {
-            var table = (x, y) => { return getTable(x, y, Common.Layer.Floor) };
-            var getViewTable = () => { return Map.getFloorViewTable(width, height, table) };
+        public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.IObject[]) {
+            var table = (x, y) => { return getTable(x, y)[Common.Layer.Ground] };
+            var getViewTable = () => { return Map.getGroundViewTable(width, height, table) };
             return new Map(getViewTable, Scene.IMAGE.WALL.DATA);
+        }
+
+        public static floor(width: number, height: number, getTable: (x: number, y: number) => Common.IObject[]) {
+            var table = (x, y) => { return getTable(x, y)[Common.Layer.Floor] };
+            var getViewTable = () => { return Map.getFloorViewTable(width, height, table) };
+            return new Map(getViewTable, Scene.IMAGE.FLOOR.DATA);
         }
 
         public update() {
@@ -457,7 +466,22 @@ module ShizimilyRogue.View {
         }
 
         private static getFloorViewTable(w: number, h: number,
-            floorTable: (x: number, y: number) => Common.IObject): number[][] {
+            table: (x: number, y: number) => Common.IObject): number[][]{
+            var map: number[][] = [];
+            var flg = true;
+
+            for (var y = 0; y < h; y++) {
+                map.push(new Array(w));
+                for (var x = 0; x < w; x++) {
+                    flg = !flg;
+                    map[y][x] = flg ? 0 : 1;
+                }
+            }
+            return map;
+        }
+
+        private static getGroundViewTable(w: number, h: number,
+            table: (x: number, y: number) => Common.IObject): number[][] {
             var blockTable = [
                 0, 17, 4, 4, 16, 36, 4, 4, // 0 - 7
                 7, 26, 9, 9, 7, 26, 9, 9, // 8 - 15
@@ -494,28 +518,26 @@ module ShizimilyRogue.View {
             ];
             var map: number[][] = [];
             var WALL = Common.DungeonObjectType.Wall;
-            var flg = true;
 
             for (var y = 0; y < h; y++) {
                 map.push(new Array(w));
                 for (var x = 0; x < w; x++) {
-                    flg = !flg;
-                    var type = floorTable(x, y).type;
+                    var type = table(x, y).type;
                     if (type == WALL) {
                         var blockId = 0;
-                        blockId |= (x == 0 || y == 0 || floorTable(x - 1, y - 1).type == WALL) ? 0 : 1;
-                        blockId |= (y == 0 || floorTable(x, y - 1).type == WALL) ? 0 : 2;
-                        blockId |= (x == w - 1 || y == 0 || floorTable(x + 1, y - 1).type == WALL) ? 0 : 4;
-                        blockId |= (x == w - 1 || floorTable(x + 1, y).type == WALL) ? 0 : 8;
-                        blockId |= (x == w - 1 || y == h - 1 || floorTable(x + 1, y + 1).type == WALL) ? 0 : 16;
-                        blockId |= (y == h - 1 || floorTable(x, y + 1).type == WALL) ? 0 : 32;
-                        blockId |= (x == 0 || y == h - 1 || floorTable(x - 1, y + 1).type == WALL) ? 0 : 64;
-                        blockId |= (x == 0 || floorTable(x - 1, y).type == WALL) ? 0 : 128;
+                        blockId |= (x == 0 || y == 0 || table(x - 1, y - 1).type == WALL) ? 0 : 1;
+                        blockId |= (y == 0 || table(x, y - 1).type == WALL) ? 0 : 2;
+                        blockId |= (x == w - 1 || y == 0 || table(x + 1, y - 1).type == WALL) ? 0 : 4;
+                        blockId |= (x == w - 1 || table(x + 1, y).type == WALL) ? 0 : 8;
+                        blockId |= (x == w - 1 || y == h - 1 || table(x + 1, y + 1).type == WALL) ? 0 : 16;
+                        blockId |= (y == h - 1 || table(x, y + 1).type == WALL) ? 0 : 32;
+                        blockId |= (x == 0 || y == h - 1 || table(x - 1, y + 1).type == WALL) ? 0 : 64;
+                        blockId |= (x == 0 || table(x - 1, y).type == WALL) ? 0 : 128;
 
                         var mapId = blockTable[blockId];
                         map[y][x] = mapId;
                     } else {
-                        map[y][x] = flg ? 48 : 49;
+                        map[y][x] = 35;
                     }
                 }
             }
