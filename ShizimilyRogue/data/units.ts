@@ -61,7 +61,7 @@
                     if (value) dirs.push(index);
                 });
                 var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = new Common.Action(Common.ActionType.Attack, [dir]);
+                action = new Common.Action(Common.ActionType.Move, [dir]);
             }
             this.lastPlayer = player;
             this.lastMe = me;

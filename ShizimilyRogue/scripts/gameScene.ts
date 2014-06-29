@@ -23,6 +23,7 @@ module ShizimilyRogue.View {
         private message: Message;
         private menuGroup: enchant.Group;
         private pathShadow: Shadow;
+        private playerHp: PlayerHp;
         private view: View;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
@@ -32,11 +33,13 @@ module ShizimilyRogue.View {
             this.pathShadow = GameScene.getPathShadow();
             this.view = new View(data, fov);
             this.menuGroup = new enchant.Group();
+            this.playerHp = new PlayerHp();
 
             this.addChild(this.view);
             this.addChild(this.pathShadow);
             this.addChild(this.message);
             this.addChild(this.menuGroup);
+            this.addChild(this.playerHp);
 
             this.addMenuKeyHandler();
             this.update(fov, []);
@@ -104,11 +107,21 @@ module ShizimilyRogue.View {
 
         update(fov: Common.IFOVData, results: Common.IResult[]): void {
             var player = this.data.player;
+            // 視界の表示
             if (fov.getObject(player.coord)[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
                 this.pathShadow.visible = false;
             } else {
                 this.pathShadow.visible = true;
             }
+
+            // プレイヤーHPの表示
+            //var playerHp = player.hp;
+            //var playerMaxHp = player.maxHp;
+            this.playerHp.show(player.hp, player.maxHp);
+
+            // 時間の表示
+
+            // メッセージウィンドウのメッセージ表示
             var message = "";
             this.view.update(fov, results);
             results.forEach(result => {
@@ -168,6 +181,37 @@ module ShizimilyRogue.View {
             this.messageArea.visible = flg;
             this.message.visible = flg;
             this.icon.visible = flg;
+        }
+    }
+
+    class PlayerHp extends enchant.Group {
+        private static PLAYERHP_TOP = 10;
+        private static PLAYERHP_LEFT = 255;
+        //private static PLAYERHP_WIDTH = VIEW_WIDTH - PlayerHp.PLAYERHP_LEFT;
+        //private static PLAYERHP_HEIGHT = 100;
+
+        private hpText: enchant.Label;
+
+        constructor() {
+            super();
+            this.hpText = new enchant.Label();
+            this.hpText.x = PlayerHp.PLAYERHP_LEFT;
+            this.hpText.y = PlayerHp.PLAYERHP_TOP;
+            this.hpText.font = "24px cursive";
+            this.hpText.color = "red";
+
+            //this.hpText.width = PlayerHp.PLAYERHP_WIDTH;
+            //this.hpText.height = PlayerHp.PLAYERHP_HEIGHT;
+
+            this.addChild(this.hpText);
+        }
+
+        show(hp: number, maxHp: number): void {
+            this.hpText.text = hp + " / " + maxHp;
+        }
+
+        set visible(flg: boolean) {
+            this.hpText.visible = flg;
         }
     }
 
