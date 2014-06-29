@@ -16,7 +16,7 @@
 
         use = (objects: Common.IObject): Common.Action[] => {
             var actions: Common.Action[] = [];
-            var action = new Common.Action(Common.ActionType.HpChange, [100]);
+            var action = new Common.Action(Common.ActionType.Heal, [100]);
             actions.push(action);
             return actions;
         }

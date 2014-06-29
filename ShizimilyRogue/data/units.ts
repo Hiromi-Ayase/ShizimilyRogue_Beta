@@ -1,5 +1,7 @@
 ﻿module ShizimilyRogue.Model.Data {
 
+
+
     export class Enemy implements IEnemyData {
         category = 0;
         name = null;
@@ -61,7 +63,7 @@
                     if (value) dirs.push(index);
                 });
                 var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = new Common.Action(Common.ActionType.Attack, [dir]);
+                action = new Common.Action(Common.ActionType.Move, [dir]);
             }
             this.lastPlayer = player;
             this.lastMe = me;
@@ -74,6 +76,13 @@
                     this.lastPlayer = obj.coord;
                 }
             });
+            if (result.action.type == Common.ActionType.Attack) {
+                if (result.object.type == Common.DungeonObjectType.Unit) {
+                    var attacker = <Common.IUnit>result.object;
+                    var damage = Common.Damage(attacker.atk, this.def);
+                    return new Common.Action(Common.ActionType.Damage, [damage]);
+                }
+            }
             return null;
         }
 

@@ -62,9 +62,21 @@
                 if (dir != null) {
                     if (Common.DEBUG)
                         View.Scene.resetKeys();
-                    var action = new Common.Action(Common.ActionType.Move, [dir]);
-                    var results = this.dungeonManager.next(action);
                     var fov = this.dungeonManager.getFOV();
+                    if (fov.movable[dir]) {
+                        var action = new Common.Action(Common.ActionType.Move, [dir]);
+                        var results = this.dungeonManager.next(action);
+                        fov = this.dungeonManager.getFOV();
+                        this._view.update(fov, results);
+                    } else {
+                        this.dungeonManager.player.dir = dir;
+                        var fov = this.dungeonManager.getFOV();
+                        this._view.update(fov, []);
+                    }
+                } else if (a == true) {
+                    var fov = this.dungeonManager.getFOV();
+                    var action = new Common.Action(Common.ActionType.Attack, [this.dungeonManager.player.dir]);
+                    var results = this.dungeonManager.next(action);
                     this._view.update(fov, results);
                 } else if (b == true) {
                     this._view.showMenu(View.MenuType.Main, ["aaa", "bbb", "ccc", "ddd"], n => { }, false);

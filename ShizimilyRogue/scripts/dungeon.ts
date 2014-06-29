@@ -60,14 +60,14 @@ module ShizimilyRogue.Model {
         type: Common.DungeonObjectType = null;
         id: number;
         layer: Common.Layer = null;
-        event: (result: Common.IResult) => Common.Action;
+
+        event(result: Common.IResult): Common.Action {
+            return null;
+        }
 
         constructor() {
             this.id = DungeonObject.currentId;
             DungeonObject.currentId++;
-            this.event = (result: Common.IResult) => {
-                return null;
-            }
         }
     }
 
@@ -91,29 +91,15 @@ module ShizimilyRogue.Model {
 
             // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
-
-            // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
-
-            // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
-
-            // 敵を配置
             this.addEnemy(new Model.Data.Ignore);
 
             // アイテムを配置
             this.addItem(new Model.Data.Sweet);
-
-            // アイテムを配置
             this.addItem(new Model.Data.Sweet);
-
-            // アイテムを配置
             this.addItem(new Model.Data.Sweet);
-
-            // アイテムを配置
             this.addItem(new Model.Data.Sweet);
-
-            // アイテムを配置
             this.addItem(new Model.Data.Sweet);
 
             // 一番最初のターンはプレイヤー
@@ -133,17 +119,17 @@ module ShizimilyRogue.Model {
             this._objects.push(item);
         }
 
-        private addObject(unit: DungeonObject, layer: Common.Layer) {
+        private addObject(obj: DungeonObject, layer: Common.Layer) {
             var coord = this.map.getRandomPoint(layer);
-            this.map.setObject(unit, coord);
-            this._objects.push(unit);
-            this.scheduler.add(unit, true);
+            this.map.setObject(obj, coord);
+            this._objects.push(obj);
+            this.scheduler.add(obj, true);
         }
 
-        private removeUnit(unit: Unit) {
-            this.map.deleteObject(unit);
-            this._objects = this._objects.filter(v => v.id != unit.id);
-            this.scheduler.remove(unit);
+        private removeObject(obj: DungeonObject) {
+            this.map.deleteObject(obj);
+            this._objects = this._objects.filter(v => v.id != obj.id);
+            this.scheduler.remove(obj);
         }
 
         public get width(): number {
@@ -218,11 +204,16 @@ module ShizimilyRogue.Model {
                     result = new Result(object, action, [target]);
                 }
             } else if (action.type == Common.ActionType.Pick) {
-                var target = this.map.getTable(object.coord.x, object.coord.y)[Common.Layer.Ground];
-                if (target.type == Common.DungeonObjectType.Item) {
-                    this.map.deleteObject(target);
+                var item = this.map.getTable(object.coord.x, object.coord.y)[Common.Layer.Ground];
+                if (item.type == Common.DungeonObjectType.Item) {
+                    this.removeObject(item);
                     result = new Result(object, action, [object]);
                 }
+            } else if (action.type == Common.ActionType.Damage) {
+                result = new Result(object, action, [object]);
+            } else if (action.type == Common.ActionType.Die) {
+                this.removeObject(object);
+                result = new Result(object, action, []);
             }
             return result;
         }
@@ -292,7 +283,25 @@ module ShizimilyRogue.Model {
             return this.speed;
         }
 
-        phase: () => Common.Action;
+        phase(): Common.Action {
+            return null;
+        }
+
+        event(result: Common.IResult): Common.Action {
+            if (result.action.type == Common.ActionType.Attack) {
+                if (result.object.type == Common.DungeonObjectType.Unit) {
+                    var attacker = <Common.IUnit>result.object;
+                    var damage = Common.Damage(attacker.atk, this.def);
+                    this.hp -= damage;
+                    return Common.Action.Damage(damage);
+                }
+            } else if (result.action.type == Common.ActionType.Damage) {
+                if (this.hp <= 0) {
+                    return Common.Action.Die();
+                }
+            }
+            return null;
+        }
 
         constructor(
             public category: number,
@@ -323,13 +332,11 @@ module ShizimilyRogue.Model {
             return this.lv * 10 + 100;
         }
 
-        phase = () => {
-            return null;
-        }
-
-        event = (result: Common.IResult) => {
+        event(result: Common.IResult): Common.Action {
             if (result.action.type == Common.ActionType.Move) {
                 return new Common.Action(Common.ActionType.Pick);
+            } else {
+                return super.event(result);
             }
         }
 
@@ -345,9 +352,6 @@ module ShizimilyRogue.Model {
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
-
-        phase: () => Common.Action;
-        event: (result: Common.IResult) => Common.Action;
 
         constructor(data: IEnemyData, private getFov: (unit) => Common.IFOVData) {
             super(data.category, data.name, data.speed, data.maxHp, data.atk, data.def);

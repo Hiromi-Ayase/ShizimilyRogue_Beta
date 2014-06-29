@@ -115,10 +115,14 @@ module ShizimilyRogue.View {
                 if (result.action.type == Common.ActionType.Attack) {
                     var unit = (<Common.IUnit>result.object);
                     message += unit.name + "はこうげきした！<br/>";
-                } else if (result.action.type == Common.ActionType.HpChange) {
+                } else if (result.action.type == Common.ActionType.Damage) {
                     var unit = (<Common.IUnit>result.object);
                     message += unit.name + "は" + result.action.params[0] + "のダメージ！<br/>";
                 } else if (result.action.type == Common.ActionType.Pick) {
+                    var unit = (<Common.IUnit>result.object);
+                    var item = (<Common.IItem>result.object);
+                    message += unit.name + "は" + item.name + "を拾った！<br/>";
+                } else if (result.action.type == Common.ActionType.Die) {
                     var unit = (<Common.IUnit>result.object);
                     var item = (<Common.IItem>result.object);
                     message += unit.name + "は" + item.name + "を拾った！<br/>";

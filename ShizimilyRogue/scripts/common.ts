@@ -2,7 +2,14 @@
     export var DEBUG = false;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
-    // igu--
+
+    // ダメージ計算式
+    export var Damage = (atk: number, def: number) => {
+        var damage = Math.floor(1 + atk * (0.875 + ROT.RNG.getUniform() * 0.25) - def);
+        return damage < 0 ? 1 : damage;
+    };
+    
+        // igu--
     // 4:Effect レイヤ  
     // 3:Flying レイヤ Flying Player
     // 2:Unit レイヤ  Player Mob
@@ -22,7 +29,7 @@
 
     export enum ActionType {
         Move, Attack, Use, Input, Throw, Pick, // 能動的アクション
-        Die, Recieve, HpChange, Swap, Blown,// 受動的アクション
+        Die, Recieve, Damage, Heal, Swap, Blown,// 受動的アクション
         AddObject, None
     }
 
@@ -56,6 +63,22 @@
             public type: Common.ActionType,
             public params?: number[],
             public objects?: IObject[]) { }
+
+        static Move(dir: number): Common.Action {
+            return new Action(ActionType.Move, [dir]);
+        }
+
+        static Attack(dir: number): Common.Action {
+            return new Action(ActionType.Attack, [dir]);
+        }
+
+        static Damage(amount: number): Common.Action {
+            return new Action(ActionType.Move, [amount]);
+        }
+
+        static Die(): Common.Action {
+            return new Action(ActionType.Die, []);
+        }
     }
 
     export interface IResult {
