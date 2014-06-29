@@ -5,7 +5,7 @@
 
     // ダメージ計算式
     export var Damage = (atk: number, def: number) => {
-        var damage = Math.floor(1 + atk * (0.875 + ROT.RNG.getUniform() * 0.90) - def);
+        var damage = Math.floor(1 + atk * (0.875 + ROT.RNG.getUniform() * 0.30) - def);
         return damage < 0 ? 1 : damage;
     };
     
