@@ -110,6 +110,16 @@ module ShizimilyRogue.View {
             }
         }
 
+        closeMenu() {
+            while (true) {
+                this.menuGroup.removeChild(this.menuGroup.lastChild);
+                if (this.menuGroup.childNodes.length == 0) {
+                    break;
+                }
+                this.tl.delay(KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+            }
+        }
+
         update(fov: Common.IFOVData, results: Common.IResult[]): void {
             var player = this.data.player;
             // 視界の表示

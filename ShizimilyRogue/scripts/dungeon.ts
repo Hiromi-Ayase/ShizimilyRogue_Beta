@@ -25,7 +25,7 @@ module ShizimilyRogue.Model {
         atk: number;
         def: number;
         exp: number;
-        drop: Common.IItem;
+        inventry: Common.IItem[];
         dropProbability: number;
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
@@ -61,7 +61,7 @@ module ShizimilyRogue.Model {
         id: number;
         layer: Common.Layer = null;
 
-        event(result: Common.IResult): Common.Action {
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
             return null;
         }
 
@@ -107,7 +107,7 @@ module ShizimilyRogue.Model {
         }
 
         private addEnemy(data: IEnemyData): Common.IUnit {
-            var enemy = new Enemy(data, (unit) => this.map.getFOV(unit));
+            var enemy = new Enemy(data);
             this.addObject(enemy, Common.Layer.Unit);
             return enemy;
         }
@@ -169,7 +169,8 @@ module ShizimilyRogue.Model {
 
                 // 次に行動するユニットのアクションを取り出す
                 this._current = this.scheduler.next();
-                action = this._current.phase();
+                var fov = this.map.getFOV(this._current);
+                action = this._current.phase(fov);
             }
             return allResults;
         }
@@ -179,7 +180,8 @@ module ShizimilyRogue.Model {
             if (result != null) {
                 results.push(result);
                 result.targets.forEach(target => {
-                    var newAction = target.event(result);
+                    var fov = this.map.getFOV(target);
+                    var newAction = target.event(result, fov);
                     if (newAction != null) {
                         this.update(target, newAction, results)
                     }
@@ -207,13 +209,15 @@ module ShizimilyRogue.Model {
                 var item = this.map.getTable(object.coord.x, object.coord.y)[Common.Layer.Ground];
                 if (item.type == Common.DungeonObjectType.Item) {
                     this.removeObject(item);
-                    result = new Result(object, action, [item]);
+                    result = new Result(object, action, [object]);
                 }
             } else if (action.type == Common.ActionType.Damage) {
                 result = new Result(object, action, [object]);
             } else if (action.type == Common.ActionType.Die) {
                 this.removeObject(object);
                 result = new Result(object, action, []);
+            } else if (action.type == Common.ActionType.Use) {
+
             }
             return result;
         }
@@ -267,13 +271,14 @@ module ShizimilyRogue.Model {
         }
         objects: DungeonObject[] = [];
         attackable: { [id: number]: boolean } = {};
-        me: Unit;
+        me: DungeonObject;
     }
 
     class Unit extends DungeonObject implements Common.IUnit {
         lv = 1;
         layer = Common.Layer.Unit;
         type = Common.DungeonObjectType.Unit;
+        inventory: Item[] = [];
         hp: number;
         turn = 0;
 
@@ -284,12 +289,12 @@ module ShizimilyRogue.Model {
             return this.speed;
         }
 
-        phase(): Common.Action {
+        phase(fov: Common.IFOVData): Common.Action {
             this.turn ++
             return null;
         }
 
-        event(result: Common.IResult): Common.Action {
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
             if (result.action.type == Common.ActionType.Attack) {
                 if (result.object.type == Common.DungeonObjectType.Unit) {
                     var attacker = <Common.IUnit>result.object;
@@ -321,7 +326,6 @@ module ShizimilyRogue.Model {
 
     class Player extends Unit implements Common.IPlayer {
         id = Common.PLAYER_ID;
-        inventory = [];
         currentExp = 0;
         maxStomach = 100;
         stomach = this.maxStomach;
@@ -336,13 +340,19 @@ module ShizimilyRogue.Model {
             return this.lv * 10 + 100;
         }
 
-        event(result: Common.IResult): Common.Action {
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
             if (result.action.type == Common.ActionType.Move) {
                 this.dir = result.action.params[0];
-                return new Common.Action(Common.ActionType.Pick);
+
+                var obj = fov.getObject(fov.me.coord)[Common.Layer.Ground];
+                if (obj.type == Common.DungeonObjectType.Item) {
+                    this.inventory.push(<Item>obj);
+                    return new Common.Action(Common.ActionType.Pick);
+                }
             } else {
-                return super.event(result);
+                return super.event(result, fov);
             }
+            return null;
         }
 
         constructor(name: string) {
@@ -352,28 +362,21 @@ module ShizimilyRogue.Model {
 
     class Enemy extends Unit {
         exp: number;
-        drop: Item;
         dropProbability: number;
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
 
-        constructor(data: IEnemyData, private getFov: (unit) => Common.IFOVData) {
+        constructor(data: IEnemyData) {
             super(data.category, data.name, data.speed, data.maxHp, data.atk, data.def);
             this.exp = data.exp;
-            this.drop = <Item>data.drop;
+            this.inventory = <Item[]>data.inventry;
             this.dropProbability = data.dropProbability;
             this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
             this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
             this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
-            this.phase = () => {
-                this.turn++;
-                return data.phase(this.getFov(this));
-            };
-            this.event = (result) => {
-                var action = data.event(result, this.getFov(this));
-                return action == null ? super.event(result) : action;
-            };
+            this.phase = data.phase;
+            this.event = data.event;
         }
     }
 
@@ -465,7 +468,7 @@ module ShizimilyRogue.Model {
         }
 
         // Field of viewを取得
-        public getFOV(unit: Unit): FOVData {
+        public getFOV(unit: DungeonObject): FOVData {
             var lightPasses = (x, y) => {
                 if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
                     return false;

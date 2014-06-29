@@ -10,7 +10,7 @@
         atk = 100;
         def = 100;
         exp = 100;
-        drop = null;
+        inventry = [];
         dropProbability = 10;
         awakeProbabilityWhenAppear = 100;
         awakeProbabilityWhenEnterRoom = 100;

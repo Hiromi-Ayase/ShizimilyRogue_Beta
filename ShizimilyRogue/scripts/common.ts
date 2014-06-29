@@ -105,6 +105,7 @@
         atk: number;
         def: number;
         turn: number;
+        inventory: IItem[];
 
         dir: number;
         speed: Speed;
@@ -116,7 +117,6 @@
         currentExp: number;
         stomach: number;
         maxStomach: number;
-        inventory: IItem[];
     }
 
     export interface IItem extends IObject {
@@ -125,7 +125,7 @@
     }
 
     export interface IFOVData {
-        me: IUnit;
+        me: IObject;
         area: Coord[];
         movable: boolean[];
         getObject(coord: Coord): IObject[];
