@@ -81,6 +81,8 @@
                         if (n == 1) {
                             var itemNames = this.player.inventory.map(item => item.name);
                             this._view.showMenu(View.MenuType.Item, itemNames, m => {
+                                this._view.showMenu(View.MenuType.Use, ["使う"], use => {
+                                });
                                 this._view.closeMenu();
                                 var action = Common.Action.Use(this.player.inventory[m]);
                                 this.viewUpdate(action);

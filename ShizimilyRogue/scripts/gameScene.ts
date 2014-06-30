@@ -7,7 +7,7 @@ module ShizimilyRogue.View {
     // メニューオープン時のキーロック開放処理フレーム数
     var KEY_LOCK_RELEASE = 10;
 
-    export enum MenuType { Main, Item }
+    export enum MenuType { Main, Item, Use }
 
     export class GameSceneData {
         constructor(

@@ -22,6 +22,10 @@
         UP, UP_RIGHT, RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT
     }
 
+    export enum ItemType {
+        Food, CPU
+    }
+
     export enum DungeonObjectType {
         Null, Wall, Path, Room, Unit, Item
     }
@@ -96,6 +100,7 @@
         category: number;
         coord: Coord;
         layer: Layer;
+        corner: boolean;
     }
 
     export interface IUnit extends IObject {
@@ -122,6 +127,7 @@
     export interface IItem extends IObject {
         name: string;
         num: number;
+        commands: Common.ActionType[];
     }
 
     export interface IFOVData {
