@@ -33,11 +33,15 @@
     export enum ActionType {
         Move, Attack, Use, Input, Throw, Pick, // 能動的アクション
         Die, Recieve, Damage, Heal, Swap, Blown,// 受動的アクション
-        AddObject, None
+        None
     }
 
     export enum DungeonUnitState {
         Normal
+    }
+
+    export enum EndState {
+        None, Clear, Up, GameOver
     }
 
     export enum Speed {
@@ -62,6 +66,7 @@
     }
 
     export class Action {
+        end: EndState = EndState.None;
         constructor(
             public type: Common.ActionType,
             public params: number[] = [],
@@ -104,16 +109,15 @@
     }
 
     export interface IUnit extends IObject {
-        lv: number;
         hp: number;
         maxHp: number;
         atk: number;
         def: number;
+        lv: number;
         turn: number;
         inventory: IItem[];
 
         dir: number;
-        speed: Speed;
         state: DungeonUnitState;
         name: string;
     }
@@ -122,6 +126,7 @@
         currentExp: number;
         stomach: number;
         maxStomach: number;
+        setDir(dir: number);
     }
 
     export interface IItem extends IObject {

@@ -1,5 +1,8 @@
 ﻿module ShizimilyRogue.Model {
     export class Process {
+        public static end() {
+        }
+
         public static process(dungeonManager: DungeonManager, object: Common.IObject, action: Common.Action): Result {
             var result: Result = null;
             var getMap = dungeonManager.getMap();
@@ -20,15 +23,19 @@
                 var item = getMap(object.coord.x, object.coord.y)[Common.Layer.Ground];
                 if (item.type == Common.DungeonObjectType.Item) {
                     dungeonManager.removeObject(item);
-                    result = new Result(object, action, [object]);
+                    result = new Result(object, action, [item]);
                 }
             } else if (action.type == Common.ActionType.Damage) {
                 result = new Result(object, action, [object]);
             } else if (action.type == Common.ActionType.Die) {
-                dungeonManager.removeObject(object);
                 result = new Result(object, action, []);
+                if (object.id == Common.PLAYER_ID) {
+                    result.action.end = Common.EndState.GameOver;
+                } else {
+                    dungeonManager.removeObject(object);
+                }
             } else if (action.type == Common.ActionType.Use) {
-
+                result = new Result(object, action, [object]);
             }
             return result;
         }

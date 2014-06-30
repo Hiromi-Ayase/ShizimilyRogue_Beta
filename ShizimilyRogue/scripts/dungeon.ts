@@ -4,27 +4,41 @@ module ShizimilyRogue.Model {
 
     export interface IItemData {
         name: string;
+        category: number;
         num: number;
-        category: Common.ItemType;
         commands: Common.ActionType[];
         use: (unit: Common.IObject, command: number, items: Common.IItem[]) => Common.Action;
     }
 
-    export interface IEnemyData {
-        category: number;
+    export interface IUnitData {
         name: string;
+        category: number;
+        dir: Common.DIR;
+        state: Common.DungeonUnitState;
+        hp: number;
+        lv: number;
         speed: Common.Speed;
         maxHp: number;
         atk: number;
         def: number;
+        turn: number;
+        inventory: Common.IItem[];
+        phase(fov: Common.IFOVData): Common.Action;
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action;
+    }
+
+    export interface IEnemyData extends IUnitData{
         exp: number;
-        inventry: Common.IItem[];
         dropProbability: number;
         awakeProbabilityWhenAppear: number;
         awakeProbabilityWhenEnterRoom: number;
         awakeProbabilityWhenNeighbor: number;
-        phase(fov: Common.IFOVData): Common.Action;
-        event(result: Common.IResult, fov: Common.IFOVData): Common.Action;
+    }
+
+    export interface IPlayerData extends IUnitData {
+        currentExp: number;
+        stomach: number;
+        maxStomach: number;
     }
 
     export class Result implements Common.IResult {
@@ -72,6 +86,7 @@ module ShizimilyRogue.Model {
         private _player: Player;
         private map: Map;
         private scheduler: ROT.Scheduler.Speed = new ROT.Scheduler.Speed();
+        private _endState: Common.EndState = Common.EndState.None;
 
         constructor(w: number, h: number) {
             this._width = w;
@@ -79,7 +94,7 @@ module ShizimilyRogue.Model {
             this.map = new Map(w, h);
 
             // Playerを配置
-            this._player = new Player("しじみりちゃん");
+            this._player = new Player(new Model.Data.PlayerData("しじみりちゃん"));
             this.addObject(this._player, Common.Layer.Unit);
 
             // 敵を配置
@@ -132,6 +147,10 @@ module ShizimilyRogue.Model {
             return this.map.moveObject(obj, dir);
         }
 
+        public get endState(): number {
+            return this._endState;
+        }
+
         public get width(): number {
             return this._width;
         }
@@ -165,7 +184,11 @@ module ShizimilyRogue.Model {
             var action = input;
             while (action != null) {
                 // 行動
-                this.update(this._current, action, allResults);
+                this._endState = this.update(this._current, action, allResults);
+                if (this._endState != Common.EndState.None) {
+                    // ゲームが終わった
+                    return allResults;
+                }
 
                 // 次に行動するユニットのアクションを取り出す
                 this._current = this.scheduler.next();
@@ -175,20 +198,25 @@ module ShizimilyRogue.Model {
             return allResults;
         }
 
-        private update(object: Common.IObject, action: Common.Action, results: Common.IResult[]) {
+        private update(object: Common.IObject, action: Common.Action, results: Common.IResult[]): Common.EndState {
             var result = Process.process(this, object, action);
+            if (action.end != Common.EndState.None)
+                return action.end;
             if (result != null) {
                 results.push(result);
-                result.targets.forEach(target => {
+                for (var i = 0; i < result.targets.length; i++) {
+                    var target = result.targets[i];
                     var fov = this.map.getFOV(target);
                     var newAction = (<DungeonObject>target).event(result, fov);
                     if (newAction != null) {
-                        this.update(target, newAction, results)
+                        var endState = this.update(target, newAction, results)
+                        if (endState != Common.EndState.None)
+                            return endState;
                     }
-                });
+                }
             }
+            return Common.EndState.None;
         }
-
     }
 
     class Item extends DungeonObject implements Common.IItem {
@@ -222,108 +250,54 @@ module ShizimilyRogue.Model {
     }
 
     class Unit extends DungeonObject implements Common.IUnit {
-        lv = 1;
         layer = Common.Layer.Unit;
         type = Common.DungeonObjectType.Unit;
-        inventory: Item[] = [];
-        hp: number;
-        turn = 0;
-
-        dir = 0;
-        state = Common.DungeonUnitState.Normal;
 
         getSpeed() {
-            return this.speed;
+            return this.data.speed;
         }
 
-        phase(fov: Common.IFOVData): Common.Action {
-            this.turn ++
-            return null;
-        }
+        public get atk() { return this.data.atk; }
+        public get def() { return this.data.def; }
+        public get lv() { return this.data.lv; }
+        public get hp() { return this.data.hp; }
+        public get maxHp() { return this.data.maxHp; }
+        public get turn() { return this.data.turn; }
+        public get dir() { return this.data.dir; }
+        public get inventory() { return this.data.inventory; }
+        public get state() { return this.data.state; }
+        public get name() { return this.data.name; }
 
-        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
-            if (result.action.type == Common.ActionType.Attack) {
-                if (result.object.type == Common.DungeonObjectType.Unit) {
-                    var attacker = <Common.IUnit>result.object;
-                    var damage = Common.Damage(attacker.atk, this.def);
-                    this.hp -= damage;
-                    return Common.Action.Damage(damage);
-                }
-            } else if (result.action.type == Common.ActionType.Damage) {
-                if (this.hp <= 0) {
-                    return Common.Action.Die();
-                }
-            } else if (result.action.type == Common.ActionType.Move) {
-                this.dir = result.action.params[0];
-            }
-            return null;
-        }
+        phase(fov: Common.IFOVData): Common.Action { return this.data.phase(fov); }
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action { return this.data.event(result, fov); }
 
-        constructor(
-            public category: number,
-            public name: string,
-            public speed: Common.Speed,
-            public maxHp: number,
-            public atk: number,
-            public def: number) {
+        constructor(private data: IUnitData) {
             super();
-            this.hp = this.maxHp;
         }
     }
 
     class Player extends Unit implements Common.IPlayer {
         id = Common.PLAYER_ID;
-        currentExp = 0;
-        maxStomach = 100;
-        stomach = this.maxStomach;
 
-        get maxHp(): number {
-            return this.lv * 10 + 100;
-        }
-        get atk(): number {
-            return this.lv * 10 + 100;
-        }
-        get def(): number {
-            return this.lv * 10 + 100;
-        }
-
-        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
-            if (result.action.type == Common.ActionType.Move) {
-                this.dir = result.action.params[0];
-
-                var obj = fov.getObject(fov.me.coord)[Common.Layer.Ground];
-                if (obj.type == Common.DungeonObjectType.Item) {
-                    this.inventory.push(<Item>obj);
-                    return new Common.Action(Common.ActionType.Pick);
-                }
-            } else {
-                return super.event(result, fov);
-            }
-            return null;
-        }
-
-        constructor(name: string) {
-            super(Common.PLAYER_ID, name, Common.Speed.NORMAL, null, null, null);
+        public get currentExp() { return this.playerData.currentExp; }
+        public get maxStomach() { return this.playerData.maxStomach; }
+        public get stomach() { return this.playerData.stomach; }
+        public setDir(dir: number) { this.playerData.dir = dir; }
+        constructor(private playerData: IPlayerData) {
+            super(playerData);
         }
     }
 
     class Enemy extends Unit {
-        exp: number;
-        dropProbability: number;
-        awakeProbabilityWhenAppear: number;
-        awakeProbabilityWhenEnterRoom: number;
-        awakeProbabilityWhenNeighbor: number;
+        public get exp() { return this.enemyData.exp; }
+        public get dropProbability() { return this.enemyData.dropProbability; }
+        public get awakeProbabilityWhenAppear() { return this.enemyData.awakeProbabilityWhenAppear; }
+        public get awakeProbabilityWhenEnterRoom() { return this.enemyData.awakeProbabilityWhenEnterRoom; }
+        public get awakeProbabilityWhenNeighbor() { return this.enemyData.awakeProbabilityWhenNeighbor; }
 
-        constructor(data: IEnemyData) {
-            super(data.category, data.name, data.speed, data.maxHp, data.atk, data.def);
-            this.exp = data.exp;
-            this.inventory = <Item[]>data.inventry;
-            this.dropProbability = data.dropProbability;
-            this.awakeProbabilityWhenAppear = data.awakeProbabilityWhenAppear;
-            this.awakeProbabilityWhenEnterRoom = data.awakeProbabilityWhenEnterRoom;
-            this.awakeProbabilityWhenNeighbor = data.awakeProbabilityWhenNeighbor;
-            this.phase = data.phase;
-            this.event = data.event;
+
+        constructor(private enemyData: IEnemyData) {
+            super(enemyData);
         }
     }
 

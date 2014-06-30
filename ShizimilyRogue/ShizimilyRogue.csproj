@@ -46,6 +46,7 @@
     <TypeScriptCompile Include="scripts\gameScene.ts" />
     <TypeScriptCompile Include="scripts\rot.d.ts" />
     <TypeScriptCompile Include="scripts\scene.ts" />
+    <TypeScriptCompile Include="scripts\gameOverScene.ts" />
     <TypeScriptCompile Include="scripts\titleScene.ts" />
   </ItemGroup>
   <ItemGroup>
