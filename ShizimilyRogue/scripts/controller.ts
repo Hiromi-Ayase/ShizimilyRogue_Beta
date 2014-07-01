@@ -46,6 +46,22 @@
         }
     }
 
+    class GameOverScene implements Scene {
+        private _view: View.GameOverScene = new View.GameOverScene();
+
+        update(e): Scene {
+            var a = View.Scene.keyA;
+            if (a) {
+                return new TitleScene();
+            }
+            return null;
+        }
+
+        get view() {
+            return this._view;
+        }
+    }
+
     class GameScene implements Scene {
         private dungeonManager: Model.DungeonManager;
         private _view: View.GameScene;
@@ -60,6 +76,10 @@
 
         update(e): Scene {
             if (!View.Scene.animating) {
+                if (this.dungeonManager.endState != Common.EndState.None) {
+                    return new GameOverScene();
+                }
+
                 var dir = View.Scene.keyDirection;
                 var a = View.Scene.keyA;
                 var b = View.Scene.keyB;
@@ -70,7 +90,7 @@
                         var action = Common.Action.Move(dir);
                         this.viewUpdate(action);
                     } else {
-                        this.player.dir = dir;
+                        this.player.setDir(dir);
                         this.viewUpdate();
                     }
                 } else if (a == true) {
@@ -81,9 +101,20 @@
                         if (n == 1) {
                             var itemNames = this.player.inventory.map(item => item.name);
                             this._view.showMenu(View.MenuType.Item, itemNames, m => {
-                                this._view.closeMenu();
-                                var action = Common.Action.Use(this.player.inventory[m]);
-                                this.viewUpdate(action);
+                                var item = this.player.inventory[m];
+                                var commandNames = [];
+                                item.commands.forEach(command => {
+                                    switch (command) {
+                                        case Common.ActionType.Use:
+                                            commandNames.push("使う");
+                                            break;
+                                    }
+                                });
+                                this._view.showMenu(View.MenuType.Use, commandNames, command => {
+                                    this._view.closeMenu();
+                                    var action = Common.Action.Use(this.player.inventory[m]);
+                                    this.viewUpdate(action);
+                                });
                             });
                         }
                     }, false);

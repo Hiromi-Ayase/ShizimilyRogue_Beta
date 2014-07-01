@@ -22,6 +22,10 @@
         UP, UP_RIGHT, RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT
     }
 
+    export enum ItemType {
+        Food, CPU
+    }
+
     export enum DungeonObjectType {
         Null, Wall, Path, Room, Unit, Item
     }
@@ -29,11 +33,15 @@
     export enum ActionType {
         Move, Attack, Use, Input, Throw, Pick, // 能動的アクション
         Die, Recieve, Damage, Heal, Swap, Blown,// 受動的アクション
-        AddObject, None
+        None
     }
 
     export enum DungeonUnitState {
         Normal
+    }
+
+    export enum EndState {
+        None, Clear, Up, GameOver
     }
 
     export enum Speed {
@@ -58,6 +66,7 @@
     }
 
     export class Action {
+        end: EndState = EndState.None;
         constructor(
             public type: Common.ActionType,
             public params: number[] = [],
@@ -96,19 +105,19 @@
         category: number;
         coord: Coord;
         layer: Layer;
+        corner: boolean;
     }
 
     export interface IUnit extends IObject {
-        lv: number;
         hp: number;
         maxHp: number;
         atk: number;
         def: number;
+        lv: number;
         turn: number;
         inventory: IItem[];
 
         dir: number;
-        speed: Speed;
         state: DungeonUnitState;
         name: string;
     }
@@ -117,11 +126,13 @@
         currentExp: number;
         stomach: number;
         maxStomach: number;
+        setDir(dir: number);
     }
 
     export interface IItem extends IObject {
         name: string;
         num: number;
+        commands: Common.ActionType[];
     }
 
     export interface IFOVData {

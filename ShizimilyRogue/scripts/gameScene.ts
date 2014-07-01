@@ -7,7 +7,7 @@ module ShizimilyRogue.View {
     // メニューオープン時のキーロック開放処理フレーム数
     var KEY_LOCK_RELEASE = 10;
 
-    export enum MenuType { Main, Item }
+    export enum MenuType { Main, Item, Use }
 
     export class GameSceneData {
         constructor(
@@ -107,6 +107,9 @@ module ShizimilyRogue.View {
             } else if (type == MenuType.Item) {
                 var menu = Menu.Item(data, selectHandler, multiple);
                 this.menuGroup.addChild(menu);
+            } else if (type == MenuType.Use) {
+                var menu = Menu.Use(data, selectHandler, multiple);
+                this.menuGroup.addChild(menu);
             }
         }
 
@@ -151,7 +154,10 @@ module ShizimilyRogue.View {
                     message += unit.name + "は" + item.name + "を拾った！<br/>";
                 } else if (result.action.type == Common.ActionType.Die) {
                     var unit = (<Common.IUnit>result.object);
-                    message += unit.name + "をやっつけた！";
+                    message += unit.name + "をやっつけた！<br/>";
+                } else if (result.action.type == Common.ActionType.Use) {
+                    var item = (<Common.IItem>result.action.objects[0]);
+                    message += item.name + "をたべた<br/>";
                 }
             });
             this.message.show(message);
@@ -381,12 +387,16 @@ module ShizimilyRogue.View {
             return new Menu(data, selectHandler, multiple, Scene.IMAGE.ITEM_WINDOW.DATA, 10, 10, 10);
         }
 
+        static Use(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.USE_MENU.DATA, 400, 10, 4);
+        }
+
         constructor(
             data: string[],
             private selectHandler: (n: number) => void,
             private multiple: boolean,
             background: enchant.Surface,
-            top: number, left: number,
+            left: number, top: number,
             private size: number) {
             super();
             this.menuArea = new enchant.Sprite(background.width, background.height);
@@ -396,6 +406,8 @@ module ShizimilyRogue.View {
             this.cursor.image = imgCursor;
             this.cursor.x = Menu.LEFT_MARGIN;
             this.elements = new enchant.Group();;
+            this.x = left;
+            this.y = top;
 
             this.setMenuElement(data);
             this.show();

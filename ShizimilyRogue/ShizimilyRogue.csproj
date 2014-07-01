@@ -31,9 +31,11 @@
     <Content Include="images\shizimily_faceIcon_A0.png" />
     <Content Include="images\title.png" />
     <Content Include="images\unit.png" />
+    <Content Include="images\UseMenu.png" />
     <Content Include="images\wall_01.png" />
     <Content Include="index.html" />
     <TypeScriptCompile Include="data\items.ts" />
+    <TypeScriptCompile Include="data\process.ts" />
     <TypeScriptCompile Include="data\units.ts" />
     <TypeScriptCompile Include="scripts\common.ts" />
     <Content Include="scripts\enchant.js" />
@@ -44,6 +46,7 @@
     <TypeScriptCompile Include="scripts\gameScene.ts" />
     <TypeScriptCompile Include="scripts\rot.d.ts" />
     <TypeScriptCompile Include="scripts\scene.ts" />
+    <TypeScriptCompile Include="scripts\gameOverScene.ts" />
     <TypeScriptCompile Include="scripts\titleScene.ts" />
   </ItemGroup>
   <ItemGroup>

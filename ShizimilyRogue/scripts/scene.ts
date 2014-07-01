@@ -19,6 +19,7 @@
             MEMU_MAIN: { URL: "./images/MainMenu.png", DATA: <enchant.Surface>null },
             CURSOR: { URL: "./images/cursor.png", DATA: <enchant.Surface>null },
             ITEM: { URL: "./images/cake.png", DATA: <enchant.Surface>null },
+            USE_MENU: { URL: "./images/UseMenu.png", DATA: <enchant.Surface>null },
         };
 
         static game: enchant.Core;

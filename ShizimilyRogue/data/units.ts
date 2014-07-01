@@ -1,20 +1,79 @@
 ﻿module ShizimilyRogue.Model.Data {
+    export class UnitData implements IUnitData {
+        category: number = 0;
+        dir: Common.DIR = 0;
+        lv: number = 1;
+        state: Common.DungeonUnitState = Common.DungeonUnitState.Normal;
+        maxHp: number = 100;
+        atk: number = 100;
+        def: number = 100;
+        hp: number = this.maxHp;
+        speed: Common.Speed = Common.Speed.NORMAL;
+        turn: number = 0;
+        inventory: Common.IItem[] = [];
 
+        phase(fov: Common.IFOVData): Common.Action {
+            this.turn++
+            return null;
+        }
 
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
+            if (result.action.type == Common.ActionType.Attack) {
+                if (result.object.type == Common.DungeonObjectType.Unit) {
+                    var attacker = <Common.IUnit>result.object;
+                    var damage = Common.Damage(attacker.atk, this.def);
+                    this.hp -= damage;
+                    return Common.Action.Damage(damage);
+                }
+            } else if (result.action.type == Common.ActionType.Damage) {
+                if (this.hp <= 0) {
+                    return Common.Action.Die();
+                }
+            } else if (result.action.type == Common.ActionType.Move) {
+                this.dir = result.action.params[0];
+            }
+            return null;
+        }
 
-    export class Enemy implements IEnemyData {
+        constructor(public name: string) {
+        }
+    }
+
+    export class PlayerData extends UnitData implements IPlayerData {
         category = 0;
-        name = null;
-        speed = Common.Speed.NORMAL;
-        maxHp = 100;
-        atk = 100;
-        def = 100;
+        currentExp = 0;
+        maxStomach = 100;
+        stomach = this.maxStomach;
+
+        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
+            if (result.action.type == Common.ActionType.Move) {
+                this.dir = result.action.params[0];
+
+                var obj = fov.getObject(fov.me.coord)[Common.Layer.Ground];
+                if (obj.type == Common.DungeonObjectType.Item) {
+                    this.inventory.push(<Common.IItem>obj);
+                    return new Common.Action(Common.ActionType.Pick);
+                }
+            } else {
+                return super.event(result, fov);
+            }
+            return null;
+        }
+
+        constructor(public name: string) {
+            super(name);
+        }
+    }
+
+
+    export class Enemy extends UnitData implements IEnemyData {
+        category = 0;
         exp = 100;
-        inventry = [];
         dropProbability = 10;
         awakeProbabilityWhenAppear = 100;
         awakeProbabilityWhenEnterRoom = 100;
         awakeProbabilityWhenNeighbor = 100;
+        hp = this.maxHp;
 
         private static CANDIDATE = [
             [Common.DIR.UP, Common.DIR.UP_RIGHT, Common.DIR.UP_LEFT, Common.DIR.RIGHT, Common.DIR.LEFT],
@@ -29,7 +88,7 @@
 
         private lastMe: Common.Coord = null;
         private lastPlayer: Common.Coord = null;
-        public phase = (fov: Common.IFOVData): Common.Action => {
+        public phase(fov: Common.IFOVData): Common.Action {
             var me = fov.me.coord;
             var player:Common.Coord = null;
             var action: Common.Action = null;
@@ -70,13 +129,16 @@
             return action;
         }
 
-        public event = (result: Common.IResult, fov: Common.IFOVData): Common.Action => {
+        public event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
             fov.objects.forEach(obj => {
                 if (obj.id == Common.PLAYER_ID) {
                     this.lastPlayer = obj.coord;
                 }
             });
-            return null;
+            if (false) {
+            } else {
+                return super.event(result, fov);
+            }
         }
 
         private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {
@@ -174,7 +236,9 @@
     }
 
     export class Ignore extends Enemy {
-        name = "いぐー";
         category = 1;
+        constructor() {
+            super("いぐー");
+        }
     }
 }

@@ -1,24 +1,26 @@
 ﻿module ShizimilyRogue.Model.Data {
     export class Item implements IItemData {
+        public commands: Common.ActionType[] = [
+            Common.ActionType.Use,
+            Common.ActionType.Throw,
+        ];
+
         constructor(
-            public targetType: TargetType,
             public category: number,
             public name: string,
-            public num: number) {
+            public num: number = 1) {
         }
-        use: (unit: Common.IObject) => Common.Action[];
+        use: (unit: Common.IObject, command: number, items: Common.IItem[]) => Common.Action;
     }
 
     export class Sweet extends Item {
         constructor() {
-            super(TargetType.Me, 0, "スイーツ", 1);
+            super(Common.ItemType.Food, "スイーツ");
         }
 
-        use = (objects: Common.IObject): Common.Action[] => {
-            var actions: Common.Action[] = [];
+        public use = (unit: Common.IObject, command: number, items: Common.IItem[]) => {
             var action = new Common.Action(Common.ActionType.Heal, [100]);
-            actions.push(action);
-            return actions;
+            return action;
         }
     }
 }
