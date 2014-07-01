@@ -33,17 +33,17 @@ module ShizimilyRogue.View {
             this.message = new Message();
             this.pathShadow = GameScene.getPathShadow();
             this.view = new View(data, fov);
-            this.menuGroup = new enchant.Group();
             this.playerHp = new PlayerHp();
             this.clock = new Clock();
-
+            this.menuGroup = new enchant.Group();
+            
             this.addChild(this.view);
             this.addChild(this.pathShadow);
-            this.addChild(this.message);
-            this.addChild(this.menuGroup);
             this.addChild(this.playerHp);
             this.addChild(this.clock);
-
+            this.addChild(this.message);
+            this.addChild(this.menuGroup);
+            
             this.addMenuKeyHandler();
             this.update(fov, []);
         }
