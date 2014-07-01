@@ -13,24 +13,42 @@
         inventory: Common.IItem[] = [];
 
         phase(fov: Common.IFOVData): Common.Action {
-            this.turn++
             return null;
         }
 
-        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
+        event(map: MapController, result: Common.IResult): Common.Action {
             if (result.action.type == Common.ActionType.Attack) {
                 if (result.object.type == Common.DungeonObjectType.Unit) {
                     var attacker = <Common.IUnit>result.object;
-                    var damage = Common.Damage(attacker.atk, this.def);
+                    var damage = Common.Damage(result.action.params[0], this.def);
                     this.hp -= damage;
                     return Common.Action.Damage(damage);
                 }
             } else if (result.action.type == Common.ActionType.Damage) {
                 if (this.hp <= 0) {
-                    return Common.Action.Die();
+                    var action = Common.Action.Die();
+                    if (result.object.id == Common.PLAYER_ID) {
+                        action.end = Common.EndState.GameOver;
+                    } else {
+                        map.deleteObject(result.object);
+                    }
+                    return action;
                 }
+            } else if (result.action.type == Common.ActionType.Pick) {
+                var item = <Common.IItem>result.action.objects[0];
+                this.inventory.push(item);
+                map.deleteObject(item);
             } else if (result.action.type == Common.ActionType.Move) {
-                this.dir = result.action.params[0];
+                map.moveObject(map.current, this.dir);
+            } else if (result.action.type == Common.ActionType.Use) {
+                var item = <Common.IItem>result.action.objects[0];
+                this.inventory = this.inventory.filter((value, index, array) => {
+                    return value != item;
+                });
+                var action = item.use(result.action);
+                return action;
+            } else if (result.action.type == Common.ActionType.Heal) {
+                this.hp += result.action.params[0];
             }
             return null;
         }
@@ -45,19 +63,17 @@
         maxStomach = 100;
         stomach = this.maxStomach;
 
-        event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
+        event(map: MapController, result: Common.IResult): Common.Action {
+            var ret = super.event(map, result);
             if (result.action.type == Common.ActionType.Move) {
-                this.dir = result.action.params[0];
-
-                var obj = fov.getObject(fov.me.coord)[Common.Layer.Ground];
+                var coord = map.current.coord;
+                var obj = map.getTable(coord.x, coord.y)[Common.Layer.Ground];
                 if (obj.type == Common.DungeonObjectType.Item) {
-                    this.inventory.push(<Common.IItem>obj);
-                    return new Common.Action(Common.ActionType.Pick);
+                    var item = <Common.IItem>obj;
+                    return Common.Action.Pick(item);
                 }
-            } else {
-                return super.event(result, fov);
             }
-            return null;
+            return ret;
         }
 
         constructor(public name: string) {
@@ -102,17 +118,21 @@
             if (player != null) {
                 // 視界内にプレイヤーがいた
                 if (fov.attackable[Common.PLAYER_ID]) {
-                    var dir = Enemy.getAttackDir(fov.me.coord, player);
-                    action = new Common.Action(Common.ActionType.Attack, [dir]);
+                    this.dir = Enemy.getAttackDir(fov.me.coord, player);
+                    action = Common.Action.Attack(this.atk);
                 } else {
                     var dir = Enemy.move(me, player, this.lastMe, fov);
-                    if (dir != null)
-                        action = new Common.Action(Common.ActionType.Move, [dir]);
+                    if (dir != null) {
+                        this.dir = dir;
+                        action = Common.Action.Move();
+                    }
                 }
             } else {
                 var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
-                if (dir != null)
-                    action = new Common.Action(Common.ActionType.Move, [dir]);
+                if (dir != null) {
+                    this.dir = dir;
+                    action = Common.Action.Move();
+                }
             }
 
             if (action == null) {
@@ -121,24 +141,23 @@
                 fov.movable.map((value, index, array) => {
                     if (value) dirs.push(index);
                 });
-                var dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = new Common.Action(Common.ActionType.Move, [dir]);
+                this.dir = Math.floor(dirs.length * ROT.RNG.getUniform());
+                action = Common.Action.Move();
             }
             this.lastPlayer = player;
             this.lastMe = me;
             return action;
         }
 
-        public event(result: Common.IResult, fov: Common.IFOVData): Common.Action {
+        public event(map: MapController, result: Common.IResult): Common.Action {
+            var ret = super.event(map, result);
+            var fov = map.getFOV();
             fov.objects.forEach(obj => {
                 if (obj.id == Common.PLAYER_ID) {
                     this.lastPlayer = obj.coord;
                 }
             });
-            if (false) {
-            } else {
-                return super.event(result, fov);
-            }
+            return ret;
         }
 
         private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {

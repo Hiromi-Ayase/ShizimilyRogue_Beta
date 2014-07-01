@@ -65,31 +65,45 @@
         }
     }
 
+    export enum Target {
+         Me, Next, Line
+    }
+
     export class Action {
         end: EndState = EndState.None;
+
         constructor(
             public type: Common.ActionType,
-            public params: number[] = [],
-            public objects: IObject[] = []) { }
+            public target: Target,
+            public params: number[]= [],
+            public objects: IObject[]= []) { }
 
-        static Move(dir: number): Common.Action {
-            return new Action(ActionType.Move, [dir]);
+        static Move(): Common.Action {
+            return new Action(ActionType.Move, Target.Me);
         }
 
-        static Attack(dir: number): Common.Action {
-            return new Action(ActionType.Attack, [dir]);
+        static Attack(atk: number): Common.Action {
+            return new Action(ActionType.Attack, Target.Next, [atk]);
         }
 
         static Damage(amount: number): Common.Action {
-            return new Action(ActionType.Damage, [amount]);
+            return new Action(ActionType.Damage, Target.Me, [amount]);
+        }
+
+        static Heal(amount: number): Common.Action {
+            return new Action(ActionType.Heal, Target.Me, [amount]);
         }
 
         static Die(): Common.Action {
-            return new Action(ActionType.Die, []);
+            return new Action(ActionType.Die, Target.Me, []);
         }
 
         static Use(item: IItem): Common.Action {
-            return new Action(ActionType.Use, [], [item]);
+            return new Action(ActionType.Use, Target.Me, [], [item]);
+        }
+
+        static Pick(item: IItem): Common.Action {
+            return new Action(ActionType.Pick, Target.Me, [], [item]);
         }
     }
 
@@ -106,23 +120,24 @@
         coord: Coord;
         layer: Layer;
         corner: boolean;
+        dir: DIR;
     }
 
     export interface IUnit extends IObject {
+        inventory: IItem[];
+
+        state: DungeonUnitState;
+        name: string;
+    }
+
+    export interface IPlayer extends IUnit {
         hp: number;
         maxHp: number;
         atk: number;
         def: number;
         lv: number;
         turn: number;
-        inventory: IItem[];
 
-        dir: number;
-        state: DungeonUnitState;
-        name: string;
-    }
-
-    export interface IPlayer extends IUnit {
         currentExp: number;
         stomach: number;
         maxStomach: number;
@@ -133,6 +148,7 @@
         name: string;
         num: number;
         commands: Common.ActionType[];
+        use(action: Action): Action;
     }
 
     export interface IFOVData {

@@ -150,7 +150,7 @@ module ShizimilyRogue.View {
                     message += unit.name + "は" + result.action.params[0] + "のダメージ！<br/>";
                 } else if (result.action.type == Common.ActionType.Pick) {
                     var unit = (<Common.IUnit>result.object);
-                    var item = (<Common.IItem>result.targets[0]);
+                    var item = (<Common.IItem>result.action.objects[0]);
                     message += unit.name + "は" + item.name + "を拾った！<br/>";
                 } else if (result.action.type == Common.ActionType.Die) {
                     var unit = (<Common.IUnit>result.object);
@@ -158,6 +158,10 @@ module ShizimilyRogue.View {
                 } else if (result.action.type == Common.ActionType.Use) {
                     var item = (<Common.IItem>result.action.objects[0]);
                     message += item.name + "をたべた<br/>";
+                } else if (result.action.type == Common.ActionType.Heal) {
+                    var unit = (<Common.IUnit>result.object);
+                    var heal = result.action.params[0];
+                    message += unit.name + "は" + heal + "回復した<br/>";
                 }
             });
             this.message.show(message);
@@ -375,9 +379,9 @@ module ShizimilyRogue.View {
         private static LEFT_MARGIN = 36;
         private static LINE_SIZE = 36;
         private menuArea: enchant.Sprite;
-        private elements: enchant.Group;
+        private elements: enchant.Group = null;
         private cursor: enchant.Sprite;
-        private cursorIndex = 0;
+        private cursorIndex: number = 0;
 
         static Main(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
             return new Menu(data, selectHandler, multiple, Scene.IMAGE.MEMU_MAIN.DATA, 10, 10, 3);
@@ -405,19 +409,21 @@ module ShizimilyRogue.View {
             this.cursor = new enchant.Sprite(imgCursor.width, imgCursor.height);
             this.cursor.image = imgCursor;
             this.cursor.x = Menu.LEFT_MARGIN;
-            this.elements = new enchant.Group();;
             this.x = left;
             this.y = top;
 
-            this.setMenuElement(data);
-            this.show();
             this.addChild(this.menuArea);
-            this.addChild(this.elements);
+            this.setMenuElement(data);
             this.addChild(this.cursor);
+            this.show();
         }
 
-        private setMenuElement(data: string[]): void {
+        public setMenuElement(data: string[]): void {
             var count = 0;
+            if (this.elements != null) {
+                this.removeChild(this.elements);
+            }
+            this.elements = new enchant.Group();
             data.forEach(d => {
                 var label: enchant.Label = new enchant.Label();
                 label.text = d;
@@ -429,6 +435,8 @@ module ShizimilyRogue.View {
                 this.elements.addChild(label);
                 count++;
             });
+            this.cursor.visible = data.length > 0;
+            this.addChild(this.elements);
         }
 
         private show(): void {
@@ -452,7 +460,8 @@ module ShizimilyRogue.View {
         }
 
         public select(): void {
-            this.selectHandler(this.cursorIndex);
+            if (this.cursor.visible)
+                this.selectHandler(this.cursorIndex);
         }
     }
 
@@ -524,7 +533,7 @@ module ShizimilyRogue.View {
             if (Common.DEBUG) {
                 if (result.object.type == Common.DungeonObjectType.Unit) {
                     var unit = <Common.IUnit>result.object;
-                    this.info.text = "[dir:" + unit.dir + ", turn:" + unit.turn + "]";
+                    this.info.text = "[dir:" + unit.dir + "]";
                 }
             }
 

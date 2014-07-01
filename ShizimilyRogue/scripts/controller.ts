@@ -86,15 +86,13 @@
                 if (dir != null) {
                     if (Common.DEBUG)
                         View.Scene.resetKeys();
+                    this.player.setDir(dir);
                     if (this.fov.movable[dir]) {
-                        var action = Common.Action.Move(dir);
+                        var action = Common.Action.Move();
                         this.viewUpdate(action);
-                    } else {
-                        this.player.setDir(dir);
-                        this.viewUpdate();
                     }
                 } else if (a == true) {
-                    var action = Common.Action.Attack(this.player.dir);
+                    var action = Common.Action.Attack(this.player.atk);
                     this.viewUpdate(action);
                 } else if (b == true) {
                     this._view.showMenu(View.MenuType.Main, ["攻撃", "アイテム"], n => {
@@ -107,6 +105,9 @@
                                     switch (command) {
                                         case Common.ActionType.Use:
                                             commandNames.push("使う");
+                                            break;
+                                        case Common.ActionType.Throw:
+                                            commandNames.push("投げる");
                                             break;
                                     }
                                 });
@@ -143,7 +144,7 @@
                     this.dungeonManager.width,
                     this.dungeonManager.height,
                     this.dungeonManager.objects,
-                    this.dungeonManager.getMap()
+                    (x, y) => this.dungeonManager.getTable(x, y)
                 );
             this.player = this.dungeonManager.player;
             this._view = new View.GameScene(data, fov);

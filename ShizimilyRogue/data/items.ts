@@ -10,7 +10,9 @@
             public name: string,
             public num: number = 1) {
         }
-        use: (unit: Common.IObject, command: number, items: Common.IItem[]) => Common.Action;
+        use(action: Common.Action): Common.Action {
+            return null;
+        }
     }
 
     export class Sweet extends Item {
@@ -18,8 +20,8 @@
             super(Common.ItemType.Food, "スイーツ");
         }
 
-        public use = (unit: Common.IObject, command: number, items: Common.IItem[]) => {
-            var action = new Common.Action(Common.ActionType.Heal, [100]);
+        use(action: Common.Action): Common.Action {
+            var action = Common.Action.Heal(100);
             return action;
         }
     }
