@@ -78,6 +78,8 @@
 
         constructor(public name: string) {
             super(name);
+            this.maxHp = 10000;
+            this.hp = 10000;
         }
     }
 

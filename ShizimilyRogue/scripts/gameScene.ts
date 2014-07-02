@@ -137,34 +137,8 @@ module ShizimilyRogue.View {
 
             // 時間の表示
             this.clock.show(player.turn);
-
-            // メッセージウィンドウのメッセージ表示
-            var message = "";
+            this.message.show(results);
             this.view.update(fov, results);
-            results.forEach(result => {
-                if (result.action.type == Common.ActionType.Attack) {
-                    var unit = (<Common.IUnit>result.object);
-                    message += unit.name + "はこうげきした！<br/>";
-                } else if (result.action.type == Common.ActionType.Damage) {
-                    var unit = (<Common.IUnit>result.object);
-                    message += unit.name + "は" + result.action.params[0] + "のダメージ！<br/>";
-                } else if (result.action.type == Common.ActionType.Pick) {
-                    var unit = (<Common.IUnit>result.object);
-                    var item = (<Common.IItem>result.action.objects[0]);
-                    message += unit.name + "は" + item.name + "を拾った！<br/>";
-                } else if (result.action.type == Common.ActionType.Die) {
-                    var unit = (<Common.IUnit>result.object);
-                    message += unit.name + "をやっつけた！<br/>";
-                } else if (result.action.type == Common.ActionType.Use) {
-                    var item = (<Common.IItem>result.action.objects[0]);
-                    message += item.name + "をたべた<br/>";
-                } else if (result.action.type == Common.ActionType.Heal) {
-                    var unit = (<Common.IUnit>result.object);
-                    var heal = result.action.params[0];
-                    message += unit.name + "は" + heal + "回復した<br/>";
-                }
-            });
-            this.message.show(message);
         }
     }
 
@@ -172,11 +146,11 @@ module ShizimilyRogue.View {
         private static MESSAGE_TOP = 405;
         private static MESSAGE_LEFT = 255;
         private static MESSAGE_WIDTH = VIEW_WIDTH - Message.MESSAGE_LEFT;
-        private static MESSAGE_HEIGHT = 100;
+        private static MESSAGE_HEIGHT = 20;
         private static MESSAGE_AREA_OPACITY = 0.8;
 
         private messageArea: enchant.Sprite;
-        private message: enchant.Label;
+        private messageGroup: enchant.Group;
         private icon: enchant.Sprite;
 
         constructor() {
@@ -186,28 +160,82 @@ module ShizimilyRogue.View {
             this.messageArea.opacity = Message.MESSAGE_AREA_OPACITY;
             this.icon = new enchant.Sprite(VIEW_WIDTH, VIEW_HEIGHT);
             this.icon.image = Scene.IMAGE.MESSAGE_ICON.DATA;
-            this.message = new enchant.Label();
-            this.message.x = Message.MESSAGE_LEFT;
-            this.message.y = Message.MESSAGE_TOP;
-            this.message.font = "16px cursive";
-            this.message.color = "white";
 
-            this.message.width = Message.MESSAGE_WIDTH;
-            this.message.height = Message.MESSAGE_HEIGHT;
-
+            this.messageGroup = new enchant.Group();
             this.addChild(this.messageArea);
             this.addChild(this.icon);
-            this.addChild(this.message);
+            this.addChild(this.messageGroup);
         }
 
-        show(text: string): void {
-            this.message.text = text;
+        show(results: Common.IResult[]): void {
+            var messages:string[] = []
+            results.forEach(result => {
+                var m = Data.Message[result.action.type];
+                if (m != undefined) {
+                    var str = m(result);
+                    str = str.replace(/\{([^\}]+)\}/g, (tag: string, key: string, offset: number, s: string) => {
+                        var x: any = result;
+                        key.split(".").forEach(elem => {
+                            var index = -1;
+                            if (elem.match(/(.*)\[([^\]])+\]$/)) {
+                                elem = RegExp.$1;
+                                index = Number(RegExp.$2);
+                            }
+                            x = elem in x ? x[elem] : "";
+                            if (index >= 0) {
+                                x = x instanceof Array && index < x.length ? x[index] : "";
+                            }
+                            if (x == "") {
+                                return x;
+                            }
+                        });
+                        return x;
+                    });
+                    messages.push(str);
+                }
+            });
+            this.setMessage(messages);
+        }
+
+        private setMessage(messageList: string[]): void {
+            this.removeChild(this.messageGroup);
+            var messageGroup = new enchant.Group();
+            messageGroup.x = Message.MESSAGE_LEFT;
+            messageGroup.y = Message.MESSAGE_TOP;
+            this.messageGroup = messageGroup;
+
+            var tl: enchant.Timeline = this.messageGroup.tl;
+            for (var i = 0; i < messageList.length; i ++) {
+                var label = new enchant.Label();
+                label = new enchant.Label();
+                label.y = i * Message.MESSAGE_HEIGHT;
+                label.font = "16px cursive";
+                label.color = "white";
+                label.width = Message.MESSAGE_WIDTH;
+                label.text = messageList[i];
+                label.visible = false;
+                messageGroup.addChild(label);
+
+                if (i > 2) {
+                    Scene.addAnimating();
+                    tl = tl.delay(10).then(() => {
+                        messageGroup.removeChild(messageGroup.firstChild);
+                    }).moveBy(0, -Message.MESSAGE_HEIGHT, 10).then((e) => {
+                        messageGroup.childNodes[2].visible = true;
+                    }).delay(10).then(() => {
+                        Scene.decAnimating();
+                    });
+                } else {
+                    label.visible = true;
+                }
+            }
+            this.addChild(this.messageGroup);
         }
 
         set visible(flg: boolean) {
             this.messageArea.visible = flg;
-            this.message.visible = flg;
             this.icon.visible = flg;
+            this.messageGroup.childNodes.forEach(node => node.visible = flg);
         }
     }
 

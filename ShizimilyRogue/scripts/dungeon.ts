@@ -61,14 +61,15 @@ module ShizimilyRogue.Model {
 
     class DungeonObject implements Common.IObject {
         private static currentId = 1;
+        id: number;
 
-        category = 0;
+        category: number = 0;
         coord: Common.Coord = null;
         corner: boolean = false;
         type: Common.DungeonObjectType = null;
-        id: number;
         layer: Common.Layer = null;
         dir: Common.DIR = 0;
+        name: string = null;
 
         event(result: Common.IResult): Common.Action {
             return null;

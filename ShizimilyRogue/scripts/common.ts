@@ -121,13 +121,12 @@
         layer: Layer;
         corner: boolean;
         dir: DIR;
+        name: string;
     }
 
     export interface IUnit extends IObject {
         inventory: IItem[];
-
         state: DungeonUnitState;
-        name: string;
     }
 
     export interface IPlayer extends IUnit {
@@ -145,7 +144,6 @@
     }
 
     export interface IItem extends IObject {
-        name: string;
         num: number;
         commands: Common.ActionType[];
         use(action: Action): Action;

@@ -35,6 +35,7 @@
     <Content Include="images\wall_01.png" />
     <Content Include="index.html" />
     <TypeScriptCompile Include="data\items.ts" />
+    <TypeScriptCompile Include="data\message.ts" />
     <TypeScriptCompile Include="data\units.ts" />
     <TypeScriptCompile Include="scripts\common.ts" />
     <Content Include="scripts\enchant.js" />
