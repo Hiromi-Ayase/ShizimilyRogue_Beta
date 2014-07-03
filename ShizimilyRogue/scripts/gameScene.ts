@@ -11,7 +11,7 @@ module ShizimilyRogue.View {
 
     export class GameSceneData {
         constructor(
-            public player: Common.IPlayer,
+            public player: Common.IUnit,
             public width: number,
             public height: number,
             public objects: Common.IObject[],
@@ -25,6 +25,7 @@ module ShizimilyRogue.View {
         private pathShadow: Shadow;
         private playerHp: PlayerHp;
         private clock: Clock;
+        private miniMap: MiniMap;
         private view: View;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
@@ -36,12 +37,14 @@ module ShizimilyRogue.View {
             this.playerHp = new PlayerHp();
             this.clock = new Clock();
             this.menuGroup = new enchant.Group();
+            this.miniMap = new MiniMap(fov.width, fov.height);
             
             this.addChild(this.view);
             this.addChild(this.pathShadow);
             this.addChild(this.playerHp);
             this.addChild(this.clock);
             this.addChild(this.message);
+            this.addChild(this.miniMap);
             this.addChild(this.menuGroup);
             
             this.addMenuKeyHandler();
@@ -139,6 +142,74 @@ module ShizimilyRogue.View {
             this.clock.show(player.turn);
             this.message.show(results);
             this.view.update(fov, results);
+            this.miniMap.update(fov);
+        }
+    }
+
+    class MiniMap extends enchant.Group {
+        private static BLOCK_UNIT = 1;
+        private static BLOCK_PLAYER = 4;
+        private static BLOCK_WALL = 0;
+        private static BLOCK_ITEM = 3;
+        private static BLOCK_EMPTY = 2;
+        private static BLOCK_OHTER = 5;
+        private static X = 150;
+        private static Y = 150;
+        private static ALPHA = 0.5;
+
+        private static SIZE = 8;
+        private groundMap: enchant.Map = new enchant.Map(MiniMap.SIZE, MiniMap.SIZE);
+        private floorMap: enchant.Map = new enchant.Map(MiniMap.SIZE, MiniMap.SIZE);
+        private floorData: number[][];
+        private groundData: number[][];
+
+        constructor(private w:number, private h:number) {
+            super();
+            this.floorData = new Array<number[]>(h);
+            this.groundData = new Array<number[]>(h);
+            for (var y = 0; y < h; y++) {
+                this.floorData[y] = new Array<number>(w);
+                this.groundData[y] = new Array<number>(w);
+                for (var x = 0; x < w; x++) {
+                    this.floorData[y][x] = MiniMap.BLOCK_OHTER;
+                    this.groundData[y][x] = MiniMap.BLOCK_OHTER;
+                }
+            }
+            this.x = MiniMap.X;
+            this.y = MiniMap.Y;
+            this.groundMap.image = Scene.IMAGE.MINI_MAP.DATA;
+            this.floorMap.image = Scene.IMAGE.MINI_MAP.DATA;
+            this.groundMap.opacity = MiniMap.ALPHA;
+            this.floorMap.opacity = MiniMap.ALPHA;
+            this.addChild(this.floorMap);
+            this.addChild(this.groundMap);
+        }
+
+        update(fov: Common.IFOVData) {
+            for (var y = 0; y < this.h; y++) {
+                for (var x = 0; x < this.w; x++) {
+                    this.groundData[y][x] = MiniMap.BLOCK_OHTER;
+                }
+            }
+
+            fov.area.forEach(coord => {
+                var obj = fov.getObject(coord);
+                var type = MiniMap.BLOCK_EMPTY;
+                if (obj[Common.Layer.Unit].id == Common.PLAYER_ID) {
+                    this.groundData[coord.y][coord.x] = MiniMap.BLOCK_PLAYER;
+                } else if (obj[Common.Layer.Unit].type == Common.DungeonObjectType.Unit) {
+                    this.groundData[coord.y][coord.x] = MiniMap.BLOCK_UNIT;
+                } else if (obj[Common.Layer.Ground].type == Common.DungeonObjectType.Item) {
+                    this.groundData[coord.y][coord.x] = MiniMap.BLOCK_ITEM;
+                }
+                if (obj[Common.Layer.Ground].type == Common.DungeonObjectType.Wall) {
+                    this.floorData[coord.y][coord.x] = MiniMap.BLOCK_WALL;
+                } else {
+                    this.floorData[coord.y][coord.x] = MiniMap.BLOCK_EMPTY;
+                }
+            });
+            this.floorMap.loadData(this.floorData);
+            this.groundMap.loadData(this.groundData);
         }
     }
 

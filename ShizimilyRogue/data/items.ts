@@ -1,5 +1,6 @@
 ﻿module ShizimilyRogue.Model.Data {
     export class Item implements IItemData {
+        type: DataType = DataType.Item;
         public commands: Common.ActionType[] = [
             Common.ActionType.Use,
             Common.ActionType.Throw,

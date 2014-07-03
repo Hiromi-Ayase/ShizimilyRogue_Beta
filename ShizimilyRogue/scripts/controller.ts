@@ -65,7 +65,7 @@
     class GameScene implements Scene {
         private dungeonManager: Model.DungeonManager;
         private _view: View.GameScene;
-        private player: Common.IPlayer;
+        private player: Common.IUnit;
         private get fov(): Common.IFOVData {
             return this.dungeonManager.getFOV();
         }
@@ -139,14 +139,14 @@
 
             // Map生成
             var fov = this.dungeonManager.getFOV();
+            this.player = this.dungeonManager.current;
             var data = new View.GameSceneData(
-                    this.dungeonManager.player,
-                    this.dungeonManager.width,
-                    this.dungeonManager.height,
+                    this.player,
+                    fov.width,
+                    fov.height,
                     this.dungeonManager.objects,
                     (x, y) => this.dungeonManager.getTable(x, y)
                 );
-            this.player = this.dungeonManager.player;
             this._view = new View.GameScene(data, fov);
         }
     }

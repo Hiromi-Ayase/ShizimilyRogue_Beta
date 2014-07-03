@@ -1,5 +1,6 @@
 ﻿module ShizimilyRogue.Model.Data {
     export class UnitData implements IUnitData {
+        type: DataType = DataType.Unit;
         category: number = 0;
         dir: Common.DIR = 0;
         lv: number = 1;
@@ -11,6 +12,9 @@
         speed: Common.Speed = Common.Speed.NORMAL;
         turn: number = 0;
         inventory: Common.IItem[] = [];
+        currentExp: number = 0;
+        stomach: number = 100;
+        maxStomach: number = 100;
 
         phase(fov: Common.IFOVData): Common.Action {
             return null;
@@ -57,12 +61,7 @@
         }
     }
 
-    export class PlayerData extends UnitData implements IPlayerData {
-        category = 0;
-        currentExp = 0;
-        maxStomach = 100;
-        stomach = this.maxStomach;
-
+    export class PlayerData extends UnitData {
         event(map: MapController, result: Common.IResult): Common.Action {
             var ret = super.event(map, result);
             if (result.action.type == Common.ActionType.Move) {

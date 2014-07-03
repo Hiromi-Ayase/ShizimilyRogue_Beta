@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = true;
+    export var DEBUG = false;
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
@@ -125,21 +125,18 @@
     }
 
     export interface IUnit extends IObject {
-        inventory: IItem[];
-        state: DungeonUnitState;
-    }
-
-    export interface IPlayer extends IUnit {
         hp: number;
         maxHp: number;
         atk: number;
         def: number;
         lv: number;
         turn: number;
-
         currentExp: number;
         stomach: number;
         maxStomach: number;
+
+        inventory: IItem[];
+        state: DungeonUnitState;
         setDir(dir: number);
     }
 
@@ -156,6 +153,8 @@
         getObject(coord: Coord): IObject[];
         objects: IObject[];
         attackable: { [id: number]: boolean };
+        width: number;
+        height: number;
     }
 
     export interface IEffect {

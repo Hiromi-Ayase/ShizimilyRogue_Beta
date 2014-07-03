@@ -26,6 +26,7 @@
     <Content Include="images\message.png" />
     <Content Include="images\messageIcon.png" />
     <Content Include="images\MessageWindow.png" />
+    <Content Include="images\minimap.png" />
     <Content Include="images\shadow.png" />
     <Content Include="images\shizimily_faceIcon.png" />
     <Content Include="images\shizimily_faceIcon_A0.png" />
