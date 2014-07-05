@@ -1,4 +1,5 @@
 ﻿module ShizimilyRogue.Model.Data {
+
     export class UnitData implements IUnitData {
         type: DataType = DataType.Unit;
         category: number = 0;
@@ -20,9 +21,9 @@
             return null;
         }
 
-        event(map: MapController, result: Common.IResult): Common.Action {
+        event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
             if (result.action.type == Common.ActionType.Attack) {
-                if (result.object.type == Common.DungeonObjectType.Unit) {
+                if (result.object.isUnit()) {
                     var attacker = <Common.IUnit>result.object;
                     var damage = Common.Damage(result.action.params[0], this.def);
                     this.hp -= damage;
@@ -43,31 +44,38 @@
                 this.inventory.push(item);
                 map.deleteObject(item);
             } else if (result.action.type == Common.ActionType.Move) {
-                map.moveObject(map.current, this.dir);
+                map.moveObject(map.currentObject, this.dir);
             } else if (result.action.type == Common.ActionType.Use) {
                 var item = <Common.IItem>result.action.objects[0];
-                this.inventory = this.inventory.filter((value, index, array) => {
-                    return value != item;
-                });
+                this.inventory = this.inventory.filter((value, index, array) => value != item );
                 var action = item.use(result.action);
                 return action;
             } else if (result.action.type == Common.ActionType.Heal) {
                 this.hp += result.action.params[0];
+            } else if (result.action.type == Common.ActionType.Fly) {
+                var item = <Common.IItem>result.action.objects[0];
+                var action = item.use(result.action);
+                return action;
+            } else if (result.action.type == Common.ActionType.Throw) {
+                var item = <Common.IItem>result.action.objects[0];
+                var action = Common.Action.Fly(item, this.dir, me.coord);
+                this.inventory = this.inventory.filter((value, index, array) => value != item);
+                return action;
             }
             return null;
         }
-
         constructor(public name: string) {
         }
     }
 
     export class PlayerData extends UnitData {
-        event(map: MapController, result: Common.IResult): Common.Action {
-            var ret = super.event(map, result);
+        atk = 10;
+        event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
+            var ret = super.event(me, map, result);
             if (result.action.type == Common.ActionType.Move) {
-                var coord = map.current.coord;
-                var obj = map.getTable(coord.x, coord.y)[Common.Layer.Ground];
-                if (obj.type == Common.DungeonObjectType.Item) {
+                var coord = map.currentObject.coord;
+                var obj = map.getObject(coord, Common.Layer.Ground);
+                if (obj.isItem()) {
                     var item = <Common.IItem>obj;
                     return Common.Action.Pick(item);
                 }
@@ -150,9 +158,9 @@
             return action;
         }
 
-        public event(map: MapController, result: Common.IResult): Common.Action {
-            var ret = super.event(map, result);
-            var fov = map.getFOV();
+        public event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
+            var ret = super.event(me, map, result);
+            var fov = me.getFOV();
             fov.objects.forEach(obj => {
                 if (obj.id == Common.PLAYER_ID) {
                     this.lastPlayer = obj.coord;
@@ -188,7 +196,7 @@
         private static move(me: Common.Coord, player: Common.Coord, lastMe: Common.Coord, fov: Common.IFOVData): number {
             // 移動AI
             var dir: number = null;
-            var inRoom = fov.getObject(me)[Common.Layer.Floor].type == Common.DungeonObjectType.Room;
+            var inRoom = fov.getCell(me).isRoom();
 
             if (!inRoom) {
                 // 通路の時
@@ -209,7 +217,7 @@
                     // 出入口を探す
                     for (var i = 0; i < fov.area.length; i++) {
                         var place = fov.area[i];
-                        if (fov.getObject(place)[Common.Layer.Floor].type == Common.DungeonObjectType.Path) {
+                        if (fov.getCell(place).isPath()) {
                             enter.push(place);
                         }
                     }

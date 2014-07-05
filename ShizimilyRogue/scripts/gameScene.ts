@@ -15,7 +15,7 @@ module ShizimilyRogue.View {
             public width: number,
             public height: number,
             public objects: Common.IObject[],
-            public getTable: (x: number, y: number) => Common.IObject[]) {
+            public getTable: (x: number, y: number) => Common.ICell) {
         }
     }
 
@@ -27,6 +27,7 @@ module ShizimilyRogue.View {
         private clock: Clock;
         private miniMap: MiniMap;
         private view: View;
+        public animateSpeed: number = 10;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
             super();
@@ -48,7 +49,7 @@ module ShizimilyRogue.View {
             this.addChild(this.menuGroup);
             
             this.addMenuKeyHandler();
-            this.update(fov, []);
+            this.update(fov, [], 0);
         }
 
         private addMenuKeyHandler(): void {
@@ -126,38 +127,33 @@ module ShizimilyRogue.View {
             }
         }
 
-        update(fov: Common.IFOVData, results: Common.IResult[]): void {
+        update(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
             var player = this.data.player;
             // 視界の表示
-            if (fov.getObject(player.coord)[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
-                this.pathShadow.visible = false;
-            } else {
-                this.pathShadow.visible = true;
-            }
+            this.pathShadow.visible = fov.getCell(player.coord).isPath();
 
             // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
 
             // 時間の表示
             this.clock.show(player.turn);
-            this.message.show(results);
-            this.view.update(fov, results);
+            this.message.show(results, speed);
+            this.view.update(fov, results, speed);
             this.miniMap.update(fov);
         }
     }
 
     class MiniMap extends enchant.Group {
-        private static BLOCK_UNIT = 1;
-        private static BLOCK_PLAYER = 4;
-        private static BLOCK_WALL = 0;
-        private static BLOCK_ITEM = 3;
-        private static BLOCK_EMPTY = 2;
-        private static BLOCK_OHTER = 5;
-        private static X = 150;
-        private static Y = 150;
-        private static ALPHA = 0.5;
-
+        private static BLOCK_UNIT = 16;
+        private static BLOCK_PLAYER = 19;
+        private static BLOCK_ITEM = 18;
+        private static BLOCK_OHTER = 15;
+        private static X = 200;
+        private static Y = 100;
+        private static ALPHA = 0.7;
         private static SIZE = 8;
+        private static FLOOR_TABLE = [6, 5, 11, 10, 7, 4, 12, 13, 1, 0, 3, 8, 2, 15, 9]; 
+
         private groundMap: enchant.Map = new enchant.Map(MiniMap.SIZE, MiniMap.SIZE);
         private floorMap: enchant.Map = new enchant.Map(MiniMap.SIZE, MiniMap.SIZE);
         private floorData: number[][];
@@ -193,19 +189,24 @@ module ShizimilyRogue.View {
             }
 
             fov.area.forEach(coord => {
-                var obj = fov.getObject(coord);
-                var type = MiniMap.BLOCK_EMPTY;
-                if (obj[Common.Layer.Unit].id == Common.PLAYER_ID) {
+                var obj = fov.getCell(coord);
+                if (obj.isPlayer()) {
                     this.groundData[coord.y][coord.x] = MiniMap.BLOCK_PLAYER;
-                } else if (obj[Common.Layer.Unit].type == Common.DungeonObjectType.Unit) {
+                } else if (obj.isUnit()) {
                     this.groundData[coord.y][coord.x] = MiniMap.BLOCK_UNIT;
-                } else if (obj[Common.Layer.Ground].type == Common.DungeonObjectType.Item) {
+                } else if (obj.isItem()) {
                     this.groundData[coord.y][coord.x] = MiniMap.BLOCK_ITEM;
                 }
-                if (obj[Common.Layer.Ground].type == Common.DungeonObjectType.Wall) {
-                    this.floorData[coord.y][coord.x] = MiniMap.BLOCK_WALL;
-                } else {
-                    this.floorData[coord.y][coord.x] = MiniMap.BLOCK_EMPTY;
+                if (!obj.isWall()) {
+                    var x = coord.x;
+                    var y = coord.y;
+
+                    var p = 0;
+                    p |= fov.getCellByCoord(x - 1, y).isWall() ? (1 << 0) : 0;
+                    p |= fov.getCellByCoord(x, y + 1).isWall() ? (1 << 1) : 0;
+                    p |= fov.getCellByCoord(x + 1, y).isWall() ? (1 << 2) : 0;
+                    p |= fov.getCellByCoord(x, y - 1).isWall() ? (1 << 3) : 0;
+                    this.floorData[coord.y][coord.x] = MiniMap.FLOOR_TABLE[p];
                 }
             });
             this.floorMap.loadData(this.floorData);
@@ -238,7 +239,7 @@ module ShizimilyRogue.View {
             this.addChild(this.messageGroup);
         }
 
-        show(results: Common.IResult[]): void {
+        show(results: Common.IResult[], speed: number): void {
             var messages:string[] = []
             results.forEach(result => {
                 var m = Data.Message[result.action.type];
@@ -265,36 +266,37 @@ module ShizimilyRogue.View {
                     messages.push(str);
                 }
             });
-            this.setMessage(messages);
+            this.setMessage(messages, speed);
         }
 
-        private setMessage(messageList: string[]): void {
+        private setMessage(messageList: string[], speed: number): void {
             this.removeChild(this.messageGroup);
             var messageGroup = new enchant.Group();
             messageGroup.x = Message.MESSAGE_LEFT;
             messageGroup.y = Message.MESSAGE_TOP;
             this.messageGroup = messageGroup;
-
             var tl: enchant.Timeline = this.messageGroup.tl;
-            for (var i = 0; i < messageList.length; i ++) {
+
+            var firstWait = speed * 3;
+            var upSpeed = speed * 0.8;
+
+            for (var i = 0; i < messageList.length; i++) {
                 var label = new enchant.Label();
                 label = new enchant.Label();
                 label.y = i * Message.MESSAGE_HEIGHT;
                 label.font = "16px cursive";
                 label.color = "white";
                 label.width = Message.MESSAGE_WIDTH;
-                label.text = messageList[i];
+                label.text = " " + messageList[i];
                 label.visible = false;
                 messageGroup.addChild(label);
 
                 if (i > 2) {
-                    Scene.addAnimating();
-                    tl = tl.delay(10).then(() => {
+                    tl = tl.delay(i == 3 ? firstWait : upSpeed).then(() => {
                         messageGroup.removeChild(messageGroup.firstChild);
-                    }).moveBy(0, -Message.MESSAGE_HEIGHT, 10).then((e) => {
+                    }).moveBy(0, -Message.MESSAGE_HEIGHT, upSpeed).then((e) => {
                         messageGroup.childNodes[2].visible = true;
-                    }).delay(10).then(() => {
-                        Scene.decAnimating();
+                    }).delay(upSpeed).then(() => {
                     });
                 } else {
                     label.visible = true;
@@ -376,11 +378,9 @@ module ShizimilyRogue.View {
         private floorMap: Map;
         private groundMap: Map;
         private layer: enchant.Group[];
-        private fov: Common.IFOVData;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
             super();
-            this.fov = fov;
             this.roomShadow = new Shadow(data.width, data.height);
             this.floorMap = Map.floor(data.width, data.height, data.getTable); 
             this.groundMap = Map.ground(data.width, data.height, data.getTable); 
@@ -394,16 +394,16 @@ module ShizimilyRogue.View {
             }
             this.addChild(this.roomShadow);
 
-            this.update(fov, []);
+            this.update(fov, [], 0);
         }
 
-        update(fov: Common.IFOVData, results: Common.IResult[]): void {
+        update(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
             this.updateShadow(fov);
-            this.updateObjects(fov, results);
-            this.moveCamera();
+            this.updateObjects(fov, results, speed);
+            this.moveCamera(speed);
         }
 
-        private updateObjects(fov: Common.IFOVData, results: Common.IResult[]): void {
+        private updateObjects(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
             // 見えているIDを取得
             var visible: { [id: number]: boolean } = {};
             var index: { [id: number]: number } = {};
@@ -413,10 +413,11 @@ module ShizimilyRogue.View {
             visible[fov.me.id] = true;
 
             this.objects.forEach(viewUnit => {
-                var ret = this.objects.filter(unit => viewUnit.id == unit.id);
-                if (ret.length == 0) {
+                var ret = this.data.objects.filter(unit => viewUnit.id == unit.id);
+                if (ret.length == 0 && viewUnit.id != Common.PLAYER_ID) {
                     // Dataの情報としてないが、Viewにはある＝消えたユニット
-                    this.layer[viewUnit.layer].removeChild(viewUnit);
+                    var layer = this.layer[viewUnit.layer]
+                    layer.tl.delay(speed).then(() => layer.removeChild(viewUnit));
                 }
             });
 
@@ -435,7 +436,12 @@ module ShizimilyRogue.View {
                     u = ret[0];
                 }
                 // ついでに見えてるかどうかを入れておく
-                u.visible = visible[unit.id] == true;
+                if (u.visible && !visible[unit.id]) {
+                    u.fadeOut(speed);
+                } else if (!u.visible && visible[unit.id]) {
+                    u.fadeIn(speed);
+                
+                }
                 return u;
             });
 
@@ -445,25 +451,25 @@ module ShizimilyRogue.View {
                 var id = result.object.id;
                 var unit = this.objects[index[id]];
                 // FOVにあるものだけを表示
-                unit.action(result);
+                unit.action(result, speed);
             });
         }
 
         // 視点移動
-        private moveCamera(): void {
+        private moveCamera(speed: number): void {
             var coord = this.data.objects[Common.PLAYER_ID].coord;
             var x = VIEW_WIDTH / 2 - coord.x * OBJECT_WIDTH;
             var y = VIEW_HEIGHT / 2 - coord.y * OBJECT_HEIGHT;
             Scene.addAnimating();
-            this.tl.moveTo(x, y, 10).then(function () {
+            this.tl.moveTo(x, y, speed).then(function () {
                 Scene.decAnimating();
             });
         }
 
         // 部屋にいる時の影
         private updateShadow(fov: Common.IFOVData): void {
-            var objs = fov.getObject(fov.me.coord);
-            if (fov.getObject(fov.me.coord)[Common.Layer.Floor].type == Common.DungeonObjectType.Room) {
+            var objs = fov.getCell(fov.me.coord);
+            if (fov.getCell(fov.me.coord).isRoom()) {
                 this.roomShadow.visible = true;
                 this.roomShadow.update(fov.area);
             } else {
@@ -587,12 +593,10 @@ module ShizimilyRogue.View {
 
     class ViewObjectFactory {
         static getInstance(object: Common.IObject): ViewObject {
-            switch (object.type) {
-                case Common.DungeonObjectType.Unit:
-                    return ViewObjectFactory.getUnitInstance(object);
-                case Common.DungeonObjectType.Item:
-                    return ViewObjectFactory.getItemInstance(object);
-            }
+            if (object.isUnit())
+                return ViewObjectFactory.getUnitInstance(object);
+            else if (object.isItem())
+                return ViewObjectFactory.getItemInstance(object);
         }
 
         private static getUnitInstance(obj: Common.IObject): ViewObject {
@@ -607,6 +611,8 @@ module ShizimilyRogue.View {
     class ViewObject extends enchant.Group {
         private sprite: enchant.Sprite;
         private info: enchant.Label;
+        public visible = false;
+
         constructor(
             private data: Common.IObject,
             image: enchant.Surface,
@@ -618,6 +624,7 @@ module ShizimilyRogue.View {
             this.sprite = new enchant.Sprite(OBJECT_WIDTH, OBJECT_HEIGHT);
             this.sprite.image = image;
             this.sprite.frame = frame;
+            this.sprite.opacity = 0;
             var coord = this.data.coord;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
@@ -628,15 +635,14 @@ module ShizimilyRogue.View {
             }
         }
 
-        action(result: Common.IResult): void {
+        action(result: Common.IResult, speed: number): void {
             if (Common.DEBUG) {
-                if (result.object.type == Common.DungeonObjectType.Unit) {
+                if (result.object.isUnit()) {
                     var unit = <Common.IUnit>result.object;
                     this.info.text = "[dir:" + unit.dir + "]";
                 }
             }
-
-            if (this.sprite.visible == false) {
+            if (this.visible == false) {
                 var coord = this.data.coord;
                 this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
                 return;
@@ -644,14 +650,25 @@ module ShizimilyRogue.View {
             if (result.action.type == Common.ActionType.Move) {
                 var coord = this.data.coord;
                 Scene.addAnimating();
-                this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, 10).then(function() {
+                this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {
                     Scene.decAnimating();
                 });
+            } else if (result.action.type == Common.ActionType.Fly) {
+                //var src = result.action.coords[0];
+                //var dst = result.object.coord;
+                //this.x = src.x;
+                //this.y = src.y;
+                //this.tl.moveBy(dst.x, dst.y, speed);
             }
         }
 
-        set visible(flg: boolean) {
-            this.sprite.visible = flg;
+        fadeOut(speed: number) {
+            this.sprite.tl.fadeOut(speed).then(() => this.visible = false);
+        }
+
+        fadeIn(speed: number) {
+            this.visible = true;
+            this.sprite.tl.fadeIn(speed);
         }
 
         get id(): number {
@@ -672,14 +689,14 @@ module ShizimilyRogue.View {
             this.update();
         }
 
-        public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.IObject[]) {
-            var table = (x, y) => { return getTable(x, y)[Common.Layer.Ground] };
+        public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.ICell) {
+            var table = (x, y) => { return getTable(x, y).ground };
             var getViewTable = () => { return Map.getGroundViewTable(width, height, table) };
             return new Map(getViewTable, Scene.IMAGE.WALL.DATA);
         }
 
-        public static floor(width: number, height: number, getTable: (x: number, y: number) => Common.IObject[]) {
-            var table = (x, y) => { return getTable(x, y)[Common.Layer.Floor] };
+        public static floor(width: number, height: number, getTable: (x: number, y: number) => Common.ICell) {
+            var table = (x, y) => { return getTable(x, y).floor };
             var getViewTable = () => { return Map.getFloorViewTable(width, height, table) };
             return new Map(getViewTable, Scene.IMAGE.FLOOR.DATA);
         }
@@ -741,22 +758,20 @@ module ShizimilyRogue.View {
                 13, 13, 3, 3, 13, 13, 3, 3, // 248 - 255
             ];
             var map: number[][] = [];
-            var WALL = Common.DungeonObjectType.Wall;
 
             for (var y = 0; y < h; y++) {
                 map.push(new Array(w));
                 for (var x = 0; x < w; x++) {
-                    var type = table(x, y).type;
-                    if (type == WALL) {
+                    if (table(x, y).isWall()) {
                         var blockId = 0;
-                        blockId |= (x == 0 || y == 0 || table(x - 1, y - 1).type == WALL) ? 0 : 1;
-                        blockId |= (y == 0 || table(x, y - 1).type == WALL) ? 0 : 2;
-                        blockId |= (x == w - 1 || y == 0 || table(x + 1, y - 1).type == WALL) ? 0 : 4;
-                        blockId |= (x == w - 1 || table(x + 1, y).type == WALL) ? 0 : 8;
-                        blockId |= (x == w - 1 || y == h - 1 || table(x + 1, y + 1).type == WALL) ? 0 : 16;
-                        blockId |= (y == h - 1 || table(x, y + 1).type == WALL) ? 0 : 32;
-                        blockId |= (x == 0 || y == h - 1 || table(x - 1, y + 1).type == WALL) ? 0 : 64;
-                        blockId |= (x == 0 || table(x - 1, y).type == WALL) ? 0 : 128;
+                        blockId |= (x == 0 || y == 0 || table(x - 1, y - 1).isWall()) ? 0 : 1;
+                        blockId |= (y == 0 || table(x, y - 1).isWall()) ? 0 : 2;
+                        blockId |= (x == w - 1 || y == 0 || table(x + 1, y - 1).isWall()) ? 0 : 4;
+                        blockId |= (x == w - 1 || table(x + 1, y).isWall()) ? 0 : 8;
+                        blockId |= (x == w - 1 || y == h - 1 || table(x + 1, y + 1).isWall()) ? 0 : 16;
+                        blockId |= (y == h - 1 || table(x, y + 1).isWall()) ? 0 : 32;
+                        blockId |= (x == 0 || y == h - 1 || table(x - 1, y + 1).isWall()) ? 0 : 64;
+                        blockId |= (x == 0 || table(x - 1, y).isWall()) ? 0 : 128;
 
                         var mapId = blockTable[blockId];
                         map[y][x] = mapId;
