@@ -442,6 +442,10 @@ module ShizimilyRogue.View {
                     u.fadeIn(speed);
                 
                 }
+
+                if (u.visible) {
+                    u.update();
+                }
                 return u;
             });
 
@@ -593,18 +597,38 @@ module ShizimilyRogue.View {
 
     class ViewObjectFactory {
         static getInstance(object: Common.IObject): ViewObject {
-            if (object.isUnit())
+            if (object.isPlayer())
+                return ViewObjectFactory.getPlayerInstance(object);
+            else if (object.isUnit())
                 return ViewObjectFactory.getUnitInstance(object);
             else if (object.isItem())
                 return ViewObjectFactory.getItemInstance(object);
         }
 
+        private static getPlayerInstance(obj: Common.IObject): ViewObject {
+            var frame = () => {
+                var x: number[][] = [
+                    [0],
+                    [0],
+                    [0],
+                    [0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                    [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
+                    [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
+                    [0]
+                ];
+                var ret: number[] = x[obj.dir];
+                return ret;
+            }
+            return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, frame, -0.5, -1, 128, 96);
+        }
+
         private static getUnitInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, 1, 0, -0.5);
+            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, () => [1], 0, -0.5);
         }
 
         private static getItemInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, 0);
+            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => [1]);
         }
     }
 
@@ -616,14 +640,16 @@ module ShizimilyRogue.View {
         constructor(
             private data: Common.IObject,
             image: enchant.Surface,
-            frame: number,
+            private frame: () => number[],
             private marginX: number = 0,
-            private marginY: number = 0) {
+            private marginY: number = 0,
+            width: number = OBJECT_WIDTH,
+            height: number = OBJECT_HEIGHT) {
             super();
 
-            this.sprite = new enchant.Sprite(OBJECT_WIDTH, OBJECT_HEIGHT);
+            this.sprite = new enchant.Sprite(width, height);
             this.sprite.image = image;
-            this.sprite.frame = frame;
+            this.sprite.frame = frame();
             this.sprite.opacity = 0;
             var coord = this.data.coord;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
@@ -633,6 +659,10 @@ module ShizimilyRogue.View {
                 this.info = new enchant.Label();
                 this.addChild(this.info);
             }
+        }
+
+        update(): void {
+            this.sprite.frame = this.frame();
         }
 
         action(result: Common.IResult, speed: number): void {
