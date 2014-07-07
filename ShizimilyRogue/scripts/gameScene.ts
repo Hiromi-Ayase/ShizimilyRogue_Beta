@@ -217,8 +217,8 @@ module ShizimilyRogue.View {
     }
 
     class Message extends enchant.Group {
-        private static MESSAGE_TOP = 405;
-        private static MESSAGE_LEFT = 255;
+        private static MESSAGE_TOP = 408;
+        private static MESSAGE_LEFT = 20;
         private static MESSAGE_WIDTH = VIEW_WIDTH - Message.MESSAGE_LEFT;
         private static MESSAGE_HEIGHT = 20;
         private static MESSAGE_AREA_OPACITY = 0.8;
