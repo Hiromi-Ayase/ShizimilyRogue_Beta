@@ -49,7 +49,6 @@ module ShizimilyRogue.View {
             this.addChild(this.menuGroup);
             
             this.addMenuKeyHandler();
-            this.update(fov, [], 0);
         }
 
         private addMenuKeyHandler(): void {
@@ -127,19 +126,22 @@ module ShizimilyRogue.View {
             }
         }
 
-        update(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
+        update(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
             var player = this.data.player;
             // 視界の表示
             this.pathShadow.visible = fov.getCell(player.coord).isPath();
 
             // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
+            this.view.update(fov, result, speed);
+            this.miniMap.update(fov);
+        }
 
-            // 時間の表示
+        updateTurn(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
+            var player = this.data.player;
+            this.view.updateTurn(fov, results, speed);
             this.clock.show(player.turn);
             this.message.show(results, speed);
-            this.view.update(fov, results, speed);
-            this.miniMap.update(fov);
         }
     }
 
@@ -372,7 +374,7 @@ module ShizimilyRogue.View {
     }
 
     class View extends enchant.Group {
-        private objects: ViewObject[] = [];
+        private objects: { [id: number]: ViewObject } = {};
 
         private roomShadow: Shadow;
         private floorMap: Map;
@@ -393,70 +395,58 @@ module ShizimilyRogue.View {
                 this.addChild(this.layer[i]);
             }
             this.addChild(this.roomShadow);
-
-            this.update(fov, [], 0);
         }
 
-        update(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
+        update(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
             this.updateShadow(fov);
-            this.updateObjects(fov, results, speed);
+            this.updateObjects(fov, result, speed);
+        }
+
+        updateTurn(fov: Common.IFOVData, results: Common.IResult[], speed: number) {
+            this.updateVisible(fov, speed);
             this.moveCamera(speed);
         }
 
-        private updateObjects(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
-            // 見えているIDを取得
-            var visible: { [id: number]: boolean } = {};
-            var index: { [id: number]: number } = {};
-            fov.objects.forEach(unit => {
-                visible[unit.id] = true;
-            });
-            visible[fov.me.id] = true;
-
-            this.objects.forEach(viewUnit => {
-                var ret = this.data.objects.filter(unit => viewUnit.id == unit.id);
-                if (ret.length == 0 && viewUnit.id != Common.PLAYER_ID) {
-                    // Dataの情報としてないが、Viewにはある＝消えたユニット
-                    var layer = this.layer[viewUnit.layer]
-                    layer.tl.delay(speed).then(() => layer.removeChild(viewUnit));
-                }
-            });
-
-            // ユニットが新規作成された
-            var i = 0;
-            this.objects = this.data.objects.map(unit => {
-                index[unit.id] = i++;
-                var ret = this.objects.filter(viewUnit => viewUnit.id == unit.id);
-                var u: ViewObject;
-                if (ret.length == 0) {
-                    // Viewの情報としてないが、Dataにはある＝新規ユニット
-                    u = ViewObjectFactory.getInstance(unit);
-                    this.layer[u.layer].addChild(u);
+        private updateVisible(fov: Common.IFOVData, speed: number) {
+            for (var id in this.objects) {
+                if (fov.isVisible(id)) {
+                    this.objects[id].show(speed);
                 } else {
-                    // 元からある
-                    u = ret[0];
+                    this.objects[id].hide(speed);
                 }
-                // ついでに見えてるかどうかを入れておく
-                if (u.visible && !visible[unit.id]) {
-                    u.fadeOut(speed);
-                } else if (!u.visible && visible[unit.id]) {
-                    u.fadeIn(speed);
-                
-                }
+            }
+        }
 
-                if (u.visible) {
-                    u.update();
-                }
-                return u;
-            });
-
+        private updateObjects(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
             // ユニットに行動を起こさせる
+            if (result.action.target == Common.Target.Map) {
+                switch (result.action.type) {
+                    case Common.ActionType.Move:
+                        var x = result.object.coord.x;
+                        var y = result.object.coord.y;
+                        this.objects[result.object.id].move(x, y, speed, () => { });
+                        break;
+                    case Common.ActionType.SetObject:
+                        var u = ViewObjectFactory.getInstance(result.action.objects[0]);
+                        this.objects[u.id] = u;
+                        this.layer[u.layer].addChild(u);
+                        if (fov.isVisible(u.id)) {
+                            u.show(speed);
+                        }
+                        break;
+                    case Common.ActionType.Delete:
+                        var u = this.objects[result.action.objects[0].id];
+                        u.hide(speed, () => {
+                            this.layer[u.layer].removeChild(u);
+                        });
+                        delete u;
+                        break;
+                }
 
-            results.forEach(result => {
-                var id = result.object.id;
-                var unit = this.objects[index[id]];
-                // FOVにあるものだけを表示
-                unit.action(result, speed);
-            });
+                if (result.object.id in this.objects) {
+                    this.objects[result.object.id].action(result, speed);
+                }
+            }
         }
 
         // 視点移動
@@ -628,14 +618,13 @@ module ShizimilyRogue.View {
         }
 
         private static getItemInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => [1]);
+            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => [0]);
         }
     }
 
     class ViewObject extends enchant.Group {
         private sprite: enchant.Sprite;
         private info: enchant.Label;
-        public visible = false;
 
         constructor(
             private data: Common.IObject,
@@ -650,8 +639,8 @@ module ShizimilyRogue.View {
             this.sprite = new enchant.Sprite(width, height);
             this.sprite.image = image;
             this.sprite.frame = frame();
-            this.sprite.opacity = 0;
             var coord = this.data.coord;
+            this.sprite.opacity = 0;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
 
@@ -666,39 +655,50 @@ module ShizimilyRogue.View {
         }
 
         action(result: Common.IResult, speed: number): void {
+
             if (Common.DEBUG) {
                 if (result.object.isUnit()) {
                     var unit = <Common.IUnit>result.object;
                     this.info.text = "[dir:" + unit.dir + "]";
                 }
             }
-            if (this.visible == false) {
-                var coord = this.data.coord;
-                this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
-                return;
-            }
             if (result.action.type == Common.ActionType.Move) {
-                var coord = this.data.coord;
-                Scene.addAnimating();
-                this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {
-                    Scene.decAnimating();
-                });
             } else if (result.action.type == Common.ActionType.Fly) {
                 //var src = result.action.coords[0];
                 //var dst = result.object.coord;
                 //this.x = src.x;
                 //this.y = src.y;
                 //this.tl.moveBy(dst.x, dst.y, speed);
+            } else if (result.action.type == Common.ActionType.Die) {
             }
         }
 
-        fadeOut(speed: number) {
-            this.sprite.tl.fadeOut(speed).then(() => this.visible = false);
+        move(x: number, y: number, speed, callback: () => void = null): void {
+            var coord = this.data.coord;
+            Scene.addAnimating();
+            this.tl.moveTo((x + this.marginX) * OBJECT_WIDTH, (y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {
+                if (callback != null)
+                    callback();
+                Scene.decAnimating();
+            });
         }
 
-        fadeIn(speed: number) {
-            this.visible = true;
-            this.sprite.tl.fadeIn(speed);
+        hide(speed: number, callback: () => void = null): void {
+            if (this.sprite.opacity == 1) {
+                var tl = this.sprite.tl.fadeOut(speed);
+                if (callback != null) {
+                    tl.then(callback);
+                }
+            }
+        }
+
+        show(speed: number, callback: () => void = null): void {
+            if (this.sprite.opacity == 0) {
+                var tl = this.sprite.tl.fadeIn(speed);
+                if (callback != null) {
+                    tl.then(callback);
+                }
+            }
         }
 
         get id(): number {

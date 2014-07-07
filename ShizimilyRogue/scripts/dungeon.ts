@@ -8,7 +8,7 @@ module ShizimilyRogue.Model {
         getRandomPoint(layer: number): Common.Coord;
         deleteObject(obj: Common.IObject): boolean;
         setObject(obj: Common.IObject, coord: Common.Coord): boolean;
-        addObject(data:IData, coord?: Common.Coord): Common.IObject;
+//        addObject(data:IData, coord?: Common.Coord): Common.IObject;
         moveObject(obj: Common.IObject, dir: number): boolean;
         getFOV(unit: Common.IUnit): Common.IFOVData;
         currentObject: Common.IObject;
@@ -17,6 +17,7 @@ module ShizimilyRogue.Model {
 
     export interface UnitController {
         getFOV(): Common.IFOVData;
+        cell: Common.ICell;
         coord: Common.Coord;
     }
 
@@ -51,7 +52,7 @@ module ShizimilyRogue.Model {
         maxStomach: number;
         inventory: Common.IItem[];
         phase(fov: Common.IFOVData): Common.Action;
-        event(me: UnitController, map: MapController, result: Common.IResult): Common.Action;
+        event(me: UnitController, result: Common.IResult): Common.Action;
     }
 
     export interface IEnemyData extends IUnitData{
@@ -63,10 +64,14 @@ module ShizimilyRogue.Model {
     }
 
     export class Result implements Common.IResult {
+        private static currentId = 1;
+        id: number;
+
         constructor(
             public object: Common.IObject,
             public action: Common.Action,
             public targets: Common.IObject[]) {
+            this.id = Result.currentId ++;
         }
     }
 
@@ -81,7 +86,7 @@ module ShizimilyRogue.Model {
         dir: Common.DIR = 0;
         name: string = null;
 
-        event(map: MapController, result: Common.IResult): Common.Action {
+        event(result: Common.IResult): Common.Action {
             return null;
         }
 
@@ -110,34 +115,41 @@ module ShizimilyRogue.Model {
         constructor(w: number, h: number) {
             this.map = new Map(w, h);
 
+        }
+
+        public init(): Common.IResult[]{
+            var results: Common.IResult[] = [];
             // Playerを配置
-            var player = new Player(new Model.Data.PlayerData("しじみりちゃん"), this);
-            this.setObject(player, this.getRandomPoint(player.layer));
+            var player = new Model.Data.PlayerData("しじみりちゃん");
+            var action = this.addObject(player);
+            this.update(action.objects[0], action, result => results.push(result));
 
-            // 敵を配置
-            this.addObject(new Model.Data.Ignore);
-            this.addObject(new Model.Data.Ignore);
-            this.addObject(new Model.Data.Ignore);
-            this.addObject(new Model.Data.Ignore);
-
-            // アイテムを配置
-            this.addObject(new Model.Data.Sweet);
-            this.addObject(new Model.Data.Sweet);
-            this.addObject(new Model.Data.Sweet);
-            this.addObject(new Model.Data.Sweet);
-            this.addObject(new Model.Data.Sweet);
+            for (var i = 0; i < 5; i++) {
+                var ignore: IData = new Model.Data.Ignore;
+                var action = this.addObject(ignore);
+                this.update(action.objects[0], action, result => results.push(result));
+            }
+            for (var i = 0; i < 5; i++) {
+                var sweet: IData = new Model.Data.Sweet;
+                var action = this.addObject(sweet);
+                this.update(action.objects[0], action, result => results.push(result));
+            }
 
             // 一番最初のターンはプレイヤー
             this._currentUnit = this.scheduler.next();
             this._currentObject = this._currentUnit;
+            return results;
         }
 
-        public addObject(data: IData, coord: Common.Coord = null): Common.IObject {
-
+        private addObject(data: IData, coord: Common.Coord = null): Common.Action {
             var object: Common.IObject;
             switch (data.type) {
                 case DataType.Unit:
-                    object = new Unit(<IUnitData>data, this);
+                    if (data instanceof Data.PlayerData) {
+                        object = new Player(<IUnitData>data, this);
+                    } else {
+                        object = new Unit(<IUnitData>data, this);
+                    }
                     break;
                 case DataType.Item:
                     object = new Item(<IItemData>data);
@@ -146,8 +158,7 @@ module ShizimilyRogue.Model {
             if (coord == null) {
                 coord = this.map.getRandomPoint(object.layer);
             }
-            this.setObject(object, coord);
-            return object
+            return Common.Action.SetObject(object, coord);
         }
 
         public setObject(obj: Common.IObject, coord: Common.Coord): boolean {
@@ -218,6 +229,8 @@ module ShizimilyRogue.Model {
             while (action != null) {
                 // 行動
                 this._endState = this.update(this._currentObject, action, callback);
+
+                
                 if (this._endState != Common.EndState.None) {
                     // ゲームが終わった
                     break;
@@ -237,7 +250,7 @@ module ShizimilyRogue.Model {
             if (result != null) {
                 for (var i = 0; i < result.targets.length; i++) {
                     this._currentObject = result.targets[i];
-                    var newAction = (<DungeonObject>this._currentObject).event(this, result);
+                    var newAction = (<DungeonObject>this._currentObject).event(result);
                     callback(result);
                     if (newAction != null) {
                         var endState = this.update(this._currentObject, newAction, callback);
@@ -263,12 +276,32 @@ module ShizimilyRogue.Model {
                     var obj = DungeonManager.getLine((x, y) => this.getCell(x, y), object, object.dir, 10);
                     targets = [obj];
                     break;
+                case Common.Target.Map:
+                    var obj = DungeonManager.mapAction(this, action, object);
+                    targets = [obj];
+                    break;
             }
             var result = new Result(object, action, targets);
             return result;
         }
 
-        private static getLine(table:(x:number, y:number) => Common.ICell, obj: Common.IObject, dir: number, distance: number): Common.IObject {
+        private static mapAction(map: MapController, action: Common.Action, object: Common.IObject): Common.IObject {
+            switch (action.type) {
+                case Common.ActionType.Move:
+                    map.moveObject(object, object.dir);
+                    return object;
+                case Common.ActionType.SetObject:
+                    object = action.objects[0];
+                    map.setObject(action.objects[0], action.coords[0]);
+                    return object;
+                case Common.ActionType.Delete:
+                    object = action.objects[0];
+                    map.deleteObject(action.objects[0]);
+                    return object;
+            }
+        }
+
+        private static getLine(table: (x: number, y: number) => Common.ICell, obj: Common.IObject, dir: number, distance: number): Common.IObject {
             var x = obj.coord.x;
             var y = obj.coord.y;
             for (var i = 0; i < distance; i++) {
@@ -309,6 +342,7 @@ module ShizimilyRogue.Model {
 
     class FOVData implements Common.IFOVData {
         visible: { [id: number]: boolean } = {};
+        id2index: { [id: number]: number } = {};
 
         constructor(
             public me: Common.IObject,
@@ -321,11 +355,22 @@ module ShizimilyRogue.Model {
             public objects: Common.IObject[],
             public attackable: { [id: number]: boolean }
             ) {
-            objects.forEach(obj => this.visible[obj.id] = true);
+            var index = 0;
+            objects.forEach(obj => {
+                this.visible[obj.id] = true;
+                this.id2index[obj.id] = index;
+                index++;
+            });
             this.visible[me.id] = true;
         }
-        isVisible(object: Common.IObject) {
-            return this.visible[object.id] == true;
+        isVisible(id: number) {
+            return this.visible[id] == true;
+        }
+        isAttackable(id: number): boolean {
+            return this.attackable[id] == true;
+        }
+        getObjectById(id: number): Common.IObject {
+            return this.objects[this.id2index[id]];
         }
     }
 
@@ -357,12 +402,16 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(this);
         }
 
+        get cell(): Common.ICell {
+            return this.map.getCell(this.coord.x, this.coord.y);
+        }
+
         phase(): Common.Action {
             this.data.turn++;
             return this.data.phase(this.map.getFOV(this));
         }
-        event(map: MapController, result: Common.IResult): Common.Action {
-            return this.data.event(this, map, result);
+        event(result: Common.IResult): Common.Action {
+            return this.data.event(this, result);
         }
 
         constructor(private data: IUnitData, private map: MapController) {
@@ -409,11 +458,7 @@ module ShizimilyRogue.Model {
         type = Common.DungeonObjectType.Null;
         id = -1;
 
-        event(map: MapController, result: Common.IResult): Common.Action {
-            var obj = result.action.objects[0];
-            if (result.action.type == Common.ActionType.Fly) {
-                map.setObject(obj, this.coord);
-            }
+        event(result: Common.IResult): Common.Action {
             return null;
         }
     }

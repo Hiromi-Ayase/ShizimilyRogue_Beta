@@ -141,12 +141,9 @@
                 var results = [];
                 this.dungeonManager.next(action, result => {
                     results.push(result);
-                    //if (this.dungeonManager.currentObject.isPlayer()) {
-                    //    this._view.update(this.fov, results, 10);
-                    //    results = [];
-                    //}
+                    this._view.update(this.getFov(), result, 10);
                 });
-                this._view.update(this.getFov(), results, 10);
+                this._view.updateTurn(this.getFov(), results, 10);
             }
         }
 
@@ -157,6 +154,7 @@
         private init(): void {
             // Dungeon(Model)とSceneManager(View)の作成
             this.dungeonManager = new Model.DungeonManager(WIDTH, HEIGHT);
+            var results = this.dungeonManager.init();
             this.player = this.dungeonManager.currentTurn;
 
             // Map生成
@@ -168,7 +166,10 @@
                     this.dungeonManager.objects,
                     (x, y) => this.dungeonManager.getCell(x, y)
                 );
+
             this._view = new View.GameScene(data, fov);
+            results.forEach(result => this._view.update(fov, result, 10));
+            this._view.updateTurn(fov, results, 10);
         }
     }
 } 

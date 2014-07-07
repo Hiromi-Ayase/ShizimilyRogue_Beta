@@ -34,8 +34,9 @@
     }
 
     export enum ActionType {
-        Move, Attack, Use, Throw, Pick, // 能動的アクション
+        Attack, Use, Throw, Pick, // 能動的アクション
         Die, Damage, Heal, Swap, Blown, Fly, // 受動的アクション
+        Move, Delete, SetObject, // マップアクション
         None
     }
 
@@ -69,11 +70,12 @@
     }
 
     export enum Target {
-         Me, Next, Line, Item
+         Me, Next, Line, Item, Map
     }
 
     export class Action {
         end: EndState = EndState.None;
+        next: boolean = true;
 
         constructor(
             public type: Common.ActionType,
@@ -83,7 +85,7 @@
             public coords: Common.Coord[] = []) { }
 
         static Move(): Common.Action {
-            return new Action(ActionType.Move, Target.Me);
+            return new Action(ActionType.Move, Target.Map);
         }
 
         static Attack(atk: number): Common.Action {
@@ -117,9 +119,22 @@
         static Pick(item: IItem): Common.Action {
             return new Action(ActionType.Pick, Target.Me, [], [item]);
         }
+
+        static Delete(obj:Common.IObject): Common.Action {
+            return new Action(ActionType.Delete, Target.Map, [], [obj]);
+        }
+
+        static SetObject(obj: Common.IObject, coord: Common.Coord): Common.Action {
+            return new Action(ActionType.SetObject, Target.Map, [], [obj], [coord]);
+        }
+
+        static None(): Common.Action {
+            return new Action(ActionType.None, Target.Me);
+        }
     }
 
     export interface IResult {
+        id: number;
         object: IObject;
         action: Action;
         targets: IObject[];
@@ -191,10 +206,11 @@
         getCell(coord: Coord): ICell;
         getCellByCoord(x: number, y: number): ICell;
         objects: IObject[];
-        isVisible(object: Common.IObject): boolean;
-        attackable: { [id: number]: boolean };
+        isVisible(id: number): boolean;
+        isAttackable(id: number): boolean;
         width: number;
         height: number;
+        getObjectById(id: number): Common.IObject;
     }
 
     export interface IEffect {

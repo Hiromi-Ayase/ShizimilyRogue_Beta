@@ -21,7 +21,7 @@
             return null;
         }
 
-        event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
+        event(me: UnitController, result: Common.IResult): Common.Action {
             if (result.action.type == Common.ActionType.Attack) {
                 if (result.object.isUnit()) {
                     var attacker = <Common.IUnit>result.object;
@@ -32,19 +32,18 @@
             } else if (result.action.type == Common.ActionType.Damage) {
                 if (this.hp <= 0) {
                     var action = Common.Action.Die();
-                    if (result.object.id == Common.PLAYER_ID) {
-                        action.end = Common.EndState.GameOver;
-                    } else {
-                        map.deleteObject(result.object);
-                    }
                     return action;
                 }
+            } else if (result.action.type == Common.ActionType.Die) {
+                var action = Common.Action.Delete(result.object);
+                if (result.object.id == Common.PLAYER_ID) {
+                    action.end = Common.EndState.GameOver;
+                }
+                return action;
             } else if (result.action.type == Common.ActionType.Pick) {
                 var item = <Common.IItem>result.action.objects[0];
                 this.inventory.push(item);
-                map.deleteObject(item);
-            } else if (result.action.type == Common.ActionType.Move) {
-                map.moveObject(map.currentObject, this.dir);
+                return Common.Action.Delete(item);
             } else if (result.action.type == Common.ActionType.Use) {
                 var item = <Common.IItem>result.action.objects[0];
                 this.inventory = this.inventory.filter((value, index, array) => value != item );
@@ -70,13 +69,11 @@
 
     export class PlayerData extends UnitData {
         atk = 10;
-        event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
-            var ret = super.event(me, map, result);
+        event(me: UnitController, result: Common.IResult): Common.Action {
+            var ret = super.event(me, result);
             if (result.action.type == Common.ActionType.Move) {
-                var coord = map.currentObject.coord;
-                var obj = map.getObject(coord, Common.Layer.Ground);
-                if (obj.isItem()) {
-                    var item = <Common.IItem>obj;
+                if (me.cell.isItem()) {
+                    var item = me.cell.item;
                     return Common.Action.Pick(item);
                 }
             }
@@ -126,7 +123,7 @@
 
             if (player != null) {
                 // 視界内にプレイヤーがいた
-                if (fov.attackable[Common.PLAYER_ID]) {
+                if (fov.isAttackable(Common.PLAYER_ID)) {
                     this.dir = Enemy.getAttackDir(fov.me.coord, player);
                     action = Common.Action.Attack(this.atk);
                 } else {
@@ -158,8 +155,8 @@
             return action;
         }
 
-        public event(me: UnitController, map: MapController, result: Common.IResult): Common.Action {
-            var ret = super.event(me, map, result);
+        public event(me: UnitController, result: Common.IResult): Common.Action {
+            var ret = super.event(me, result);
             var fov = me.getFOV();
             fov.objects.forEach(obj => {
                 if (obj.id == Common.PLAYER_ID) {
