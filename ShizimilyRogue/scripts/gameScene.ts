@@ -447,6 +447,11 @@ module ShizimilyRogue.View {
                     this.objects[result.object.id].action(result, speed);
                 }
             }
+            for (var id in this.objects) {
+                if (this.objects[id] instanceof ViewObject) {
+                    this.objects[id].update();
+                }
+            }
         }
 
         // 視点移動
