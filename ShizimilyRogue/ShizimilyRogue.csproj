@@ -44,6 +44,7 @@
     <Content Include="scripts\rot.js" />
     <Content Include="web.config" />
     <TypeScriptCompile Include="scripts\controller.ts" />
+    <TypeScriptCompile Include="scripts\debug.ts" />
     <TypeScriptCompile Include="scripts\enchant.d.ts" />
     <TypeScriptCompile Include="scripts\gameScene.ts" />
     <TypeScriptCompile Include="scripts\rot.d.ts" />

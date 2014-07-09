@@ -247,24 +247,6 @@ module ShizimilyRogue.View {
                 var m = Data.Message[result.action.type];
                 if (m != undefined) {
                     var str = m(result);
-                    str = str.replace(/\{([^\}]+)\}/g, (tag: string, key: string, offset: number, s: string) => {
-                        var x: any = result;
-                        key.split(".").forEach(elem => {
-                            var index = -1;
-                            if (elem.match(/(.*)\[([^\]])+\]$/)) {
-                                elem = RegExp.$1;
-                                index = Number(RegExp.$2);
-                            }
-                            x = elem in x ? x[elem] : "";
-                            if (index >= 0) {
-                                x = x instanceof Array && index < x.length ? x[index] : "";
-                            }
-                            if (x == "") {
-                                return x;
-                            }
-                        });
-                        return x;
-                    });
                     messages.push(str);
                 }
             });
@@ -420,27 +402,23 @@ module ShizimilyRogue.View {
         private updateObjects(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
             // ユニットに行動を起こさせる
             if (result.action.target == Common.Target.Map) {
-                switch (result.action.type) {
-                    case Common.ActionType.Move:
-                        var x = result.object.coord.x;
-                        var y = result.object.coord.y;
-                        this.objects[result.object.id].move(x, y, speed, () => { });
-                        break;
-                    case Common.ActionType.SetObject:
-                        var u = ViewObjectFactory.getInstance(result.action.objects[0]);
-                        this.objects[u.id] = u;
-                        this.layer[u.layer].addChild(u);
-                        if (fov.isVisible(u.id)) {
-                            u.show(speed);
-                        }
-                        break;
-                    case Common.ActionType.Delete:
-                        var u = this.objects[result.action.objects[0].id];
-                        u.hide(speed, () => {
-                            this.layer[u.layer].removeChild(u);
-                        });
-                        delete u;
-                        break;
+                if (result.action.isMove()) {
+                    var x = result.object.coord.x;
+                    var y = result.object.coord.y;
+                    this.objects[result.object.id].move(x, y, speed, () => { });
+                } else if (result.action.isAppear()) {
+                    var u = ViewObjectFactory.getInstance(result.action.targetObject);
+                    this.objects[u.id] = u;
+                    this.layer[u.layer].addChild(u);
+                    if (fov.isVisible(u.id)) {
+                        u.show(speed);
+                    }
+                } else if (result.action.isDelete()) {
+                    var u = this.objects[result.action.targetObject.id];
+                    u.hide(speed, () => {
+                        this.layer[u.layer].removeChild(u);
+                    });
+                    delete u;
                 }
 
                 if (result.object.id in this.objects) {
@@ -660,21 +638,11 @@ module ShizimilyRogue.View {
         }
 
         action(result: Common.IResult, speed: number): void {
-
             if (Common.DEBUG) {
                 if (result.object.isUnit()) {
                     var unit = <Common.IUnit>result.object;
-                    this.info.text = "[dir:" + unit.dir + "]";
+                    this.info.text = "[(" + unit.coord.x + "," + unit.coord.y + ")" + "dir:" + unit.dir + "]";
                 }
-            }
-            if (result.action.type == Common.ActionType.Move) {
-            } else if (result.action.type == Common.ActionType.Fly) {
-                //var src = result.action.coords[0];
-                //var dst = result.object.coord;
-                //this.x = src.x;
-                //this.y = src.y;
-                //this.tl.moveBy(dst.x, dst.y, speed);
-            } else if (result.action.type == Common.ActionType.Die) {
             }
         }
 

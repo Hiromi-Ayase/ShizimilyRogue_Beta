@@ -22,47 +22,39 @@
         }
 
         event(me: UnitController, result: Common.IResult): Common.Action {
-            if (result.action.type == Common.ActionType.Attack) {
+            if (result.action.isAttack()) {
                 if (result.object.isUnit()) {
                     var attacker = <Common.IUnit>result.object;
-                    var damage = Common.Damage(result.action.params[0], this.def);
-                    this.hp -= damage;
-                    return Common.Action.Damage(damage);
+                    var damage = Common.Damage(result.action.param, this.def);
+                    return Common.Action.Status(me.object, Common.StatusActionType.Damage, damage);
                 }
-            } else if (result.action.type == Common.ActionType.Damage) {
-                if (this.hp <= 0) {
-                    var action = Common.Action.Die();
-                    return action;
-                }
-            } else if (result.action.type == Common.ActionType.Die) {
-                var action = Common.Action.Delete(result.object);
+            } else if (result.action.isStatus()) {
+                return this.statusChange(result.action);
+            } else if (result.action.isDie()) {
+                var action = Common.Action.Delete(me.object);
                 if (result.object.id == Common.PLAYER_ID) {
                     action.end = Common.EndState.GameOver;
                 }
                 return action;
-            } else if (result.action.type == Common.ActionType.Pick) {
-                var item = <Common.IItem>result.action.objects[0];
-                this.inventory.push(item);
-                return Common.Action.Delete(item);
-            } else if (result.action.type == Common.ActionType.Use) {
-                var item = <Common.IItem>result.action.objects[0];
-                this.inventory = this.inventory.filter((value, index, array) => value != item );
-                var action = item.use(result.action);
-                return action;
-            } else if (result.action.type == Common.ActionType.Heal) {
-                this.hp += result.action.params[0];
-            } else if (result.action.type == Common.ActionType.Fly) {
-                var item = <Common.IItem>result.action.objects[0];
-                var action = item.use(result.action);
-                return action;
-            } else if (result.action.type == Common.ActionType.Throw) {
-                var item = <Common.IItem>result.action.objects[0];
-                var action = Common.Action.Fly(item, this.dir, me.coord);
-                this.inventory = this.inventory.filter((value, index, array) => value != item);
-                return action;
             }
             return null;
         }
+
+        private statusChange(action: Common.Action): Common.Action {
+            if (action.subType == Common.StatusActionType.Damage) {
+                var damage = action.param;
+                this.hp -= damage > this.hp ? this.hp : damage;
+                if (this.hp <= 0) {
+                    action = Common.Action.Die();
+                    return action;
+                }
+            } else if (action.subType == Common.StatusActionType.Heal) {
+                var heal = action.param;
+                this.hp += (this.hp + heal) > this.maxHp ? (this.maxHp - this.hp) : heal;
+            }
+            return null;
+        }
+
         constructor(public name: string) {
         }
     }
@@ -71,10 +63,9 @@
         atk = 10;
         event(me: UnitController, result: Common.IResult): Common.Action {
             var ret = super.event(me, result);
-            if (result.action.type == Common.ActionType.Move) {
+            if (result.action.isMove()) {
                 if (me.cell.isItem()) {
-                    var item = me.cell.item;
-                    return Common.Action.Pick(item);
+                    return Common.Action.Pick();
                 }
             }
             return ret;

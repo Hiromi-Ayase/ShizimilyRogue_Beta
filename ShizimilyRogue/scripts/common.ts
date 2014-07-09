@@ -1,10 +1,19 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = false;
+    export var DEBUG = true;
+
+
     export var PLAYER_ID = 0;
     export var NULL_ID = -1;
 
     // 投げられる距離
     export var THROW_DISTANCE = 5;
+
+    // ドロップ位置の優先順位
+    export var Drop: number[][] = [
+        [0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1],
+        [2, 0], [0, 2], [-2, 0], [0, -2], [2, 1], [1, 2], [-2, 1], [1, -2], [-1, 2], [2, -1], [-1, -2], [-2, -1],
+        [2, 2], [2, -2], [-2, 2], [-2, -2]
+    ];
 
     // ダメージ計算式
     export var Damage = (atk: number, def: number) => {
@@ -33,11 +42,21 @@
         Null, Wall, Path, Room, Unit, Item
     }
 
+
+    export enum Target {
+        Me, Next, Line, FarLine, Target, Item, Map, Ground, Unit
+    }
+
     export enum ActionType {
-        Attack, Use, Throw, Pick, // 能動的アクション
-        Die, Damage, Heal, Swap, Blown, Fly, // 受動的アクション
-        Move, Delete, SetObject, // マップアクション
+        Attack, // 攻撃
+        Use, Throw, Pick, Place, // アイテムアクション
+        Die, Status, // 受動的アクション
+        Fly, Move, Delete, Swap, Appear, Set, // マップアクション
         None
+    }
+
+    export enum StatusActionType {
+        Damage, Heal, Hunger, Full
     }
 
     export enum DungeonUnitState {
@@ -69,66 +88,116 @@
         }
     }
 
-    export enum Target {
-         Me, Next, Line, Item, Map
-    }
-
     export class Action {
         end: EndState = EndState.None;
         next: boolean = true;
+        param: number = 0;
+        subType: number = 0;
+        item: IItem = null;
+        targetItems: IItem[] = null;
+        coord: Common.Coord = null;
+        targetObject: IObject = null;
+
+        isAttack(): boolean { return this.type == ActionType.Attack; }
+        isUse(): boolean { return this.type == ActionType.Use; }
+        isThrow(): boolean { return this.type == ActionType.Throw; }
+        isPick(): boolean { return this.type == ActionType.Pick; }
+        isPlace(): boolean { return this.type == ActionType.Place; }
+        isDie(): boolean { return this.type == ActionType.Die; }
+        isStatus(): boolean { return this.type == ActionType.Status; }
+        isFly(): boolean { return this.type == ActionType.Fly; }
+        isMove(): boolean { return this.type == ActionType.Move; }
+        isDelete(): boolean { return this.type == ActionType.Delete; }
+        isSwap(): boolean { return this.type == ActionType.Swap; }
+        isAppear(): boolean { return this.type == ActionType.Appear; }
+        isNone(): boolean { return this.type == ActionType.None; }
+        isSet(): boolean { return this.type == ActionType.Set; }
 
         constructor(
-            public type: Common.ActionType,
-            public target: Target,
-            public params: number[] = [],
-            public objects: IObject[]= [],
-            public coords: Common.Coord[] = []) { }
+            public type: ActionType,
+            public target: Target) { }
 
         static Move(): Common.Action {
             return new Action(ActionType.Move, Target.Map);
         }
 
         static Attack(atk: number): Common.Action {
-            return new Action(ActionType.Attack, Target.Next, [atk]);
+            var action = new Action(ActionType.Attack, Target.Next);
+            action.param = atk;
+            return action;
         }
 
-        static Damage(amount: number): Common.Action {
-            return new Action(ActionType.Damage, Target.Me, [amount]);
+        static Status(target: Common.IObject, type: StatusActionType, amount: number): Action {
+            var action = new Action(ActionType.Status, Target.Target);
+            action.targetObject = target;
+            action.subType = type;
+            action.param = amount;
+            return action;
         }
 
-        static Heal(amount: number): Common.Action {
-            return new Action(ActionType.Heal, Target.Me, [amount]);
+        static Die(): Action {
+            var action = new Action(ActionType.Die, Target.Me);
+            return action;
         }
 
-        static Die(): Common.Action {
-            return new Action(ActionType.Die, Target.Me, []);
+        static Use(item: IItem, targetItems: IItem[] = []): Action {
+            var action = new Action(ActionType.Use, Target.Item);
+            action.item = item;
+            action.targetItems = targetItems;
+            return action;
         }
 
-        static Use(item: IItem): Common.Action {
-            return new Action(ActionType.Use, Target.Me, [], [item]);
+        static Throw(item: IItem): Action {
+            var action = new Action(ActionType.Throw, Target.Item);
+            action.item = item;
+            return action;
         }
 
-        static Throw(item: IItem): Common.Action {
-            return new Action(ActionType.Throw, Target.Me, [], [item]);
+        static Fly(src: Common.Coord): Action {
+            var action = new Action(ActionType.Fly, Target.Line);
+            action.coord = src;
+            return action;
         }
 
-        static Fly(item: IItem, dir: Common.DIR, src: Common.Coord): Common.Action {
-            return new Action(ActionType.Fly, Target.Line, [dir], [item], [src]);
+        static Pick(): Action {
+            var action = new Action(ActionType.Pick, Target.Ground);
+            return action;
         }
 
-        static Pick(item: IItem): Common.Action {
-            return new Action(ActionType.Pick, Target.Me, [], [item]);
+        static Delete(target: IObject): Common.Action {
+            var action = new Action(ActionType.Delete, Target.Map);
+            action.targetObject = target;
+            return action;
         }
 
-        static Delete(obj:Common.IObject): Common.Action {
-            return new Action(ActionType.Delete, Target.Map, [], [obj]);
+        static Appear(target: IObject, coord: Coord): Common.Action {
+            var action = new Action(ActionType.Appear, Target.Map);
+            action.targetObject = target;
+            action.coord = coord;
+            return action;
         }
 
-        static SetObject(obj: Common.IObject, coord: Common.Coord): Common.Action {
-            return new Action(ActionType.SetObject, Target.Map, [], [obj], [coord]);
+        static Set(target: IObject, coord: Coord): Common.Action {
+            var action = new Action(ActionType.Set, Target.Map);
+            action.targetObject = target;
+            action.coord = coord;
+            return action;
         }
 
-        static None(): Common.Action {
+        static Place(item: IItem): Action {
+            var action = new Action(ActionType.Place, Target.Me);
+            action.item = item;
+            return action;
+        }
+
+        static Swap(target: IObject, coord: Coord): Action {
+            var action = new Action(ActionType.Swap, Target.Map);
+            action.targetObject = target;
+            action.coord = coord;
+            return action;
+        }
+
+        static None(): Action {
             return new Action(ActionType.None, Target.Me);
         }
     }
@@ -195,8 +264,8 @@
 
     export interface IItem extends IObject {
         num: number;
-        commands: Common.ActionType[];
-        use(action: Action): Action;
+        commands: ActionType[];
+        event(result: IResult): Action;
     }
 
     export interface IFOVData {

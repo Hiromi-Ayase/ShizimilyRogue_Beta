@@ -8,6 +8,7 @@ module ShizimilyRogue.Model {
         getRandomPoint(layer: number): Common.Coord;
         deleteObject(obj: Common.IObject): boolean;
         setObject(obj: Common.IObject, coord: Common.Coord): boolean;
+        dropObject(obj: Common.IObject, coord: Common.Coord): boolean;
 //        addObject(data:IData, coord?: Common.Coord): Common.IObject;
         moveObject(obj: Common.IObject, dir: number): boolean;
         getFOV(unit: Common.IUnit): Common.IFOVData;
@@ -16,6 +17,7 @@ module ShizimilyRogue.Model {
     }
 
     export interface UnitController {
+        object: Common.IUnit;
         getFOV(): Common.IFOVData;
         cell: Common.ICell;
         coord: Common.Coord;
@@ -34,7 +36,7 @@ module ShizimilyRogue.Model {
     export interface IItemData extends IData {
         num: number;
         commands: Common.ActionType[];
-        use(command: Common.Action): Common.Action;
+        event(me: Common.IItem, result: Common.IResult): Common.Action;
     }
 
     export interface IUnitData extends IData {
@@ -122,17 +124,17 @@ module ShizimilyRogue.Model {
             // Playerを配置
             var player = new Model.Data.PlayerData("しじみりちゃん");
             var action = this.addObject(player);
-            this.update(action.objects[0], action, result => results.push(result));
+            this.update(action.targetObject, action, result => results.push(result));
 
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 0; i++) {
                 var ignore: IData = new Model.Data.Ignore;
                 var action = this.addObject(ignore);
-                this.update(action.objects[0], action, result => results.push(result));
+                this.update(action.targetObject, action, result => results.push(result));
             }
             for (var i = 0; i < 5; i++) {
                 var sweet: IData = new Model.Data.Sweet;
                 var action = this.addObject(sweet);
-                this.update(action.objects[0], action, result => results.push(result));
+                this.update(action.targetObject, action, result => results.push(result));
             }
 
             // 一番最初のターンはプレイヤー
@@ -158,7 +160,7 @@ module ShizimilyRogue.Model {
             if (coord == null) {
                 coord = this.map.getRandomPoint(object.layer);
             }
-            return Common.Action.SetObject(object, coord);
+            return Common.Action.Appear(object, coord);
         }
 
         public setObject(obj: Common.IObject, coord: Common.Coord): boolean {
@@ -182,6 +184,15 @@ module ShizimilyRogue.Model {
                 if (obj.isUnit())
                     this.scheduler.remove(obj);
                 return true;
+            } else {
+                return false;
+            }
+        }
+
+        public dropObject(obj: Common.IObject, coord: Common.Coord): boolean {
+            coord = this.map.drop(obj, coord);
+            if (coord != null) {
+                return this.setObject(obj, coord);
             } else {
                 return false;
             }
@@ -245,6 +256,7 @@ module ShizimilyRogue.Model {
 
         private update(object: Common.IObject, action: Common.Action, callback: (result: Common.IResult) => void): Common.EndState {
             var result = this.process(object, action);
+            Common.Debug.result(result);
             if (action.end != Common.EndState.None)
                 return action.end;
             if (result != null) {
@@ -264,6 +276,7 @@ module ShizimilyRogue.Model {
 
         private process(object: Common.IObject, action: Common.Action): Common.IResult {
             var targets: Common.IObject[] = [];
+            var obj: Common.IObject;
             switch (action.target) {
                 case Common.Target.Me:
                     targets = [object];
@@ -273,12 +286,28 @@ module ShizimilyRogue.Model {
                     targets = [this.map.getObject(coord, object.layer)];
                     break;
                 case Common.Target.Line:
-                    var obj = DungeonManager.getLine((x, y) => this.getCell(x, y), object, object.dir, 10);
+                    obj = DungeonManager.getLine((x, y) => this.getCell(x, y), object, object.dir, 10);
                     targets = [obj];
                     break;
-                case Common.Target.Map:
-                    var obj = DungeonManager.mapAction(this, action, object);
+                case Common.Target.FarLine:
+                    obj = DungeonManager.getLine((x, y) => this.getCell(x, y), object, object.dir, 100);
                     targets = [obj];
+                    break;
+                case Common.Target.Target:
+                    targets = [action.targetObject];
+                    break;
+                case Common.Target.Map:
+                    obj = DungeonManager.mapAction(this, action, object);
+                    targets = [obj];
+                    break;
+                case Common.Target.Item:
+                    targets = [action.item];
+                    break;
+                case Common.Target.Ground:
+                    targets = [this.getCell(object.coord.x, object.coord.y).ground];
+                    break;
+                case Common.Target.Unit:
+                    targets = [this.getCell(object.coord.x, object.coord.y).unit];
                     break;
             }
             var result = new Result(object, action, targets);
@@ -286,19 +315,28 @@ module ShizimilyRogue.Model {
         }
 
         private static mapAction(map: MapController, action: Common.Action, object: Common.IObject): Common.IObject {
-            switch (action.type) {
-                case Common.ActionType.Move:
-                    map.moveObject(object, object.dir);
-                    return object;
-                case Common.ActionType.SetObject:
-                    object = action.objects[0];
-                    map.setObject(action.objects[0], action.coords[0]);
-                    return object;
-                case Common.ActionType.Delete:
-                    object = action.objects[0];
-                    map.deleteObject(action.objects[0]);
-                    return object;
+            if (action.isMove()) {
+                map.moveObject(object, object.dir);
+            } else if (action.isAppear()) {
+                object = action.targetObject;
+                map.dropObject(object, action.coord);
+            } else if (action.isSet()) {
+                object = action.targetObject;
+                map.setObject(object, action.coord);
+            } else if (action.isDelete()) {
+                object = action.targetObject;
+                map.deleteObject(object);
+            } else if (action.isFly()) {
+                object = DungeonManager.getLine((x, y) => map.getCell(x, y), object, object.dir, 10);
+            } else if (action.isSwap()) {
+                var targetCoord = object.coord;
+                var myCoord = action.targetObject.coord;
+                map.deleteObject(object);
+                map.deleteObject(action.targetObject);
+                map.setObject(action.targetObject, targetCoord);
+                map.setObject(object, myCoord);
             }
+            return object;
         }
 
         private static getLine(table: (x: number, y: number) => Common.ICell, obj: Common.IObject, dir: number, distance: number): Common.IObject {
@@ -310,10 +348,10 @@ module ShizimilyRogue.Model {
                 if (table(x, y).isUnit()) {
                     return table(x, y).unit;
                 } else if (table(x + ROT.DIRS[8][dir][0], y + ROT.DIRS[8][dir][1]).isWall()) {
-                    return table(x, y).ground;
+                    return table(x, y).unit;
                 }
             }
-            return table(x, y).ground;
+            return table(x, y).unit;
         }
 
         private static getDst(obj: Common.IObject, dir: number): Common.Coord {
@@ -331,8 +369,9 @@ module ShizimilyRogue.Model {
         public get num(): number { return this.data.num; }
         public get category(): number { return this.data.category; }
         public get commands(): Common.ActionType[] { return this.data.commands; }
-        use(action: Common.Action): Common.Action {
-            return this.data.use(action);
+
+        event(result: Common.IResult): Common.Action {
+            return this.data.event(this, result);
         }
 
         constructor(private data: IItemData) {
@@ -406,6 +445,10 @@ module ShizimilyRogue.Model {
             return this.map.getCell(this.coord.x, this.coord.y);
         }
 
+        get object(): Common.IUnit {
+            return this;
+        }
+
         phase(): Common.Action {
             this.data.turn++;
             return this.data.phase(this.map.getFOV(this));
@@ -442,23 +485,30 @@ module ShizimilyRogue.Model {
     class Wall extends DungeonObject {
         type = Common.DungeonObjectType.Wall;
         layer = Common.Layer.Ground;
+        name = "Wall";
     }
 
     class Room extends DungeonObject {
         type = Common.DungeonObjectType.Room;
         layer = Common.Layer.Floor;
+        name = "Room";
     }
 
     class Path extends DungeonObject {
         type = Common.DungeonObjectType.Path;
         layer = Common.Layer.Floor;
+        name = "Pass";
     }
 
     class Null extends DungeonObject {
         type = Common.DungeonObjectType.Null;
         id = -1;
+        name = "Null";
 
         event(result: Common.IResult): Common.Action {
+            if (result.action.isFly()) {
+                return Common.Action.Appear(result.object, this.coord);
+            }
             return null;
         }
     }
@@ -679,6 +729,16 @@ module ShizimilyRogue.Model {
             }
             cell.object = obj;
             return true;
+        }
+
+        public drop(obj: Common.IObject, coord: Common.Coord): Common.Coord {
+            for (var i = 0; i < Common.Drop.length; i++) {
+                var cell = this.map[coord.y + Common.Drop[i][0]][coord.x + Common.Drop[i][1]];
+                if (cell.isNull(obj.layer) && !cell.isWall()) {
+                    return cell.coord;
+                }
+            }
+            return null;
         }
 
         // あるレイヤのランダムな場所を取得
