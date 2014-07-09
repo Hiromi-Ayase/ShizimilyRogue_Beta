@@ -13,6 +13,7 @@
         speed: Common.Speed = Common.Speed.NORMAL;
         turn: number = 0;
         inventory: Common.IItem[] = [];
+        maxInventory = 10;
         currentExp: number = 0;
         stomach: number = 100;
         maxStomach: number = 100;
@@ -27,6 +28,10 @@
                     var attacker = <Common.IUnit>result.object;
                     var damage = Common.Damage(result.action.param, this.def);
                     return Common.Action.Status(me.object, Common.StatusActionType.Damage, damage);
+                }
+            } else if (result.action.isFly()) {
+                if (result.object.isItem()) {
+                    return Common.Action.Use(<Common.IItem>result.object);
                 }
             } else if (result.action.isStatus()) {
                 return this.statusChange(result.action);
@@ -43,14 +48,50 @@
         private statusChange(action: Common.Action): Common.Action {
             if (action.subType == Common.StatusActionType.Damage) {
                 var damage = action.param;
-                this.hp -= damage > this.hp ? this.hp : damage;
-                if (this.hp <= 0) {
-                    action = Common.Action.Die();
-                    return action;
-                }
+                return this.damage(damage);
             } else if (action.subType == Common.StatusActionType.Heal) {
                 var heal = action.param;
                 this.hp += (this.hp + heal) > this.maxHp ? (this.maxHp - this.hp) : heal;
+            } else if (action.subType == Common.StatusActionType.Hunger) {
+                var hunger = action.param;
+                if (hunger > this.stomach) {
+                    this.stomach = 0;
+                    var damage = Common.HungerDamage(this.maxHp);
+                    return this.damage(damage);
+                } else {
+                    this.stomach -= hunger;
+                }
+            } else if (action.subType == Common.StatusActionType.Full) {
+                var full = action.param;
+                this.stomach += (this.stomach + full) > this.maxStomach ? (this.maxStomach - this.stomach) : full;
+            }
+            return null;
+        }
+
+        addInventory(item: Common.IItem): boolean {
+            if (this.inventory.length < this.maxInventory) {
+                this.inventory.push(item);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        takeInventory(item: Common.IItem): boolean {
+            for (var i = 0; i < this.inventory.length; i++) {
+                if (this.inventory[i].id == item.id) {
+                    this.inventory.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private damage(damage: number): Common.Action {
+            this.hp -= damage > this.hp ? this.hp : damage;
+            if (this.hp <= 0) {
+                var action = Common.Action.Die();
+                return action;
             }
             return null;
         }

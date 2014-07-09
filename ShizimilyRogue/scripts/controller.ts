@@ -70,6 +70,10 @@
             return this.dungeonManager.getFOV(this.player);
         }
 
+        private get cell(): Common.ICell {
+            return this.dungeonManager.getCell(this.player.coord.x, this.player.coord.y);
+        }
+
         constructor() {
             this.init();
         }
@@ -95,45 +99,51 @@
                     var action = Common.Action.Attack(this.player.atk);
                     this.viewUpdate(action);
                 } else if (b == true) {
-                    this.showMenu();
+                    this.showMainMenu();
                 }
             }
             return null;
         }
 
-        private showMenu(): void {
-            this._view.showMenu(View.MenuType.Main, ["攻撃", "アイテム"], n => {
-                if (n == 1) {
-                    var itemNames = this.player.inventory.map(item => item.name);
-                    this._view.showMenu(View.MenuType.Item, itemNames, m => {
-                        var item = this.player.inventory[m];
-                        var commandNames = [];
-                        item.commands.forEach(command => {
-                            switch (command) {
-                                case Common.ActionType.Use:
-                                    commandNames.push("使う");
-                                    break;
-                                case Common.ActionType.Throw:
-                                    commandNames.push("投げる");
-                                    break;
-                            }
-                        });
-                        this._view.showMenu(View.MenuType.Use, commandNames, command => {
-                            this._view.closeMenu();
-                            var action = null;
-                            switch (command) {
-                                case 0:
-                                    action = Common.Action.Use(item);
-                                    break;
-                                case 1:
-                                    action = Common.Action.Throw(item);
-                                    break;
-                            }
-                            this.viewUpdate(action);
-                        });
-                    });
-                }
+        private showMainMenu(): void {
+            var mainItems = ["攻撃", "アイテム"];
+            if (this.cell.isItem()) {
+                mainItems.push("ひろう");
+            }
+
+            this._view.showMenu(View.MenuType.Main, mainItems, n => {
+                if (n == 1) { this.showItemMenu(); }
             }, false);
+        }
+
+        private showItemMenu(): void {
+            var itemNames = this.player.inventory.map(item => item.name);
+            this._view.showMenu(View.MenuType.Item, itemNames, m => {
+                var item = this.player.inventory[m];
+                var commandNames = [];
+                var next: Common.Action[] = [];
+                item.commands.forEach(command => {
+                    switch (command) {
+                        case Common.ActionType.Use:
+                            commandNames.push("使う");
+                            next.push(Common.Action.Use(item));
+                            break;
+                        case Common.ActionType.Throw:
+                            commandNames.push("投げる");
+                            next.push(Common.Action.Throw(item));
+                            break;
+                        case Common.ActionType.Place:
+                            commandNames.push("置く");
+                            next.push(Common.Action.Place(item));
+                            break;
+                    }
+                });
+                this._view.showMenu(View.MenuType.Use, commandNames, command => {
+                    this._view.closeMenu();
+                    var action = next[command];
+                    this.viewUpdate(action);
+                });
+            });
         }
 
         private viewUpdate(action: Common.Action = null): void {

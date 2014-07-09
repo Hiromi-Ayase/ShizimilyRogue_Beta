@@ -53,6 +53,11 @@ module ShizimilyRogue.Model {
         stomach: number;
         maxStomach: number;
         inventory: Common.IItem[];
+        maxInventory: number;
+
+        addInventory(item: Common.IItem): boolean;
+        takeInventory(item: Common.IItem): boolean;
+
         phase(fov: Common.IFOVData): Common.Action;
         event(me: UnitController, result: Common.IResult): Common.Action;
     }
@@ -126,7 +131,7 @@ module ShizimilyRogue.Model {
             var action = this.addObject(player);
             this.update(action.targetObject, action, result => results.push(result));
 
-            for (var i = 0; i < 0; i++) {
+            for (var i = 0; i < 5; i++) {
                 var ignore: IData = new Model.Data.Ignore;
                 var action = this.addObject(ignore);
                 this.update(action.targetObject, action, result => results.push(result));
@@ -252,11 +257,15 @@ module ShizimilyRogue.Model {
                 this._currentObject = this._currentUnit;
                 action = this._currentUnit.phase();
             }
+            if (Common.DEBUG)
+                Common.Debug.message("------- Turn End --------");
+
         }
 
         private update(object: Common.IObject, action: Common.Action, callback: (result: Common.IResult) => void): Common.EndState {
             var result = this.process(object, action);
-            Common.Debug.result(result);
+            if (Common.DEBUG)
+                Common.Debug.result(result);
             if (action.end != Common.EndState.None)
                 return action.end;
             if (result != null) {
@@ -265,6 +274,7 @@ module ShizimilyRogue.Model {
                     var newAction = (<DungeonObject>this._currentObject).event(result);
                     callback(result);
                     if (newAction != null) {
+                        newAction.resultId = result.id;
                         var endState = this.update(this._currentObject, newAction, callback);
                         if (endState != Common.EndState.None)
                             return endState;
@@ -434,6 +444,10 @@ module ShizimilyRogue.Model {
         get currentExp(): number { return this.data.currentExp; }
         get maxStomach(): number { return this.data.maxStomach; }
         get stomach(): number { return this.data.stomach; }
+        get maxInventory(): number { return this.data.maxInventory; }
+
+        addInventory(item: Common.IItem): boolean { return this.data.addInventory(item); }
+        takeInventory(item: Common.IItem): boolean { return this.data.takeInventory(item); }
 
         setDir(dir: number) { this.data.dir = dir; }
 

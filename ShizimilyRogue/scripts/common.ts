@@ -20,6 +20,9 @@
         var damage = Math.floor(1 + atk * (0.875 + ROT.RNG.getUniform() * 1.20) - def);
         return damage < 0 ? 1 : damage;
     };
+
+    // お腹すいた時のダメージ量
+    export var HungerDamage = (maxHp: number) => Math.floor(maxHp * 0.1);
     
     // 4:Effect レイヤ  
     // 3:Flying レイヤ Flying Player
@@ -35,7 +38,11 @@
     }
 
     export enum ItemType {
-        Food, CPU
+        CPU, GraphicBoard, HDD, Memory, Sweet, DVD, Case, Application
+    }
+
+    export enum FailType {
+        CaseOver
     }
 
     export enum DungeonObjectType {
@@ -44,7 +51,7 @@
 
 
     export enum Target {
-        Me, Next, Line, FarLine, Target, Item, Map, Ground, Unit
+        Me, Next, Line, FarLine, Target, Item, Map, Ground, Unit, None
     }
 
     export enum ActionType {
@@ -52,7 +59,7 @@
         Use, Throw, Pick, Place, // アイテムアクション
         Die, Status, // 受動的アクション
         Fly, Move, Delete, Swap, Appear, Set, // マップアクション
-        None
+        Fail, None
     }
 
     export enum StatusActionType {
@@ -97,6 +104,7 @@
         targetItems: IItem[] = null;
         coord: Common.Coord = null;
         targetObject: IObject = null;
+        resultId = -1;
 
         isAttack(): boolean { return this.type == ActionType.Attack; }
         isUse(): boolean { return this.type == ActionType.Use; }
@@ -185,7 +193,7 @@
         }
 
         static Place(item: IItem): Action {
-            var action = new Action(ActionType.Place, Target.Me);
+            var action = new Action(ActionType.Place, Target.Item);
             action.item = item;
             return action;
         }
@@ -198,7 +206,13 @@
         }
 
         static None(): Action {
-            return new Action(ActionType.None, Target.Me);
+            return new Action(ActionType.None, Target.None);
+        }
+
+        static Fail(type: number): Action {
+            var action = new Action(ActionType.Fail, Target.Map);
+            action.subType = type;
+            return action;
         }
     }
 
@@ -258,6 +272,11 @@
         maxStomach: number;
 
         inventory: IItem[];
+        maxInventory: number;
+
+        addInventory(item: Common.IItem): boolean;
+        takeInventory(item: Common.IItem): boolean;
+
         state: DungeonUnitState;
         setDir(dir: number): void;
     }

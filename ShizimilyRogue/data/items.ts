@@ -4,6 +4,7 @@
         public commands: Common.ActionType[] = [
             Common.ActionType.Use,
             Common.ActionType.Throw,
+            Common.ActionType.Place,
         ];
 
         constructor(
@@ -16,10 +17,13 @@
             if (result.action.isPick()) {
                 unit.inventory.push(me);
                 return Common.Action.Delete(me);
+            } else if (result.action.isPlace()) {
+                unit.takeInventory(me);
+                return Common.Action.Appear(me, unit.coord);
             } else if (result.action.isUse()) {
-                Item.consume(unit, me);
+                return this.use(me, result.action, unit);
             } else if (result.action.isThrow()) {
-                Item.consume(unit, me);
+                unit.takeInventory(me);
                 me.dir = unit.dir;
                 me.coord = unit.coord;
                 var action = Common.Action.Fly(unit.coord);
@@ -28,30 +32,82 @@
             return null;
         }
 
-        private static consume(unit: Common.IUnit, item: Common.IItem) {
-            for (var i = 0; i < unit.inventory.length; i++) {
-                if (unit.inventory[i].id == item.id) {
-                    unit.inventory.splice(i, 1);
-                    break;
-                }
-            }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
+            return null;
         }
     }
 
     export class Sweet extends Item {
         constructor() {
-            super(Common.ItemType.Food, "スイーツ");
+            super(Common.ItemType.Sweet, "スイーツ");
         }
 
-        event(me: Common.IItem, result: Common.IResult): Common.Action {
-            var action = super.event(me, result);
-            var item = result.action.item;
-            var unit = <Common.IUnit>result.object;
-
-            if (result.action.isUse()) {
-                action = Common.Action.Status(unit, Common.StatusActionType.Heal, 100);
-            }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
+            unit.takeInventory(me);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Heal, 100);
             return action;
+        }
+    }
+
+    export class Case extends Item {
+        maxItems = Math.floor(ROT.RNG.getUniform() * 6);
+        items: Common.IItem[] = [];
+
+        constructor() {
+            super(Common.ItemType.Case, "PCケース");
+        }
+
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
+            var targetItems = action.targetItems;
+            var type = action.subType;
+            if (this.isInserted(targetItems[0])) {
+                if (this.items.length + targetItems.length <= this.maxItems) {
+                    targetItems.forEach(item => {
+                        this.takeItem(item);
+                        unit.addInventory(item);
+                    });
+                } else {
+                    return Common.Action.Fail(Common.FailType.CaseOver);
+                }
+            } else {
+                if (this.items.length + targetItems.length <= this.maxItems) {
+                    targetItems.forEach(item => {
+                        unit.takeInventory(item);
+                        this.addItem(item);
+                    });
+                } else {
+                    return Common.Action.Fail(Common.FailType.CaseOver);
+                }
+            }
+            return null;
+        }
+
+        private isInserted(item: Common.IItem): boolean {
+            for (var i = 0; i < this.items.length; i++) {
+                if (this.items[i].id == item.id) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        addItem(item: Common.IItem): boolean {
+            if (this.items.length < this.maxItems) {
+                this.items.push(item);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        takeItem(item: Common.IItem): boolean {
+            for (var i = 0; i < this.items.length; i++) {
+                if (this.items[i].id == item.id) {
+                    this.items.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
