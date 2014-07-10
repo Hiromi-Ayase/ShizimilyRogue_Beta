@@ -4,24 +4,27 @@
         static ActionString = ["Attack", "Use", "Throw", "Pick", "Place", "Die", "Status", "Fly", "Move", "Delete", "Swap", "Appear", "Set", "Fail", "None"];
 
         static textarea: HTMLInputElement = null;
-        static result(result: IResult): void {
+        static result(action: Action): void {
             var targetList = "";
-            var from = result.action.resultId >= 0 ? (" from " + result.action.resultId) : "";
-            result.targets.forEach(target => targetList += Debug.obj(target) + " ")
+            var from = action.lastAction != null ? (" from " + action.lastAction.id) : "";
+            action.targetObjects.forEach(target => targetList += Debug.obj(target) + " ")
 
-            var message = "[" + result.id + from + "] "
-                + Debug.obj(result.object)
-                + Debug.action(result.action)
+            var message = "[" + action.id + from + "] "
+                + Debug.obj(action.sender)
+                + Debug.action(action)
                 + "to:" + targetList
                 + "";
             Debug.message(message);
         }
 
         private static obj(object: IObject): string {
-            if (object == null)
+            if (object == null) {
                 return "(null)";
-            else
-                return object.name + "(id:" + object.id + " dir:" + Debug.DirString[object.dir] + " [" + object.coord.x + ", " + object.coord.y + "]) "
+            } else {
+                var turn = object.isUnit() ? (" turn:" + (<Common.IUnit>object).turn) : "";
+                var coord = object.coord != null ? (" Coord:[" + object.coord.x + ", " + object.coord.y + "]") : "";
+                return object.name + "(id:" + object.id + turn + " dir:" + Debug.DirString[object.dir] + coord + ") ";
+            }
         }
 
         private static action(action: Action): string {
@@ -32,8 +35,7 @@
             } else {
                 items = "";
             }
-            var target = action.targetObject != null ? " target:" + Debug.obj(action.targetObject) : "";
-            return Debug.ActionString[action.type] + "(sub:" + action.subType + " param:" + action.param + " end:" + action.end + items + target + ") "
+            return Debug.ActionString[action.type] + "(sub:" + action.subType + " param:" + action.param + " end:" + action.end + items + ") "
         }
 
         static message(m: string): void {

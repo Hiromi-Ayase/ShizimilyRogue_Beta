@@ -1,12 +1,14 @@
 ﻿module ShizimilyRogue.Common {
     export var DEBUG = true;
 
-
+    // プレイヤーのID
     export var PLAYER_ID = 0;
-    export var NULL_ID = -1;
 
-    // 投げられる距離
-    export var THROW_DISTANCE = 5;
+    // 各種パラメタ
+    export var Parameter = {
+        ThrowDistance: 10,  // 投げられる最大距離
+        StomachDecrease: 10, // 何ターンに1お腹がへるか
+    };
 
     // ドロップ位置の優先順位
     export var Drop: number[][] = [
@@ -23,53 +25,55 @@
 
     // お腹すいた時のダメージ量
     export var HungerDamage = (maxHp: number) => Math.floor(maxHp * 0.1);
-    
-    // 4:Effect レイヤ  
-    // 3:Flying レイヤ Flying Player
-    // 2:Unit レイヤ  Player Mob
-    // 1:Ground レイヤ  ITEM ENTRANCE
-    // 0:Floor レイヤ   PATH ROOM WALL
+
+    // レイヤー
     export enum Layer {
         Floor, Ground, Unit, Flying, Effect, MAX
     }
 
+    // 方向
     export enum DIR {
         UP, UP_RIGHT, RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT
     }
 
+    // アイテム種別
     export enum ItemType {
         CPU, GraphicBoard, HDD, Memory, Sweet, DVD, Case, Application
-    }
-
-    export enum FailType {
-        CaseOver
     }
 
     export enum DungeonObjectType {
         Null, Wall, Path, Room, Unit, Item
     }
 
-
+    // Actionの通知範囲
     export enum Target {
-        Me, Next, Line, FarLine, Target, Item, Map, Ground, Unit, None
+        Me, Next, Line, FarLine, Target, Item, System, Ground, Unit, None
     }
 
+    // Actionの種別
     export enum ActionType {
         Attack, // 攻撃
         Use, Throw, Pick, Place, // アイテムアクション
         Die, Status, // 受動的アクション
-        Fly, Move, Delete, Swap, Appear, Set, // マップアクション
+        Fly, Move, Delete, Swap, Drop, Set, // マップアクション
         Fail, None
     }
 
+    // ステータス変更Action種別
     export enum StatusActionType {
         Damage, Heal, Hunger, Full
+    }
+
+    // 失敗Action種別
+    export enum FailActionType {
+        CaseOver
     }
 
     export enum DungeonUnitState {
         Normal
     }
 
+    // 終了ステータス
     export enum EndState {
         None, Clear, Up, GameOver
     }
@@ -81,7 +85,7 @@
         TRIPLE = 300,
     }
 
-    //export enum ObjectType
+    // 座標
     export class Coord {
         private _x: number;
         private _y: number;
@@ -96,15 +100,19 @@
     }
 
     export class Action {
+        private static currentId = 1;
+
+        id: number;
         end: EndState = EndState.None;
         next: boolean = true;
         param: number = 0;
         subType: number = 0;
         item: IItem = null;
-        targetItems: IItem[] = null;
+        targetItems: IItem[] = [];
         coord: Common.Coord = null;
-        targetObject: IObject = null;
-        resultId = -1;
+        targetObjects: IObject[] = [];
+        lastAction: Common.Action = null;
+        sender: Common.IObject = null;
 
         isAttack(): boolean { return this.type == ActionType.Attack; }
         isUse(): boolean { return this.type == ActionType.Use; }
@@ -117,16 +125,19 @@
         isMove(): boolean { return this.type == ActionType.Move; }
         isDelete(): boolean { return this.type == ActionType.Delete; }
         isSwap(): boolean { return this.type == ActionType.Swap; }
-        isAppear(): boolean { return this.type == ActionType.Appear; }
+        isAppear(): boolean { return this.type == ActionType.Drop; }
         isNone(): boolean { return this.type == ActionType.None; }
         isSet(): boolean { return this.type == ActionType.Set; }
+        isSystem(): boolean { return this.target == Target.System; }
 
         constructor(
             public type: ActionType,
-            public target: Target) { }
+            public target: Target) {
+            this.id = Action.currentId++;
+        }
 
         static Move(): Common.Action {
-            return new Action(ActionType.Move, Target.Map);
+            return new Action(ActionType.Move, Target.System);
         }
 
         static Attack(atk: number): Common.Action {
@@ -137,7 +148,7 @@
 
         static Status(target: Common.IObject, type: StatusActionType, amount: number): Action {
             var action = new Action(ActionType.Status, Target.Target);
-            action.targetObject = target;
+            action.targetObjects = [target];
             action.subType = type;
             action.param = amount;
             return action;
@@ -173,21 +184,21 @@
         }
 
         static Delete(target: IObject): Common.Action {
-            var action = new Action(ActionType.Delete, Target.Map);
-            action.targetObject = target;
+            var action = new Action(ActionType.Delete, Target.System);
+            action.targetObjects = [target];
             return action;
         }
 
-        static Appear(target: IObject, coord: Coord): Common.Action {
-            var action = new Action(ActionType.Appear, Target.Map);
-            action.targetObject = target;
+        static Drop(target: IObject, coord: Coord): Common.Action {
+            var action = new Action(ActionType.Drop, Target.System);
+            action.targetObjects = [target];
             action.coord = coord;
             return action;
         }
 
         static Set(target: IObject, coord: Coord): Common.Action {
-            var action = new Action(ActionType.Set, Target.Map);
-            action.targetObject = target;
+            var action = new Action(ActionType.Set, Target.System);
+            action.targetObjects = [target];
             action.coord = coord;
             return action;
         }
@@ -199,8 +210,8 @@
         }
 
         static Swap(target: IObject, coord: Coord): Action {
-            var action = new Action(ActionType.Swap, Target.Map);
-            action.targetObject = target;
+            var action = new Action(ActionType.Swap, Target.System);
+            action.targetObjects = [target];
             action.coord = coord;
             return action;
         }
@@ -210,17 +221,10 @@
         }
 
         static Fail(type: number): Action {
-            var action = new Action(ActionType.Fail, Target.Map);
+            var action = new Action(ActionType.Fail, Target.System);
             action.subType = type;
             return action;
         }
-    }
-
-    export interface IResult {
-        id: number;
-        object: IObject;
-        action: Action;
-        targets: IObject[];
     }
 
     export interface ICell {
@@ -284,7 +288,6 @@
     export interface IItem extends IObject {
         num: number;
         commands: ActionType[];
-        event(result: IResult): Action;
     }
 
     export interface IFOVData {

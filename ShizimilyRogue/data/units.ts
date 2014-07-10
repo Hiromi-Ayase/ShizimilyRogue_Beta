@@ -18,54 +18,52 @@
         stomach: number = 100;
         maxStomach: number = 100;
 
-        phase(fov: Common.IFOVData): Common.Action {
-            return null;
+        phase(fov: Common.IFOVData): Common.Action[] {
+            return [];
         }
 
-        event(me: UnitController, result: Common.IResult): Common.Action {
-            if (result.action.isAttack()) {
-                if (result.object.isUnit()) {
-                    var attacker = <Common.IUnit>result.object;
-                    var damage = Common.Damage(result.action.param, this.def);
-                    return Common.Action.Status(me.object, Common.StatusActionType.Damage, damage);
+        event(me: UnitController, action: Common.Action): Common.Action[] {
+            if (action.isAttack()) {
+                if (action.sender.isUnit()) {
+                    var attacker = <Common.IUnit>action.sender;
+                    var damage = Common.Damage(action.param, this.def);
+                    return [Common.Action.Status(me.object, Common.StatusActionType.Damage, damage)];
                 }
-            } else if (result.action.isFly()) {
-                if (result.object.isItem()) {
-                    return Common.Action.Use(<Common.IItem>result.object);
+            } else if (action.isFly()) {
+                if (action.sender.isItem()) {
+                    return [Common.Action.Use(<Common.IItem>action.sender)];
                 }
-            } else if (result.action.isStatus()) {
-                return this.statusChange(result.action);
-            } else if (result.action.isDie()) {
+            } else if (action.isStatus()) {
+                return this.statusChange(action);
+            } else if (action.isDie()) {
                 var action = Common.Action.Delete(me.object);
-                if (result.object.id == Common.PLAYER_ID) {
+                if (action.sender.isPlayer()) {
                     action.end = Common.EndState.GameOver;
                 }
-                return action;
+                return [action];
             }
-            return null;
+            return [];
         }
 
-        private statusChange(action: Common.Action): Common.Action {
+        statusChange(action: Common.Action): Common.Action[] {
+            var amount = action.param;
             if (action.subType == Common.StatusActionType.Damage) {
-                var damage = action.param;
-                return this.damage(damage);
+                return this.damage(amount);
             } else if (action.subType == Common.StatusActionType.Heal) {
-                var heal = action.param;
-                this.hp += (this.hp + heal) > this.maxHp ? (this.maxHp - this.hp) : heal;
+                this.hp += (this.hp + amount) > this.maxHp ? (this.maxHp - this.hp) : amount;
             } else if (action.subType == Common.StatusActionType.Hunger) {
-                var hunger = action.param;
-                if (hunger > this.stomach) {
+                if (amount > this.stomach) {
                     this.stomach = 0;
                     var damage = Common.HungerDamage(this.maxHp);
                     return this.damage(damage);
                 } else {
-                    this.stomach -= hunger;
+                    this.stomach -= amount;
                 }
             } else if (action.subType == Common.StatusActionType.Full) {
                 var full = action.param;
                 this.stomach += (this.stomach + full) > this.maxStomach ? (this.maxStomach - this.stomach) : full;
             }
-            return null;
+            return [];
         }
 
         addInventory(item: Common.IItem): boolean {
@@ -87,14 +85,17 @@
             return false;
         }
 
-        private damage(damage: number): Common.Action {
-            this.hp -= damage > this.hp ? this.hp : damage;
+        damage(amount: number): Common.Action[] {
+            this.hp -= amount > this.hp ? this.hp : amount;
             if (this.hp <= 0) {
                 var action = Common.Action.Die();
-                return action;
+                return [action];
             }
-            return null;
+            return [];
         }
+        private heal(amount: number): void {
+        }
+
 
         constructor(public name: string) {
         }
@@ -102,14 +103,21 @@
 
     export class PlayerData extends UnitData {
         atk = 10;
-        event(me: UnitController, result: Common.IResult): Common.Action {
-            var ret = super.event(me, result);
-            if (result.action.isMove()) {
+        event(me: UnitController, action: Common.Action): Common.Action[] {
+            var ret = super.event(me, action);
+            if (action.isMove()) {
                 if (me.cell.isItem()) {
-                    return Common.Action.Pick();
+                    return [Common.Action.Pick()];
                 }
             }
             return ret;
+        }
+
+        phase(fov: Common.IFOVData): Common.Action[] {
+            if (this.turn % Common.Parameter.StomachDecrease == 0) {
+
+            }
+            return [];
         }
 
         constructor(public name: string) {
@@ -142,12 +150,12 @@
 
         private lastMe: Common.Coord = null;
         private lastPlayer: Common.Coord = null;
-        public phase(fov: Common.IFOVData): Common.Action {
+        public phase(fov: Common.IFOVData): Common.Action[] {
             var me = fov.me.coord;
             var player:Common.Coord = null;
             var action: Common.Action = null;
             for (var i = 0; i < fov.objects.length; i++) {
-                if (fov.objects[i].id == Common.PLAYER_ID) {
+                if (fov.objects[i].isPlayer()) {
                     player = fov.objects[i].coord;
                     break;
                 }
@@ -184,14 +192,14 @@
             }
             this.lastPlayer = player;
             this.lastMe = me;
-            return action;
+            return [action];
         }
 
-        public event(me: UnitController, result: Common.IResult): Common.Action {
-            var ret = super.event(me, result);
+        public event(me: UnitController, action: Common.Action): Common.Action[] {
+            var ret = super.event(me, action);
             var fov = me.getFOV();
             fov.objects.forEach(obj => {
-                if (obj.id == Common.PLAYER_ID) {
+                if (obj.isPlayer()) {
                     this.lastPlayer = obj.coord;
                 }
             });

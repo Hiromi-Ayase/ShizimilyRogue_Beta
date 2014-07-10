@@ -12,28 +12,28 @@
             public name: string,
             public num: number = 1) {
         }
-        event(me: Common.IItem, result: Common.IResult): Common.Action {
-            var unit = <Common.IUnit>result.object;
-            if (result.action.isPick()) {
+        event(me: Common.IItem, action: Common.Action): Common.Action[] {
+            var unit = <Common.IUnit>action.sender;
+            if (action.isPick()) {
                 unit.inventory.push(me);
-                return Common.Action.Delete(me);
-            } else if (result.action.isPlace()) {
+                return [Common.Action.Delete(me)];
+            } else if (action.isPlace()) {
                 unit.takeInventory(me);
-                return Common.Action.Appear(me, unit.coord);
-            } else if (result.action.isUse()) {
-                return this.use(me, result.action, unit);
-            } else if (result.action.isThrow()) {
+                return [Common.Action.Drop(me, unit.coord)];
+            } else if (action.isUse()) {
+                return this.use(me, action, unit);
+            } else if (action.isThrow()) {
                 unit.takeInventory(me);
                 me.dir = unit.dir;
                 me.coord = unit.coord;
                 var action = Common.Action.Fly(unit.coord);
-                return action;
+                return [action];
             }
-            return null;
+            return [];
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
-            return null;
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            return [];
         }
     }
 
@@ -42,10 +42,10 @@
             super(Common.ItemType.Sweet, "スイーツ");
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
             unit.takeInventory(me);
             var action = Common.Action.Status(unit, Common.StatusActionType.Heal, 100);
-            return action;
+            return [action];
         }
     }
 
@@ -57,7 +57,7 @@
             super(Common.ItemType.Case, "PCケース");
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action {
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var targetItems = action.targetItems;
             var type = action.subType;
             if (this.isInserted(targetItems[0])) {
@@ -67,7 +67,7 @@
                         unit.addInventory(item);
                     });
                 } else {
-                    return Common.Action.Fail(Common.FailType.CaseOver);
+                    return [Common.Action.Fail(Common.FailActionType.CaseOver)];
                 }
             } else {
                 if (this.items.length + targetItems.length <= this.maxItems) {
@@ -76,10 +76,10 @@
                         this.addItem(item);
                     });
                 } else {
-                    return Common.Action.Fail(Common.FailType.CaseOver);
+                    return [Common.Action.Fail(Common.FailActionType.CaseOver)];
                 }
             }
-            return null;
+            return [];
         }
 
         private isInserted(item: Common.IItem): boolean {

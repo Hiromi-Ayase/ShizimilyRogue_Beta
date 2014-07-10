@@ -146,12 +146,14 @@
             });
         }
 
-        private viewUpdate(action: Common.Action = null): void {
-            if (action != null) {
+        private viewUpdate(input: Common.Action = null): void {
+            if (input != null) {
                 var results = [];
-                this.dungeonManager.next(action, result => {
-                    results.push(result);
-                    this._view.update(this.getFov(), result, 10);
+                this.dungeonManager.next(input, action => {
+                    results.push(action);
+                    this._view.update(this.getFov(), action, null, 10);
+                }, (receiver, action) => {
+                    this._view.update(this.getFov(), action, receiver, 10);
                 });
                 this._view.updateTurn(this.getFov(), results, 10);
             }
@@ -178,7 +180,7 @@
                 );
 
             this._view = new View.GameScene(data, fov);
-            results.forEach(result => this._view.update(fov, result, 10));
+            results.forEach(action => this._view.update(fov, action, null,  10));
             this._view.updateTurn(fov, results, 10);
         }
     }

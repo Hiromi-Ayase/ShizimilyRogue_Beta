@@ -126,22 +126,22 @@ module ShizimilyRogue.View {
             }
         }
 
-        update(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
+        update(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
             var player = this.data.player;
             // 視界の表示
             this.pathShadow.visible = fov.getCell(player.coord).isPath();
 
             // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
-            this.view.update(fov, result, speed);
+            this.view.update(fov, action, receiver, speed);
             this.miniMap.update(fov);
         }
 
-        updateTurn(fov: Common.IFOVData, results: Common.IResult[], speed: number): void {
+        updateTurn(fov: Common.IFOVData, action: Common.Action[], speed: number): void {
             var player = this.data.player;
-            this.view.updateTurn(fov, results, speed);
+            this.view.updateTurn(fov, action, speed);
             this.clock.show(player.turn);
-            this.message.show(results, speed);
+            this.message.show(action, speed);
         }
     }
 
@@ -241,12 +241,12 @@ module ShizimilyRogue.View {
             this.addChild(this.messageGroup);
         }
 
-        show(results: Common.IResult[], speed: number): void {
+        show(actions: Common.Action[], speed: number): void {
             var messages:string[] = []
-            results.forEach(result => {
-                var m = Data.Message[result.action.type];
+            actions.forEach(action => {
+                var m = Data.Message[action.type];
                 if (m != undefined) {
-                    var str = m(result);
+                    var str = m(action);
                     messages.push(str);
                 }
             });
@@ -379,12 +379,12 @@ module ShizimilyRogue.View {
             this.addChild(this.roomShadow);
         }
 
-        update(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
+        update(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
             this.updateShadow(fov);
-            this.updateObjects(fov, result, speed);
+            this.updateObjects(fov, action, receiver, speed);
         }
 
-        updateTurn(fov: Common.IFOVData, results: Common.IResult[], speed: number) {
+        updateTurn(fov: Common.IFOVData, actions: Common.Action[], speed: number) {
             this.updateVisible(fov, speed);
             this.moveCamera(speed);
         }
@@ -399,32 +399,51 @@ module ShizimilyRogue.View {
             }
         }
 
-        private updateObjects(fov: Common.IFOVData, result: Common.IResult, speed: number): void {
-            // ユニットに行動を起こさせる
-            if (result.action.target == Common.Target.Map) {
-                if (result.action.isMove()) {
-                    var x = result.object.coord.x;
-                    var y = result.object.coord.y;
-                    this.objects[result.object.id].move(x, y, speed, () => { });
-                } else if (result.action.isAppear()) {
-                    var u = ViewObjectFactory.getInstance(result.action.targetObject);
-                    this.objects[u.id] = u;
-                    this.layer[u.layer].addChild(u);
-                    if (fov.isVisible(u.id)) {
-                        u.show(speed);
+        private updateObjects(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
+            if (receiver == null) {
+                // ユニットに行動を起こさせる
+                if (action.isSystem()) {
+                    var target = action.targetObjects[0];
+                    if (action.isMove()) {
+                        this.objects[action.sender.id].move(action.sender.coord, speed);
+                    } else if (action.isAppear()) {
+                        if (this.objects[target.id] == null) {
+                            var u = ViewObjectFactory.getInstance(target);
+                            this.objects[u.id] = u;
+                            this.layer[u.layer].addChild(u);
+
+                            if (fov.isVisible(u.id)) {
+                                u.show(speed);
+                            }
+                        }
+                    } else if (action.isDelete()) {
+                        var u = this.objects[target.id];
+                        u.hide(speed).then(() => {
+                            this.layer[u.layer].removeChild(u);
+                        });
+                        delete this.objects[target.id];
                     }
-                } else if (result.action.isDelete()) {
-                    var u = this.objects[result.action.targetObject.id];
-                    u.hide(speed, () => {
-                        this.layer[u.layer].removeChild(u);
-                    });
-                    delete u;
                 }
 
-                if (result.object.id in this.objects) {
-                    this.objects[result.object.id].action(result, speed);
+                if (action.isFly()) {
+                    var u = ViewObjectFactory.getInstance(action.sender);
+                    u.move(action.sender.coord, 0);
+                    u.show(0);
+                    this.layer[u.layer].addChild(u);
+                    u.move(action.targetObjects[0].coord, speed).then(() => {
+                        this.layer[u.layer].removeChild(u);
+                    });
+                }
+
+                if (action.sender != null && this.objects[action.sender.id] != null) {
+                    this.objects[action.sender.id].action(action, speed);
+                }
+            } else {
+                if (this.objects[receiver.id] != null) {
+                    this.objects[receiver.id].receive(action, speed);
                 }
             }
+
             for (var id in this.objects) {
                 if (this.objects[id] instanceof ViewObject) {
                     this.objects[id].update();
@@ -637,41 +656,39 @@ module ShizimilyRogue.View {
             this.sprite.frame = this.frame();
         }
 
-        action(result: Common.IResult, speed: number): void {
+        action(action: Common.Action, speed: number): void {
             if (Common.DEBUG) {
-                if (result.object.isUnit()) {
-                    var unit = <Common.IUnit>result.object;
+                if (action.sender.isUnit()) {
+                    var unit = <Common.IUnit>action.sender;
                     this.info.text = "[(" + unit.coord.x + "," + unit.coord.y + ")" + "dir:" + unit.dir + "]";
                 }
             }
+       }
+
+        receive(action: Common.Action, speed: number): void {
         }
 
-        move(x: number, y: number, speed, callback: () => void = null): void {
-            var coord = this.data.coord;
+        move(coord: Common.Coord, speed: number): enchant.Timeline {
             Scene.addAnimating();
-            this.tl.moveTo((x + this.marginX) * OBJECT_WIDTH, (y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {
-                if (callback != null)
-                    callback();
+            return this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {
                 Scene.decAnimating();
             });
         }
 
-        hide(speed: number, callback: () => void = null): void {
+        hide(speed: number): enchant.Timeline {
+            var tl = this.sprite.tl;
             if (this.sprite.opacity == 1) {
-                var tl = this.sprite.tl.fadeOut(speed);
-                if (callback != null) {
-                    tl.then(callback);
-                }
+                tl = tl.fadeOut(speed);
             }
+            return tl;
         }
 
-        show(speed: number, callback: () => void = null): void {
+        show(speed: number): enchant.Timeline {
+            var tl = this.sprite.tl;
             if (this.sprite.opacity == 0) {
-                var tl = this.sprite.tl.fadeIn(speed);
-                if (callback != null) {
-                    tl.then(callback);
-                }
+                tl = tl.fadeIn(speed);
             }
+            return tl;
         }
 
         get id(): number {
