@@ -1,13 +1,13 @@
 ﻿module ShizimilyRogue.Common {
     export class Debug {
         static DirString = ["UP", "UP_RIGHT", "RIGHT", "DOWN_RIGHT", "DOWN", "DOWN_LEFT", "LEFT", "UP_LEFT"];
-        static ActionString = ["Attack", "Use", "Throw", "Pick", "Place", "Die", "Status", "Fly", "Move", "Delete", "Swap", "Appear", "Set", "Fail", "None"];
+        static ActionString = ["Attack", "Use", "Throw", "Pick", "Place", "Die", "Status", "Fly", "Move", "Delete", "Swap", "Drop", "Set", "Fail", "None"];
 
         static textarea: HTMLInputElement = null;
         static result(action: Action): void {
             var targetList = "";
             var from = action.lastAction != null ? (" from " + action.lastAction.id) : "";
-            action.targetObjects.forEach(target => targetList += Debug.obj(target) + " ")
+            action.targets.forEach(target => targetList += Debug.obj(target) + " ")
 
             var message = "[" + action.id + from + "] "
                 + Debug.obj(action.sender)

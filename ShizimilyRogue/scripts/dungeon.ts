@@ -99,11 +99,12 @@ module ShizimilyRogue.Model {
     }
 
     export class DungeonManager implements MapController {
-        private _currentUnit: Unit;
+        private _currentUnit: Unit = null;
         private _objects: Common.IObject[] = [];
         private map: Map;
         private scheduler: ROT.Scheduler.Speed = new ROT.Scheduler.Speed();
         private _endState: Common.EndState = Common.EndState.None;
+        private actionQueue: Common.Action[] = [];
 
         constructor(w: number, h: number) {
             this.map = new Map(w, h);
@@ -112,24 +113,24 @@ module ShizimilyRogue.Model {
 
         public init(): Common.Action[]{
             var actions: Common.Action[] = [];
-            // Playerを配置
+            // Player作成
             var player = new Model.Data.PlayerData("しじみりちゃん");
-            var action = this.addObject(player);
-            this.update(null, action, result => actions.push(result), () => { });
+            actions.unshift(this.addObject(player));
 
             for (var i = 0; i < 5; i++) {
                 var ignore: IData = new Model.Data.Ignore;
-                var action = this.addObject(ignore);
-                this.update(null, action, result => actions.push(result), () => { });
+                actions.unshift(this.addObject(ignore));
             }
             for (var i = 0; i < 5; i++) {
                 var sweet: IData = new Model.Data.Sweet;
-                var action = this.addObject(sweet);
-                this.update(null, action, result => actions.push(result), () => { });
+                actions.unshift(this.addObject(sweet));
             }
 
-            // 一番最初のターンはプレイヤー
-            this._currentUnit = this.scheduler.next();
+            // 配置
+            this.addInput(actions);
+            while (this.hasNext()) {
+                this.update();
+            };
             return actions;
         }
 
@@ -220,60 +221,76 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(unit);
         }
 
-        public next(input: Common.Action, sendCallback: (action: Common.Action) => void, receiveCallback: (object: Common.IObject, action: Common.Action) => void): void {
-            var actions: Common.Action[] = [input];
-            while (actions.length > 0) {
-                // 行動
-                for (var i = 0; i < actions.length; i++) {
-                    this._endState = this.update(this._currentUnit, actions[i], sendCallback, receiveCallback);
-                    if (this._endState != Common.EndState.None)
-                        return;
+        public addInput(actions: Common.Action[], sender: Common.IObject = this._currentUnit): void {
+            for (var i = 0; i < actions.length; i++) {
+                var action = actions[i];
+                this.process(sender, action);
+                if (Common.DEBUG) {
+                    Common.Debug.result(action);
                 }
-
-                // 次に行動するユニットのアクションを取り出す
-                this._currentUnit = this.scheduler.next();
-                actions = this._currentUnit.phase();
+                if (action.end != Common.EndState.None) {
+                    var e = new Error("GameEnd");
+                    this._endState = action.end;
+                    throw e;
+                }
+                this.actionQueue.unshift(action);
             }
-            if (Common.DEBUG)
-                Common.Debug.message("------- Turn End --------");
-
         }
 
-        private update(sender: Common.IObject, action: Common.Action, sendCallback: (action: Common.Action) => void, receiveCallback: (object: Common.IObject, action: Common.Action) => void): Common.EndState {
-            this.process(sender, action);
-            var newSystemActions: Common.Action[] = [];
-            if (action.isSystem()) {
-                newSystemActions = DungeonManager.systemAction(this, action);
-            }
-
-            sendCallback(action);
-            if (Common.DEBUG) {
-                Common.Debug.result(action);
-            }
-
-            for (var i = 0; i < action.targetObjects.length; i++) {
-                var receiver = action.targetObjects[i];
-                var newActions: Common.Action[] = [];
-                var newActions = newSystemActions.concat((<DungeonObject>receiver).event(action));
-                receiveCallback(receiver, action);
-
-                for (var j = 0; j < newActions.length; j++) {
-                    var newAction = newActions[i];
-                    if (newAction.end != Common.EndState.None)
-                        return newAction.end;
-                    newAction.lastAction = action;
-                    var endState = this.update(receiver, newAction, sendCallback, receiveCallback);
-                    if (endState != Common.EndState.None)
-                        return endState;
-                }
-            }
-            return Common.EndState.None;
+        public hasNext(): boolean {
+            return this.actionQueue.length > 0;
         }
 
+        /**
+         * 次の行動を行う
+         * @return {Common.EndState} ターンが完了したらEndState, 完了しない場合はnull
+         */
+        public update(): Common.Action {
+            var action = this.actionQueue[0];
+            try {
+                action.targetIndex++;
+                var receiver = action.target;
+                if (action.targetIndex == action.targets.length - 1) {
+                    // 現在のキューのターゲットが空になったので次のキューへ
+                    this.actionQueue.shift();
+                }
+
+                if (action.isSystem()) {
+                    this.addInput(DungeonManager.systemAction(this, action));
+                }
+                this.addInput((<DungeonObject>receiver).event(action), receiver);
+
+                // キューが0になったら
+                if (this.actionQueue.length == 0) {
+                    // 次に行動するユニットのアクションを取り出す
+                    this._currentUnit = this.scheduler.next();
+                    this.addInput(this._currentUnit.phase());
+                }
+            } catch (e) {
+                if (e.message = "GameEnd") {
+                } else {
+                    if (Common.DEBUG) {
+                        Common.Debug.message(e.message);
+                    }
+                }
+            }
+            if (this.actionQueue.length == 0) {
+                if (Common.DEBUG) {
+                    Common.Debug.message("------- Turn End --------");
+                }
+            }
+            return action;
+        }
+
+        /**
+         * Actionに必要な情報を付加して完全な形にする
+         * @param {Common.IObject} sender Actionの送信元
+         * @param {Common.Action} action 元となるAction
+         */
         private process(sender: Common.IObject, action: Common.Action): void {
             var targets: Common.IObject[] = [];
             var obj: Common.IObject;
-            switch (action.target) {
+            switch (action.targetType) {
                 case Common.Target.Me:
                     targets = [sender];
                     break;
@@ -290,10 +307,13 @@ module ShizimilyRogue.Model {
                     targets = [obj];
                     break;
                 case Common.Target.Target:
-                    targets = action.targetObjects;
+                    targets = action.targets;
                     break;
                 case Common.Target.System:
-                    targets = action.targetObjects;
+                    targets = action.targets;
+                    if (action.isMove()) {
+                        targets = [sender];
+                    }
                     break;
                 case Common.Target.Item:
                     targets = [action.item];
@@ -306,30 +326,35 @@ module ShizimilyRogue.Model {
                     break;
             }
             action.sender = sender;
-            action.targetObjects = targets;
+            action.targets = targets;
         }
 
+        /**
+         * システムアクション(マップの移動など)
+         * @param {MapController} map マップコントローラクラス
+         * @param {Common.Action} action Action本体
+         * @return {Common.Action[]} 次のアクション
+         */
         private static systemAction(map: MapController, action: Common.Action): Common.Action[]{
             var actions: Common.Action[] = [];
             if (action.isMove()) {
                 map.moveObject(action.sender, action.sender.dir);
-                action.targetObjects = [action.sender];
-            } else if (action.isAppear()) {
-                var object = action.targetObjects[0];
+            } else if (action.isDrop()) {
+                var object = action.targets[0];
                 map.dropObject(object, action.coord);
             } else if (action.isSet()) {
-                var object = action.targetObjects[0];
+                var object = action.targets[0];
                 map.setObject(object, action.coord);
             } else if (action.isDelete()) {
-                var object = action.targetObjects[0];
+                var object = action.targets[0];
                 map.deleteObject(object);
             } else if (action.isSwap()) {
-                var coord0 = action.targetObjects[0].coord;
-                var coord1 = action.targetObjects[1].coord;
-                map.deleteObject(action.targetObjects[0]);
-                map.deleteObject(action.targetObjects[1]);
-                map.setObject(action.targetObjects[0], coord1);
-                map.setObject(action.targetObjects[0], coord0);
+                var coord0 = action.targets[0].coord;
+                var coord1 = action.targets[1].coord;
+                map.deleteObject(action.targets[0]);
+                map.deleteObject(action.targets[1]);
+                map.setObject(action.targets[0], coord1);
+                map.setObject(action.targets[0], coord0);
             }
             return actions;
         }

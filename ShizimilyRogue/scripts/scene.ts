@@ -56,10 +56,12 @@
 
         static addAnimating(): void {
             Scene._animating++;
+            //Common.Debug.message("add animating:" + Scene._animating);
         }
 
         static decAnimating(): void {
             Scene._animating--;
+            //Common.Debug.message("dec animating:" + Scene._animating);
         }
 
         static get animating(): boolean {

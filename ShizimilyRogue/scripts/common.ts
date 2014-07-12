@@ -1,5 +1,5 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = true;
+    export var DEBUG = false;
 
     // プレイヤーのID
     export var PLAYER_ID = 0;
@@ -47,7 +47,7 @@
 
     // Actionの通知範囲
     export enum Target {
-        Me, Next, Line, FarLine, Target, Item, System, Ground, Unit, None
+        Me, Next, Line, FarLine, Target, Item, System, Ground, Unit
     }
 
     // Actionの種別
@@ -110,9 +110,10 @@
         item: IItem = null;
         targetItems: IItem[] = [];
         coord: Common.Coord = null;
-        targetObjects: IObject[] = [];
+        targets: IObject[] = [];
         lastAction: Common.Action = null;
         sender: Common.IObject = null;
+        targetIndex = -1;
 
         isAttack(): boolean { return this.type == ActionType.Attack; }
         isUse(): boolean { return this.type == ActionType.Use; }
@@ -125,14 +126,18 @@
         isMove(): boolean { return this.type == ActionType.Move; }
         isDelete(): boolean { return this.type == ActionType.Delete; }
         isSwap(): boolean { return this.type == ActionType.Swap; }
-        isAppear(): boolean { return this.type == ActionType.Drop; }
+        isDrop(): boolean { return this.type == ActionType.Drop; }
         isNone(): boolean { return this.type == ActionType.None; }
         isSet(): boolean { return this.type == ActionType.Set; }
-        isSystem(): boolean { return this.target == Target.System; }
+        isSystem(): boolean { return this.targetType == Target.System; }
+
+        get target(): Common.IObject {
+            return this.targets[this.targetIndex];
+        }
 
         constructor(
             public type: ActionType,
-            public target: Target) {
+            public targetType: Target) {
             this.id = Action.currentId++;
         }
 
@@ -148,7 +153,7 @@
 
         static Status(target: Common.IObject, type: StatusActionType, amount: number): Action {
             var action = new Action(ActionType.Status, Target.Target);
-            action.targetObjects = [target];
+            action.targets = [target];
             action.subType = type;
             action.param = amount;
             return action;
@@ -185,20 +190,20 @@
 
         static Delete(target: IObject): Common.Action {
             var action = new Action(ActionType.Delete, Target.System);
-            action.targetObjects = [target];
+            action.targets = [target];
             return action;
         }
 
         static Drop(target: IObject, coord: Coord): Common.Action {
             var action = new Action(ActionType.Drop, Target.System);
-            action.targetObjects = [target];
+            action.targets = [target];
             action.coord = coord;
             return action;
         }
 
         static Set(target: IObject, coord: Coord): Common.Action {
             var action = new Action(ActionType.Set, Target.System);
-            action.targetObjects = [target];
+            action.targets = [target];
             action.coord = coord;
             return action;
         }
@@ -211,13 +216,13 @@
 
         static Swap(target: IObject, coord: Coord): Action {
             var action = new Action(ActionType.Swap, Target.System);
-            action.targetObjects = [target];
+            action.targets = [target];
             action.coord = coord;
             return action;
         }
 
         static None(): Action {
-            return new Action(ActionType.None, Target.None);
+            return new Action(ActionType.None, Target.Me);
         }
 
         static Fail(type: number): Action {

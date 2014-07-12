@@ -25,7 +25,6 @@
         event(me: UnitController, action: Common.Action): Common.Action[] {
             if (action.isAttack()) {
                 if (action.sender.isUnit()) {
-                    var attacker = <Common.IUnit>action.sender;
                     var damage = Common.Damage(action.param, this.def);
                     return [Common.Action.Status(me.object, Common.StatusActionType.Damage, damage)];
                 }
@@ -36,11 +35,11 @@
             } else if (action.isStatus()) {
                 return this.statusChange(action);
             } else if (action.isDie()) {
-                var action = Common.Action.Delete(me.object);
+                var nextAction = Common.Action.Delete(me.object);
                 if (action.sender.isPlayer()) {
-                    action.end = Common.EndState.GameOver;
+                    nextAction.end = Common.EndState.GameOver;
                 }
-                return [action];
+                return [nextAction];
             }
             return [];
         }
@@ -102,7 +101,7 @@
     }
 
     export class PlayerData extends UnitData {
-        atk = 10;
+        atk = 100;
         event(me: UnitController, action: Common.Action): Common.Action[] {
             var ret = super.event(me, action);
             if (action.isMove()) {
@@ -122,8 +121,8 @@
 
         constructor(public name: string) {
             super(name);
-            this.maxHp = 10000;
-            this.hp = 10000;
+            this.maxHp = 1000;
+            this.hp = 1000;
         }
     }
 

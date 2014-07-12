@@ -122,26 +122,25 @@ module ShizimilyRogue.View {
                 if (this.menuGroup.childNodes.length == 0) {
                     break;
                 }
-                this.tl.delay(KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
             }
+            this.tl.delay(KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
         }
 
-        update(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
+        update(fov: Common.IFOVData, action: Common.Action, speed: number): void {
             var player = this.data.player;
             // 視界の表示
             this.pathShadow.visible = fov.getCell(player.coord).isPath();
 
             // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
-            this.view.update(fov, action, receiver, speed);
+            this.view.update(fov, action, speed);
             this.miniMap.update(fov);
-        }
-
-        updateTurn(fov: Common.IFOVData, action: Common.Action[], speed: number): void {
-            var player = this.data.player;
-            this.view.updateTurn(fov, action, speed);
             this.clock.show(player.turn);
             this.message.show(action, speed);
+        }
+
+        updateTurn(fov: Common.IFOVData, speed: number): void {
+            this.view.updateTurn(fov, speed);
         }
     }
 
@@ -226,6 +225,9 @@ module ShizimilyRogue.View {
         private messageArea: enchant.Sprite;
         private messageGroup: enchant.Group;
         private icon: enchant.Sprite;
+        private messages: string[] = [];
+        private groupTl: enchant.Timeline = null;
+        private count: number = 0;
 
         constructor() {
             super();
@@ -236,63 +238,92 @@ module ShizimilyRogue.View {
             this.icon.image = Scene.IMAGE.MESSAGE_ICON.DATA;
 
             this.messageGroup = new enchant.Group();
+            this.messageGroup.x = Message.MESSAGE_LEFT;
+            this.messageGroup.y = Message.MESSAGE_TOP;
+
             this.addChild(this.messageArea);
             this.addChild(this.icon);
             this.addChild(this.messageGroup);
+
+            this.visible = false;
         }
 
-        show(actions: Common.Action[], speed: number): void {
-            var messages:string[] = []
-            actions.forEach(action => {
-                var m = Data.Message[action.type];
-                if (m != undefined) {
-                    var str = m(action);
-                    messages.push(str);
+        show(action: Common.Action, speed: number): void {
+            var m = Data.Message[action.type];
+            if (m != null) {
+                this.visible = true;
+                if (this.groupTl == null) {
+                    this.resetMessageGroup();
                 }
-            });
-            this.setMessage(messages, speed);
+
+                var str = m(action);
+                this.messages.push(str);
+                this.setMessage(speed);
+            }
         }
 
-        private setMessage(messageList: string[], speed: number): void {
+        private resetMessageGroup(): void {
             this.removeChild(this.messageGroup);
-            var messageGroup = new enchant.Group();
-            messageGroup.x = Message.MESSAGE_LEFT;
-            messageGroup.y = Message.MESSAGE_TOP;
-            this.messageGroup = messageGroup;
-            var tl: enchant.Timeline = this.messageGroup.tl;
+            this.messageGroup = new enchant.Group();
+            this.messageGroup.x = Message.MESSAGE_LEFT;
+            this.messageGroup.y = Message.MESSAGE_TOP;
+            this.addChild(this.messageGroup);
+            this.groupTl = this.messageGroup.tl;
+        }
+
+        private setMessage(speed: number): void {
 
             var firstWait = speed * 3;
             var upSpeed = speed * 0.8;
+            if (this.messages.length > 0) {
 
-            for (var i = 0; i < messageList.length; i++) {
                 var label = new enchant.Label();
                 label = new enchant.Label();
-                label.y = i * Message.MESSAGE_HEIGHT;
                 label.font = "16px cursive";
                 label.color = "white";
                 label.width = Message.MESSAGE_WIDTH;
-                label.text = " " + messageList[i];
+                label.text = this.messages.shift();
                 label.visible = false;
-                messageGroup.addChild(label);
+                label.y = this.messageGroup.lastChild == null ? 0 : this.messageGroup.lastChild.y + Message.MESSAGE_HEIGHT;
+                this.messageGroup.addChild(label);
 
-                if (i > 2) {
-                    tl = tl.delay(i == 3 ? firstWait : upSpeed).then(() => {
-                        messageGroup.removeChild(messageGroup.firstChild);
+                if (this.messageGroup.childNodes.length >= 4) {
+                    this.groupTl = this.groupTl.delay(upSpeed).then(() => {
+                        this.messageGroup.removeChild(this.messageGroup.firstChild);
                     }).moveBy(0, -Message.MESSAGE_HEIGHT, upSpeed).then((e) => {
-                        messageGroup.childNodes[2].visible = true;
-                    }).delay(upSpeed).then(() => {
-                    });
+                            this.messageGroup.childNodes[2].visible = true;
+                            this.count++;
+                            this.tl.delay(speed * 5).then(() => {
+                                this.count--;
+                                if (this.count == 0) {
+                                    this.visible = false;
+                                }
+                            });
+                        }).delay(upSpeed).then(() => {
+                            this.setMessage(speed);
+                        });
                 } else {
                     label.visible = true;
+                    this.count++;
+                    this.setMessage(speed);
+                    this.tl.delay(speed * 5).then(() => {
+                        this.count--;
+                        if (this.count == 0) {
+                            this.visible = false;
+                        }
+                    });
                 }
             }
-            this.addChild(this.messageGroup);
         }
 
         set visible(flg: boolean) {
             this.messageArea.visible = flg;
             this.icon.visible = flg;
-            this.messageGroup.childNodes.forEach(node => node.visible = flg);
+
+            if (!flg) {
+                this.removeChild(this.messageGroup);
+                this.groupTl = null;
+            }
         }
     }
 
@@ -362,6 +393,7 @@ module ShizimilyRogue.View {
         private floorMap: Map;
         private groundMap: Map;
         private layer: enchant.Group[];
+        private lastCoord: Common.Coord;
 
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
             super();
@@ -369,6 +401,7 @@ module ShizimilyRogue.View {
             this.floorMap = Map.floor(data.width, data.height, data.getTable); 
             this.groundMap = Map.ground(data.width, data.height, data.getTable); 
             this.layer = new Array<enchant.Group>(Common.Layer.MAX);
+
 
             this.addChild(this.floorMap);
             this.addChild(this.groundMap);
@@ -379,14 +412,15 @@ module ShizimilyRogue.View {
             this.addChild(this.roomShadow);
         }
 
-        update(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
+        update(fov: Common.IFOVData, action: Common.Action, speed: number): void {
+            //this.updateVisible(fov, speed);
             this.updateShadow(fov);
-            this.updateObjects(fov, action, receiver, speed);
+            this.updateObjects(fov, action, speed);
+            this.moveCamera(speed);
         }
 
-        updateTurn(fov: Common.IFOVData, actions: Common.Action[], speed: number) {
+        updateTurn(fov: Common.IFOVData, speed: number): void {
             this.updateVisible(fov, speed);
-            this.moveCamera(speed);
         }
 
         private updateVisible(fov: Common.IFOVData, speed: number) {
@@ -399,49 +433,47 @@ module ShizimilyRogue.View {
             }
         }
 
-        private updateObjects(fov: Common.IFOVData, action: Common.Action, receiver: Common.IObject, speed: number): void {
-            if (receiver == null) {
-                // ユニットに行動を起こさせる
-                if (action.isSystem()) {
-                    var target = action.targetObjects[0];
-                    if (action.isMove()) {
-                        this.objects[action.sender.id].move(action.sender.coord, speed);
-                    } else if (action.isAppear()) {
-                        if (this.objects[target.id] == null) {
-                            var u = ViewObjectFactory.getInstance(target);
-                            this.objects[u.id] = u;
-                            this.layer[u.layer].addChild(u);
+        private updateObjects(fov: Common.IFOVData, action: Common.Action, speed: number): void {
+            // ユニットに行動を起こさせる
+            if (action.isSystem()) {
+                var target = action.targets[0];
+                if (action.isMove()) {
+                    this.objects[action.sender.id].move(action.sender.coord, speed);
+                } else if (action.isDrop()) {
+                    if (this.objects[target.id] == null) {
+                        var u = ViewObjectFactory.getInstance(target);
+                        this.objects[u.id] = u;
+                        this.layer[u.layer].addChild(u);
 
-                            if (fov.isVisible(u.id)) {
-                                u.show(speed);
-                            }
+                        if (fov.isVisible(u.id)) {
+                            u.show(speed);
                         }
-                    } else if (action.isDelete()) {
-                        var u = this.objects[target.id];
-                        u.hide(speed).then(() => {
-                            this.layer[u.layer].removeChild(u);
-                        });
-                        delete this.objects[target.id];
                     }
-                }
-
-                if (action.isFly()) {
-                    var u = ViewObjectFactory.getInstance(action.sender);
-                    u.move(action.sender.coord, 0);
-                    u.show(0);
-                    this.layer[u.layer].addChild(u);
-                    u.move(action.targetObjects[0].coord, speed).then(() => {
+                } else if (action.isDelete()) {
+                    var u = this.objects[target.id];
+                    u.hide(speed).then(() => {
                         this.layer[u.layer].removeChild(u);
                     });
+                    delete this.objects[target.id];
                 }
+            }
 
-                if (action.sender != null && this.objects[action.sender.id] != null) {
-                    this.objects[action.sender.id].action(action, speed);
-                }
-            } else {
-                if (this.objects[receiver.id] != null) {
-                    this.objects[receiver.id].receive(action, speed);
-                }
+            if (action.isFly()) {
+                var u = ViewObjectFactory.getInstance(action.sender);
+                u.move(action.sender.coord, 0);
+                u.show(0);
+                this.layer[u.layer].addChild(u);
+                u.move(action.targets[0].coord, speed).then(() => {
+                    this.layer[u.layer].removeChild(u);
+                });
+            }
+
+            if (action.sender != null && this.objects[action.sender.id] != null) {
+                this.objects[action.sender.id].action(action, speed);
+            }
+
+            if (this.objects[action.target.id] != null) {
+                this.objects[action.target.id].receive(action, speed);
             }
 
             for (var id in this.objects) {
@@ -454,12 +486,15 @@ module ShizimilyRogue.View {
         // 視点移動
         private moveCamera(speed: number): void {
             var coord = this.data.objects[Common.PLAYER_ID].coord;
-            var x = VIEW_WIDTH / 2 - coord.x * OBJECT_WIDTH;
-            var y = VIEW_HEIGHT / 2 - coord.y * OBJECT_HEIGHT;
-            Scene.addAnimating();
-            this.tl.moveTo(x, y, speed).then(function () {
-                Scene.decAnimating();
-            });
+            if (this.lastCoord != coord) {
+                var x = VIEW_WIDTH / 2 - coord.x * OBJECT_WIDTH;
+                var y = VIEW_HEIGHT / 2 - coord.y * OBJECT_HEIGHT;
+                Scene.addAnimating();
+                this.tl.moveTo(x, y, speed).then(function () {
+                    Scene.decAnimating();
+                });
+                this.lastCoord = coord;
+            }
         }
 
         // 部屋にいる時の影
@@ -662,6 +697,18 @@ module ShizimilyRogue.View {
                     var unit = <Common.IUnit>action.sender;
                     this.info.text = "[(" + unit.coord.x + "," + unit.coord.y + ")" + "dir:" + unit.dir + "]";
                 }
+            }
+            if (action.isAttack()) {
+                Scene.addAnimating();
+                this.tl
+                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                    .then(() => {
+                    Scene.decAnimating();
+                });
             }
        }
 
