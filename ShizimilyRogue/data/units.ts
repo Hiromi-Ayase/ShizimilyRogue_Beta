@@ -150,12 +150,12 @@
         private lastMe: Common.Coord = null;
         private lastPlayer: Common.Coord = null;
         public phase(fov: Common.IFOVData): Common.Action[] {
-            var me = fov.me.coord;
+            var me = fov.me.cell.coord;
             var player:Common.Coord = null;
             var action: Common.Action = null;
             for (var i = 0; i < fov.objects.length; i++) {
                 if (fov.objects[i].isPlayer()) {
-                    player = fov.objects[i].coord;
+                    player = fov.objects[i].cell.coord;
                     break;
                 }
             }
@@ -163,7 +163,7 @@
             if (player != null) {
                 // 視界内にプレイヤーがいた
                 if (fov.isAttackable(Common.PLAYER_ID)) {
-                    this.dir = Enemy.getAttackDir(fov.me.coord, player);
+                    this.dir = Enemy.getAttackDir(fov.me.cell.coord, player);
                     action = Common.Action.Attack(this.atk);
                 } else {
                     var dir = Enemy.move(me, player, this.lastMe, fov);
@@ -199,7 +199,7 @@
             var fov = me.getFOV();
             fov.objects.forEach(obj => {
                 if (obj.isPlayer()) {
-                    this.lastPlayer = obj.coord;
+                    this.lastPlayer = obj.cell.coord;
                 }
             });
             return ret;

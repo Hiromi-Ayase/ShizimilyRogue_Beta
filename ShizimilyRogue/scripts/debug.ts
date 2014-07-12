@@ -22,7 +22,7 @@
                 return "(null)";
             } else {
                 var turn = object.isUnit() ? (" turn:" + (<Common.IUnit>object).turn) : "";
-                var coord = object.coord != null ? (" Coord:[" + object.coord.x + ", " + object.coord.y + "]") : "";
+                var coord = object.cell != null ? (" Coord:[" + object.cell.coord.x + ", " + object.cell.coord.y + "]") : "";
                 return object.name + "(id:" + object.id + turn + " dir:" + Debug.DirString[object.dir] + coord + ") ";
             }
         }

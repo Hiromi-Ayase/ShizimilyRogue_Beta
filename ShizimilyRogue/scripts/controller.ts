@@ -71,7 +71,7 @@
         }
 
         private get cell(): Common.ICell {
-            return this.dungeonManager.getCell(this.player.coord.x, this.player.coord.y);
+            return this.dungeonManager.getCell(this.player.cell.coord.x, this.player.cell.coord.y);
         }
 
         constructor() {
@@ -132,27 +132,26 @@
             var itemNames = this.player.inventory.map(item => item.name);
             this._view.showMenu(View.MenuType.Item, itemNames, m => {
                 var item = this.player.inventory[m];
-                var commandNames = [];
-                var next: Common.Action[] = [];
-                item.commands.forEach(command => {
-                    switch (command) {
-                        case Common.ActionType.Use:
-                            commandNames.push("使う");
-                            next.push(Common.Action.Use(item));
-                            break;
-                        case Common.ActionType.Throw:
-                            commandNames.push("投げる");
-                            next.push(Common.Action.Throw(item));
-                            break;
-                        case Common.ActionType.Place:
-                            commandNames.push("置く");
-                            next.push(Common.Action.Place(item));
-                            break;
+                var commandNames = item.commands();
+                this._view.showMenu(View.MenuType.Use, item.commands(), n => {
+                    if (commandNames[n] == "見る") {
+                        var innerItemNames = item.innerItems.map(item => item.name);
+                        this._view.showMenu(View.MenuType.Item, innerItemNames, l => {
+                            this._view.closeMenu();
+                            var next: Common.Action = item.select(0, [item.innerItems[l]]);
+                            this.input(next);
+                        });
+                    } else if (commandNames[n] == "入れる") {
+                        this._view.showMenu(View.MenuType.Item, itemNames, l => {
+                            this._view.closeMenu();
+                            var next: Common.Action = item.select(1, [this.player.inventory[l]]);
+                            this.input(next);
+                        });
+                    } else {
+                        this._view.closeMenu();
+                        var next: Common.Action = item.select(n);
+                        this.input(next);
                     }
-                });
-                this._view.showMenu(View.MenuType.Use, commandNames, command => {
-                    this._view.closeMenu();
-                    this.input(next[command]);
                 });
             });
         }

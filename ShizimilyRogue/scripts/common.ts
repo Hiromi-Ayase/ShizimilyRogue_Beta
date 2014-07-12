@@ -1,6 +1,6 @@
 ﻿module ShizimilyRogue.Common {
     /** デバッグモード切り替え */
-    export var DEBUG = true;
+    export var DEBUG = false;
 
     /** プレイヤーのID */
     export var PLAYER_ID = 0;
@@ -81,6 +81,11 @@
 
     /** ユニットの状態 */
     export enum DungeonUnitState {
+        Normal
+    }
+
+    /** ユニットの状態 */
+    export enum ItemState {
         Normal
     }
 
@@ -413,7 +418,7 @@
     export interface IObject {
         id: number;
         category: number;
-        coord: Coord;
+        cell: ICell;
         layer: Layer;
         dir: DIR;
         name: string;
@@ -455,8 +460,12 @@
      * アイテムオブジェクトインターフェース
      */
     export interface IItem extends IObject {
+        status: ItemState;
+        unknownName: string;
         num: number;
-        commands: ActionType[];
+        innerItems: IItem[];
+        commands(): string[];
+        select(n: number, items?: Common.IItem[]): Common.Action;
     }
 
     /**

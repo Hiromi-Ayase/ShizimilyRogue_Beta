@@ -106,7 +106,7 @@ module ShizimilyRogue.View {
         updateAction(fov: Common.IFOVData, action: Common.Action, speed: number): void {
             var player = this.data.player;
             // 視界の表示
-            this.pathShadow.visible = fov.getCell(player.coord).isPath();
+            this.pathShadow.visible = fov.getCell(player.cell.coord).isPath();
 
             // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
@@ -518,7 +518,7 @@ module ShizimilyRogue.View {
             if (action.isSystem()) {
                 var target = action.targets[0];
                 if (action.isMove()) {
-                    this.objects[action.sender.id].move(action.sender.coord, speed);
+                    this.objects[action.sender.id].move(action.sender.cell.coord, speed);
                 } else if (action.isDrop()) {
                     if (this.objects[target.id] == null) {
                         var u = ViewObjectFactory.getInstance(target);
@@ -540,10 +540,10 @@ module ShizimilyRogue.View {
 
             if (action.isFly()) {
                 var u = ViewObjectFactory.getInstance(action.sender);
-                u.move(action.sender.coord, 0);
+                u.move(action.sender.cell.coord, 0);
                 u.show(0);
                 this.layer[u.layer].addChild(u);
-                u.move(action.targets[0].coord, speed).then(() => {
+                u.move(action.targets[0].cell.coord, speed).then(() => {
                     this.layer[u.layer].removeChild(u);
                 });
             }
@@ -552,9 +552,9 @@ module ShizimilyRogue.View {
                 this.objects[action.sender.id].action(action, speed);
             }
 
-            if (this.objects[action.target.id] != null) {
-                this.objects[action.target.id].receive(action, speed);
-            }
+            //if (this.objects[action.target.id] != null) {
+            //    this.objects[action.target.id].receive(action, speed);
+            //}
 
             for (var id in this.objects) {
                 if (this.objects[id] instanceof ViewObject) {
@@ -565,7 +565,7 @@ module ShizimilyRogue.View {
 
         // 視点移動
         private moveCamera(speed: number): void {
-            var coord = this.data.objects[Common.PLAYER_ID].coord;
+            var coord = this.data.objects[Common.PLAYER_ID].cell.coord;
             if (this.lastCoord != coord) {
                 var x = VIEW_WIDTH / 2 - coord.x * OBJECT_WIDTH;
                 var y = VIEW_HEIGHT / 2 - coord.y * OBJECT_HEIGHT;
@@ -579,8 +579,8 @@ module ShizimilyRogue.View {
 
         // 部屋にいる時の影
         private updateShadow(fov: Common.IFOVData): void {
-            var objs = fov.getCell(fov.me.coord);
-            if (fov.getCell(fov.me.coord).isRoom()) {
+            var objs = fov.getCell(fov.me.cell.coord);
+            if (fov.getCell(fov.me.cell.coord).isRoom()) {
                 this.roomShadow.visible = true;
                 this.roomShadow.update(fov.area);
             } else {
@@ -817,7 +817,7 @@ module ShizimilyRogue.View {
             this.sprite = new enchant.Sprite(width, height);
             this.sprite.image = image;
             this.sprite.frame = frame();
-            var coord = this.data.coord;
+            var coord = this.data.cell.coord;
             this.sprite.opacity = 0;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
             this.addChild(this.sprite);
@@ -850,7 +850,7 @@ module ShizimilyRogue.View {
             if (Common.DEBUG) {
                 if (action.sender.isUnit()) {
                     var unit = <Common.IUnit>action.sender;
-                    this.info.text = "[(" + unit.coord.x + "," + unit.coord.y + ")" + "dir:" + unit.dir + "]";
+                    this.info.text = "[(" + unit.cell.coord.x + "," + unit.cell.coord.y + ")" + "dir:" + unit.dir + "]";
                 }
             }
             if (action.isAttack()) {

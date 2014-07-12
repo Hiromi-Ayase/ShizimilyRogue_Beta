@@ -18,7 +18,6 @@ module ShizimilyRogue.Model {
         object: Common.IUnit;
         getFOV(): Common.IFOVData;
         cell: Common.ICell;
-        coord: Common.Coord;
     }
 
     export enum DataType {
@@ -33,7 +32,11 @@ module ShizimilyRogue.Model {
 
     export interface IItemData extends IData {
         num: number;
-        commands: Common.ActionType[];
+        status: Common.ItemState;
+        unknownName: string;
+        innerItems: Common.IItem[];
+        commands(me: Common.IItem): string[];
+        select(me: Common.IItem, n: number, items: Common.IItem[]): Common.Action;
         event(me: Common.IItem, action: Common.Action): Common.Action[];
     }
 
@@ -73,7 +76,7 @@ module ShizimilyRogue.Model {
         id: number;
 
         category: number = 0;
-        coord: Common.Coord = null;
+        cell: Common.ICell = null;
         type: Common.DungeonObjectType = null;
         layer: Common.Layer = null;
         dir: Common.DIR = 0;
@@ -323,10 +326,10 @@ module ShizimilyRogue.Model {
                     targets = [action.item];
                     break;
                 case Common.Target.Ground:
-                    targets = [this.getCell(sender.coord.x, sender.coord.y).ground];
+                    targets = [this.getCell(sender.cell.coord.x, sender.cell.coord.y).ground];
                     break;
                 case Common.Target.Unit:
-                    targets = [this.getCell(sender.coord.x, sender.coord.y).unit];
+                    targets = [this.getCell(sender.cell.coord.x, sender.cell.coord.y).unit];
                     break;
             }
             action.sender = sender;
@@ -353,8 +356,8 @@ module ShizimilyRogue.Model {
                 var object = action.targets[0];
                 map.deleteObject(object);
             } else if (action.isSwap()) {
-                var coord0 = action.targets[0].coord;
-                var coord1 = action.targets[1].coord;
+                var coord0 = action.targets[0].cell.coord;
+                var coord1 = action.targets[1].cell.coord;
                 map.deleteObject(action.targets[0]);
                 map.deleteObject(action.targets[1]);
                 map.setObject(action.targets[0], coord1);
@@ -364,8 +367,8 @@ module ShizimilyRogue.Model {
         }
 
         private static getLine(table: (x: number, y: number) => Common.ICell, obj: Common.IObject, dir: number, distance: number): Common.IObject {
-            var x = obj.coord.x;
-            var y = obj.coord.y;
+            var x = obj.cell.coord.x;
+            var y = obj.cell.coord.y;
             for (var i = 0; i < distance; i++) {
                 x += ROT.DIRS[8][dir][0];
                 y += ROT.DIRS[8][dir][1];
@@ -379,8 +382,8 @@ module ShizimilyRogue.Model {
         }
 
         private static getDst(obj: Common.IObject, dir: number): Common.Coord {
-            var x = obj.coord.x + ROT.DIRS[8][dir][0];
-            var y = obj.coord.y + ROT.DIRS[8][dir][1];
+            var x = obj.cell.coord.x + ROT.DIRS[8][dir][0];
+            var y = obj.cell.coord.y + ROT.DIRS[8][dir][1];
             return new Common.Coord(x, y);
         }
     }
@@ -391,10 +394,20 @@ module ShizimilyRogue.Model {
 
         public get name(): string { return this.data.name; }
         public get num(): number { return this.data.num; }
+        public get status(): Common.ItemState { return this.data.status; }
+        public get unknownName(): string { return this.data.unknownName; }
+        public get innerItems(): Common.IItem[] { return this.data.innerItems; }
         public get category(): number { return this.data.category; }
-        public get commands(): Common.ActionType[] { return this.data.commands; }
 
-        event(action: Common.Action): Common.Action[] {
+        commands(): string[]{
+            return this.data.commands(this);
+        }
+
+        select(n: number, items: Common.IItem[] = []): Common.Action {
+            return this.data.select(this, n, items);
+        }
+
+        event(action: Common.Action): Common.Action[]{
             return this.data.event(this, action);
         }
 
@@ -469,10 +482,6 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(this);
         }
 
-        get cell(): Common.ICell {
-            return this.map.getCell(this.coord.x, this.coord.y);
-        }
-
         get object(): Common.IUnit {
             return this;
         }
@@ -535,7 +544,7 @@ module ShizimilyRogue.Model {
 
         event(action: Common.Action): Common.Action[] {
             if (action.isFly()) {
-                return [Common.Action.Drop(action.sender, this.coord)];
+                return [Common.Action.Drop(action.sender, this.cell.coord)];
             }
             return [];
         }
@@ -554,12 +563,12 @@ module ShizimilyRogue.Model {
 
         del(layer: Common.Layer): void {
             this._objects[layer] = new Null();
-            this._objects[layer].coord = this._coord;
+            this._objects[layer].cell = this;
         }
 
         set object(obj: Common.IObject) {
             this._objects[obj.layer] = obj;
-            obj.coord = this._coord;
+            obj.cell = this;
         }
 
         get objects(): Common.IObject[] { return this._objects; }
@@ -631,7 +640,7 @@ module ShizimilyRogue.Model {
             }
 
             var fov = new ROT.FOV.PreciseShadowcasting(lightPasses);
-            var coord = unit.coord;
+            var coord = unit.cell.coord;
             var area: Common.Coord[] = [];
             fov.compute(coord.x, coord.y, 10, (x, y, r, visibility) => {
                 area.push(this.map[y][x].coord);
@@ -675,14 +684,14 @@ module ShizimilyRogue.Model {
 
         // 攻撃できるかどうか
         private isAttackable(obj: Common.IObject, target: Common.IObject): boolean {
-            var dirX: number = target.coord.x - obj.coord.x;
-            var dirY: number = target.coord.y - obj.coord.y;
+            var dirX: number = target.cell.coord.x - obj.cell.coord.x;
+            var dirY: number = target.cell.coord.y - obj.cell.coord.y;
 
             if (Math.abs(dirX) > 1 || Math.abs(dirY) > 1) {
                 return false;
             }
 
-            var coord = obj.coord;
+            var coord = obj.cell.coord;
             var newCell = this.map[coord.y + dirY][coord.x + dirX];
 
             if (!newCell.isWall()) {
@@ -703,7 +712,7 @@ module ShizimilyRogue.Model {
         private isMovable(obj: Common.IObject, dir: number): boolean {
             var dirX = ROT.DIRS[8][dir][0];
             var dirY = ROT.DIRS[8][dir][1];
-            var coord = obj.coord;
+            var coord = obj.cell.coord;
             var newCell = this.map[coord.y + dirY][coord.x + dirX];
 
             if (newCell.isNull(obj.layer) && !newCell.isWall()) {
@@ -723,7 +732,7 @@ module ShizimilyRogue.Model {
         // すでに存在するオブジェクトを移動する。成功したらTrue
         public moveObject(obj: Common.IObject, dir: number): boolean {
             if (this.isMovable(obj, dir)) {
-                var coord = obj.coord;
+                var coord = obj.cell.coord;
                 var oldCell = this.map[coord.y][coord.x];
                 var newCell = this.map[coord.y + ROT.DIRS[8][dir][1]][coord.x + ROT.DIRS[8][dir][0]];
                 this.deleteObject(obj);
@@ -736,8 +745,8 @@ module ShizimilyRogue.Model {
 
         // すでに存在するオブジェクトを削除する。成功したらTrue
         public deleteObject(obj: Common.IObject): boolean {
-            var coord = obj.coord;
-            if (obj.coord != null) {
+            var coord = obj.cell.coord;
+            if (obj.cell.coord != null) {
                 var cell = this.map[coord.y][coord.x];
                 cell.del(obj.layer);
                 return true;
