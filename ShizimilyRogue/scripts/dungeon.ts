@@ -9,7 +9,6 @@ module ShizimilyRogue.Model {
         deleteObject(obj: Common.IObject): boolean;
         setObject(obj: Common.IObject, coord: Common.Coord): boolean;
         dropObject(obj: Common.IObject, coord: Common.Coord): boolean;
-//        addObject(data:IData, coord?: Common.Coord): Common.IObject;
         moveObject(obj: Common.IObject, dir: number): boolean;
         getFOV(unit: Common.IUnit): Common.IFOVData;
         currentTurn: Common.IUnit;
@@ -124,6 +123,11 @@ module ShizimilyRogue.Model {
             for (var i = 0; i < 5; i++) {
                 var sweet: IData = new Model.Data.Sweet;
                 actions.unshift(this.addObject(sweet));
+            }
+
+            for (var i = 0; i < 5; i++) {
+                var pccase: IData = new Model.Data.Case;
+                actions.unshift(this.addObject(pccase));
             }
 
             // 配置
@@ -354,7 +358,7 @@ module ShizimilyRogue.Model {
                 map.deleteObject(action.targets[0]);
                 map.deleteObject(action.targets[1]);
                 map.setObject(action.targets[0], coord1);
-                map.setObject(action.targets[0], coord0);
+                map.setObject(action.targets[1], coord0);
             }
             return actions;
         }

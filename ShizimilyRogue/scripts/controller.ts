@@ -164,13 +164,13 @@
         private viewUpdate(): void {
             while (this.dungeonManager.hasNext()) {
                 var action = this.dungeonManager.update();
-                this._view.update(this.getFov(), action, 10);
-                if (!action.isMove() && !action.isPick()) {
+                this._view.updateAction(this.getFov(), action, 10);
+                if (!action.isPick() && !action.isSystem()) {
                     break;
                 }
             }
             if (!this.dungeonManager.hasNext()) {
-                this._view.updateTurn(this.getFov(), 10);
+                this._view.updateFrame(this.getFov(), 10);
             }
         }
 
@@ -195,7 +195,7 @@
                 );
 
             this._view = new View.GameScene(data, fov);
-            results.forEach(action => this._view.update(fov, action, 10));
+            results.forEach(action => this._view.updateAction(fov, action, 10));
         }
     }
 } 

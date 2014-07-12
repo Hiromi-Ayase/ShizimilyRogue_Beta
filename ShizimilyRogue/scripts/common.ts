@@ -1,91 +1,102 @@
 ﻿module ShizimilyRogue.Common {
-    export var DEBUG = false;
+    /** デバッグモード切り替え */
+    export var DEBUG = true;
 
-    // プレイヤーのID
+    /** プレイヤーのID */
     export var PLAYER_ID = 0;
 
-    // 各種パラメタ
+    /** 各種パラメタ */
     export var Parameter = {
-        ThrowDistance: 10,  // 投げられる最大距離
-        StomachDecrease: 10, // 何ターンに1お腹がへるか
+        /** 投げられる最大距離 */
+        ThrowDistance: 10,
+        /** 何ターンに1お腹がへるか */
+        StomachDecrease: 10,
     };
 
-    // ドロップ位置の優先順位
+    /** コンフィグ */
+    export var Config = {
+        /** メニューオープン時のキーロック開放処理フレーム数 */
+        KEY_LOCK_RELEASE: 10,
+        /** メッセージの表示スピード */
+        MESSAGE_SPEED: 0.3,
+        /** メッセージの自動非表示時間 */
+        MESSAGE_FADEOUT: 5,
+    };
+
+    /** ドロップ位置の優先順位 */
     export var Drop: number[][] = [
         [0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1],
         [2, 0], [0, 2], [-2, 0], [0, -2], [2, 1], [1, 2], [-2, 1], [1, -2], [-1, 2], [2, -1], [-1, -2], [-2, -1],
         [2, 2], [2, -2], [-2, 2], [-2, -2]
     ];
 
-    // ダメージ計算式
+    /** ダメージ計算式 */
     export var Damage = (atk: number, def: number) => {
         var damage = Math.floor(1 + atk * (0.875 + ROT.RNG.getUniform() * 1.20) - def);
         return damage < 0 ? 1 : damage;
     };
 
-    // お腹すいた時のダメージ量
+    /** お腹すいた時のダメージ量 */
     export var HungerDamage = (maxHp: number) => Math.floor(maxHp * 0.1);
 
-    // レイヤー
+    /** レイヤー */
     export enum Layer {
         Floor, Ground, Unit, Flying, Effect, MAX
     }
 
-    // 方向
+    /** 方向 */
     export enum DIR {
         UP, UP_RIGHT, RIGHT, DOWN_RIGHT, DOWN, DOWN_LEFT, LEFT, UP_LEFT
     }
 
-    // アイテム種別
+    /** アイテム種別 */
     export enum ItemType {
         CPU, GraphicBoard, HDD, Memory, Sweet, DVD, Case, Application
     }
 
+    /** ダンジョンのオブジェクトのタイプ */
     export enum DungeonObjectType {
         Null, Wall, Path, Room, Unit, Item
     }
 
-    // Actionの通知範囲
+    /** Actionの通知範囲 */
     export enum Target {
         Me, Next, Line, FarLine, Target, Item, System, Ground, Unit
     }
 
-    // Actionの種別
+    /** Actionの種別 */
     export enum ActionType {
-        Attack, // 攻撃
-        Use, Throw, Pick, Place, // アイテムアクション
-        Die, Status, // 受動的アクション
-        Fly, Move, Delete, Swap, Drop, Set, // マップアクション
-        Fail, None
+        Attack, Use, Throw, Pick, Place, Die, Status, Fly, Move, Delete, Swap, Drop, Set, Fail, None
     }
 
-    // ステータス変更Action種別
+    /** ステータス変更Action種別 */
     export enum StatusActionType {
         Damage, Heal, Hunger, Full
     }
 
-    // 失敗Action種別
+    /** 失敗Action種別 */
     export enum FailActionType {
         CaseOver
     }
 
+    /** ユニットの状態 */
     export enum DungeonUnitState {
         Normal
     }
 
-    // 終了ステータス
+    /** 終了ステータス */
     export enum EndState {
         None, Clear, Up, GameOver
     }
 
+    /** ユニットのスピード */
     export enum Speed {
-        HALF = 50,
         NORMAL = 100,
         DOUBLE = 200,
         TRIPLE = 300,
     }
 
-    // 座標
+    /** 座標 */
     export class Coord {
         private _x: number;
         private _y: number;
@@ -99,20 +110,33 @@
         }
     }
 
+    /**
+     * アクション
+     */
     export class Action {
         private static currentId = 1;
 
+        /** アクションID */
         id: number;
+        /** 終了ステータス None以外の場合終了 */
         end: EndState = EndState.None;
-        next: boolean = true;
+        /** 数値パラメタ */
         param: number = 0;
-        subType: number = 0;
-        item: IItem = null;
+        /** アイテムパラメタ */
         targetItems: IItem[] = [];
+        /** 座標パラメタ */
         coord: Common.Coord = null;
+        /** サブタイプ */
+        subType: number = 0;
+        /** アイテム */
+        item: IItem = null;
+        /** Actionの送信先 targetTypeがTarget以外の時は自動設定される */
         targets: IObject[] = [];
+        /** このアクションを起こす契機になったアクション */
         lastAction: Common.Action = null;
+        /** このアクションの呼び出し元 自動設定される */
         sender: Common.IObject = null;
+        /** 現在のターゲット番号 */
         targetIndex = -1;
 
         isAttack(): boolean { return this.type == ActionType.Attack; }
@@ -131,26 +155,60 @@
         isSet(): boolean { return this.type == ActionType.Set; }
         isSystem(): boolean { return this.targetType == Target.System; }
 
+        /**
+         * @return {Common.IObject} 現在のターゲット
+         */
         get target(): Common.IObject {
             return this.targets[this.targetIndex];
         }
 
+        /**
+         * @constructor
+         */
         constructor(
             public type: ActionType,
             public targetType: Target) {
             this.id = Action.currentId++;
         }
 
+        /**
+         * 移動アクション
+         * <ul>
+         * <li>現在の方向に向かって移動する
+         * <li>システムアクション
+         * </ul>
+         * @return {Common.Action} アクション
+         */
         static Move(): Common.Action {
             return new Action(ActionType.Move, Target.System);
         }
 
+        /**
+         * 攻撃アクション
+         * <ul>
+         * <li>現在の方向に向かって指定した攻撃力で攻撃
+         * <li>隣接アクション
+         * </ul>
+         * @param {number} atk 攻撃力 paramに格納
+         * @return {Common.Action} アクション
+         */
         static Attack(atk: number): Common.Action {
             var action = new Action(ActionType.Attack, Target.Next);
             action.param = atk;
             return action;
         }
 
+        /**
+         * ステータス変更アクション
+         * <ul>
+         * <li>指定したステータスを変更
+         * <li>ターゲット指定アクション
+         * </ul>
+         * @param {Common.IObject} target 変更対象 targetsに格納
+         * @param {StatusActionType} type 変更するステータス subTypeに格納
+         * @param {number} amount 変化量 paramに格納
+         * @return {Common.Action} アクション
+         */
         static Status(target: Common.IObject, type: StatusActionType, amount: number): Action {
             var action = new Action(ActionType.Status, Target.Target);
             action.targets = [target];
@@ -159,11 +217,27 @@
             return action;
         }
 
+        /**
+         * 死亡アクション
+         * <ul>
+         * <li>自分アクション
+         * </ul>
+         * @return {Common.Action} アクション
+         */
         static Die(): Action {
             var action = new Action(ActionType.Die, Target.Me);
             return action;
         }
 
+        /**
+         * アイテム使用アクション
+         * <ul>
+         * <li>アイテムアクション
+         * </ul>
+         * @param {IItem} item 使用するアイテム itemに格納
+         * @param {IItem[]} targetItems 合成等のアイテム(Default:[]) targetItemsに格納
+         * @return {Common.Action} アクション
+         */
         static Use(item: IItem, targetItems: IItem[] = []): Action {
             var action = new Action(ActionType.Use, Target.Item);
             action.item = item;
@@ -171,29 +245,69 @@
             return action;
         }
 
+        /**
+         * 投げるアクション
+         * <ul>
+         * <li>アイテムアクション
+         * </ul>
+         * @param {IItem} item 使用するアイテム itemに格納
+         * @return {Common.Action} アクション
+         */
         static Throw(item: IItem): Action {
             var action = new Action(ActionType.Throw, Target.Item);
             action.item = item;
             return action;
         }
 
+        /**
+         * 飛ぶアクション
+         * <ul>
+         * <li>ライン上アクション
+         * </ul>
+         * @param {Common.Coord} src 初期地点 coordに格納
+         * @return {Common.Action} アクション
+         */
         static Fly(src: Common.Coord): Action {
             var action = new Action(ActionType.Fly, Target.Line);
             action.coord = src;
             return action;
         }
 
+        /**
+         * 拾うアクション
+         * <ul>
+         * <li>Groundレイヤアクション
+         * </ul>
+         * @return {Common.Action} アクション
+         */
         static Pick(): Action {
             var action = new Action(ActionType.Pick, Target.Ground);
             return action;
         }
 
+        /**
+         * オブジェクトの削除アクション
+         * <ul>
+         * <li>システムアクション
+         * </ul>
+         * @param {IObject} target 削除対象 targetsに格納
+         * @return {Common.Action} アクション
+         */
         static Delete(target: IObject): Common.Action {
             var action = new Action(ActionType.Delete, Target.System);
             action.targets = [target];
             return action;
         }
 
+        /**
+         * オブジェクトのドロップアクション
+         * <ul>
+         * <li>システムアクション
+         * </ul>
+         * @param {IObject} target ドロップするオブジェクト targetsに格納
+         * @param {Common.Coord} coord ドロップ地点 coordに格納
+         * @return {Common.Action} アクション
+         */
         static Drop(target: IObject, coord: Coord): Common.Action {
             var action = new Action(ActionType.Drop, Target.System);
             action.targets = [target];
@@ -201,6 +315,15 @@
             return action;
         }
 
+        /**
+         * オブジェクトをセットするアクション
+         * <ul>
+         * <li>システムアクション
+         * </ul>
+         * @param {IObject} target セット対象 targetsに格納
+         * @param {Common.Coord} coord セット地点 coordに格納
+         * @return {Common.Action} アクション
+         */
         static Set(target: IObject, coord: Coord): Common.Action {
             var action = new Action(ActionType.Set, Target.System);
             action.targets = [target];
@@ -208,30 +331,64 @@
             return action;
         }
 
+        /**
+         * アイテムを置くアクション
+         * <ul>
+         * <li>アイテムアクション
+         * </ul>
+         * @param {IItem} item 置くアイテム itemに格納
+         * @return {Common.Action} アクション
+         */
         static Place(item: IItem): Action {
             var action = new Action(ActionType.Place, Target.Item);
             action.item = item;
             return action;
         }
 
-        static Swap(target: IObject, coord: Coord): Action {
+        /**
+         * 場所の交換アクション
+         * <ul>
+         * <li>システムアクション
+         * </ul>
+         * @param {IObject} target0 交換対象1 targetsに格納
+         * @param {IObject} target1 交換対象2 targetsに格納
+         * @return {Common.Action} アクション
+         */
+        static Swap(target0: IObject, target1: IObject): Action {
             var action = new Action(ActionType.Swap, Target.System);
-            action.targets = [target];
-            action.coord = coord;
+            action.targets = [target0, target1];
             return action;
         }
 
+        /**
+         * 何もしないアクション
+         * <ul>
+         * <li>自分アクション
+         * </ul>
+         * @return {Common.Action} アクション
+         */
         static None(): Action {
             return new Action(ActionType.None, Target.Me);
         }
 
-        static Fail(type: number): Action {
+        /**
+         * 失敗アクション
+         * <ul>
+         * <li>アイテムアクション
+         * </ul>
+         * @param {Common.FailActionType} type 失敗タイプ subTypeに格納
+         * @return {Common.Action} アクション
+         */
+        static Fail(type: Common.FailActionType): Action {
             var action = new Action(ActionType.Fail, Target.System);
             action.subType = type;
             return action;
         }
     }
 
+    /**
+     * 各座標の情報
+     */
     export interface ICell {
         objects: IObject[];
         coord: Coord;
@@ -246,14 +403,15 @@
 
         unit: IUnit;
         item: IItem;
-
         floor: IObject;
         ground: IObject;
     }
 
+    /**
+     * マップオブジェクトインターフェース
+     */
     export interface IObject {
         id: number;
-        //type: DungeonObjectType;
         category: number;
         coord: Coord;
         layer: Layer;
@@ -269,6 +427,9 @@
         isNull(): boolean;
     }
 
+    /**
+     * ユニットオブジェクトインターフェース
+     */
     export interface IUnit extends IObject {
         hp: number;
         maxHp: number;
@@ -290,11 +451,17 @@
         setDir(dir: number): void;
     }
 
+    /**
+     * アイテムオブジェクトインターフェース
+     */
     export interface IItem extends IObject {
         num: number;
         commands: ActionType[];
     }
 
+    /**
+     * 視界情報インターフェース
+     */
     export interface IFOVData {
         me: IObject;
         area: Coord[];
@@ -314,6 +481,9 @@
 }
 
 module ShizimilyRogue {
+    /**
+     * ゲームの開始
+     */
     export function start() {
         window.onload = function (e) {
             window.focus();

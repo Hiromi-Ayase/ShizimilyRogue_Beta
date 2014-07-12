@@ -1,15 +1,20 @@
 ﻿
 module ShizimilyRogue.View {
-    // セルのサイズ
+    /** セルのWidth */
     var OBJECT_WIDTH = 64;
+    /** セルのHeight */
     var OBJECT_HEIGHT = 64;
 
-    // メニューオープン時のキーロック開放処理フレーム数
-    var KEY_LOCK_RELEASE = 10;
-
+    /** メニュータイプ */
     export enum MenuType { Main, Item, Use }
 
+    /**
+     * ゲーム画面用データ
+     */
     export class GameSceneData {
+        /**
+         * @constructor
+         */
         constructor(
             public player: Common.IUnit,
             public width: number,
@@ -19,6 +24,9 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * ゲーム画面
+     */
     export class GameScene extends Scene {
         private message: Message;
         private menuGroup: enchant.Group;
@@ -27,8 +35,12 @@ module ShizimilyRogue.View {
         private clock: Clock;
         private miniMap: MiniMap;
         private view: View;
-        public animateSpeed: number = 10;
 
+        /**
+         * @constructor
+         * @param {GameSceneData} data ゲームシーン用データ
+         * @param {Common.IFOVData} fov 視界情報
+         */
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
             super();
 
@@ -49,6 +61,68 @@ module ShizimilyRogue.View {
             this.addChild(this.menuGroup);
             
             this.addMenuKeyHandler();
+        }
+
+        /**
+         * メニューの表示
+         * @param {MenuType} type ゲームシーン用データ
+         * @param {string[]} data メニューアイテム
+         * @param {(n: number) => void} selectHandler メニュー選択時のハンドラ
+         * @param {boolean} multiple 複数選択(Default:false)
+         */
+        showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean = false): void {
+            Scene.keyLock = true;
+            if (type == MenuType.Main) {
+                var menu = Menu.Main(data, selectHandler, multiple);
+                this.menuGroup.addChild(menu);
+            } else if (type == MenuType.Item) {
+                var menu = Menu.Item(data, selectHandler, multiple);
+                this.menuGroup.addChild(menu);
+            } else if (type == MenuType.Use) {
+                var menu = Menu.Use(data, selectHandler, multiple);
+                this.menuGroup.addChild(menu);
+            }
+        }
+
+        /**
+         * メニューを閉じる
+         */
+        closeMenu(): void {
+            while (true) {
+                this.menuGroup.removeChild(this.menuGroup.lastChild);
+                if (this.menuGroup.childNodes.length == 0) {
+                    break;
+                }
+            }
+            this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+        }
+
+        /**
+         * アクションごとのアップデート
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {Common.Action} action アクション
+         * @param {number} speed スピード
+         */
+        updateAction(fov: Common.IFOVData, action: Common.Action, speed: number): void {
+            var player = this.data.player;
+            // 視界の表示
+            this.pathShadow.visible = fov.getCell(player.coord).isPath();
+
+            // プレイヤーHPの表示
+            this.playerHp.show(player.hp, player.maxHp, player.stomach);
+            this.view.updateAction(fov, action, speed);
+            this.miniMap.update(fov);
+            this.clock.show(player.turn);
+            this.message.show(action, speed);
+        }
+
+        /**
+         * フレームごとのアップデート
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {number} speed スピード
+         */
+        updateFrame(fov: Common.IFOVData, speed: number): void {
+            this.view.updateFrame(fov, speed);
         }
 
         private addMenuKeyHandler(): void {
@@ -74,7 +148,7 @@ module ShizimilyRogue.View {
                 if (this.menuGroup.childNodes.length > 0) {
                     this.menuGroup.removeChild(this.menuGroup.lastChild);
                     if (this.menuGroup.childNodes.length == 0)
-                        this.tl.delay(KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+                        this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
                 }
             });
         }
@@ -101,49 +175,11 @@ module ShizimilyRogue.View {
             pathShadow.update(map);
             return pathShadow;
         }
-
-        showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean = false): void {
-            Scene.keyLock = true;
-            if (type == MenuType.Main) {
-                var menu = Menu.Main(data, selectHandler, multiple);
-                this.menuGroup.addChild(menu);
-            } else if (type == MenuType.Item) {
-                var menu = Menu.Item(data, selectHandler, multiple);
-                this.menuGroup.addChild(menu);
-            } else if (type == MenuType.Use) {
-                var menu = Menu.Use(data, selectHandler, multiple);
-                this.menuGroup.addChild(menu);
-            }
-        }
-
-        closeMenu() {
-            while (true) {
-                this.menuGroup.removeChild(this.menuGroup.lastChild);
-                if (this.menuGroup.childNodes.length == 0) {
-                    break;
-                }
-            }
-            this.tl.delay(KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
-        }
-
-        update(fov: Common.IFOVData, action: Common.Action, speed: number): void {
-            var player = this.data.player;
-            // 視界の表示
-            this.pathShadow.visible = fov.getCell(player.coord).isPath();
-
-            // プレイヤーHPの表示
-            this.playerHp.show(player.hp, player.maxHp, player.stomach);
-            this.view.update(fov, action, speed);
-            this.miniMap.update(fov);
-            this.clock.show(player.turn);
-            this.message.show(action, speed);
-        }
-
-        updateTurn(fov: Common.IFOVData, speed: number): void {
-            this.view.updateTurn(fov, speed);
-        }
     }
 
+    /**
+     * ミニマップ
+     */
     class MiniMap extends enchant.Group {
         private static BLOCK_UNIT = 16;
         private static BLOCK_PLAYER = 19;
@@ -160,6 +196,12 @@ module ShizimilyRogue.View {
         private floorData: number[][];
         private groundData: number[][];
 
+        /**
+         * ミニマップのコンストラクタ
+         * @param {number} w Width
+         * @param {number} h Height
+         * @constructor
+         */
         constructor(private w:number, private h:number) {
             super();
             this.floorData = new Array<number[]>(h);
@@ -182,7 +224,11 @@ module ShizimilyRogue.View {
             this.addChild(this.groundMap);
         }
 
-        update(fov: Common.IFOVData) {
+        /**
+         * ミニマップのアップデート
+         * @param {Common.IFOVData} fov 視界情報
+         */
+        update(fov: Common.IFOVData): void {
             for (var y = 0; y < this.h; y++) {
                 for (var x = 0; x < this.w; x++) {
                     this.groundData[y][x] = MiniMap.BLOCK_OHTER;
@@ -215,12 +261,16 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * 下部のメッセージ
+     */
     class Message extends enchant.Group {
         private static MESSAGE_TOP = 408;
         private static MESSAGE_LEFT = 20;
         private static MESSAGE_WIDTH = VIEW_WIDTH - Message.MESSAGE_LEFT;
         private static MESSAGE_HEIGHT = 20;
         private static MESSAGE_AREA_OPACITY = 0.8;
+        private static MESSAGE_LINE = 3;
 
         private messageArea: enchant.Sprite;
         private messageGroup: enchant.Group;
@@ -229,6 +279,9 @@ module ShizimilyRogue.View {
         private groupTl: enchant.Timeline = null;
         private count: number = 0;
 
+        /**
+         * @constructor
+         */
         constructor() {
             super();
             this.messageArea = new enchant.Sprite(VIEW_WIDTH, VIEW_HEIGHT);
@@ -248,6 +301,11 @@ module ShizimilyRogue.View {
             this.visible = false;
         }
 
+        /**
+         * メッセージの表示
+         * @param {Common.Action} action メッセージを表示するアクション
+         * @param {number} speed スピード
+         */
         show(action: Common.Action, speed: number): void {
             var m = Data.Message[action.type];
             if (m != null) {
@@ -262,6 +320,20 @@ module ShizimilyRogue.View {
             }
         }
 
+        /**
+         * 表示の切替
+         * @param {boolean} flg True/False
+         */
+        set visible(flg: boolean) {
+            this.messageArea.visible = flg;
+            this.icon.visible = flg;
+
+            if (!flg) {
+                this.removeChild(this.messageGroup);
+                this.groupTl = null;
+            }
+        }
+
         private resetMessageGroup(): void {
             this.removeChild(this.messageGroup);
             this.messageGroup = new enchant.Group();
@@ -273,8 +345,7 @@ module ShizimilyRogue.View {
 
         private setMessage(speed: number): void {
 
-            var firstWait = speed * 3;
-            var upSpeed = speed * 0.8;
+            var upSpeed = speed * Common.Config.MESSAGE_SPEED;
             if (this.messages.length > 0) {
 
                 var label = new enchant.Label();
@@ -287,42 +358,32 @@ module ShizimilyRogue.View {
                 label.y = this.messageGroup.lastChild == null ? 0 : this.messageGroup.lastChild.y + Message.MESSAGE_HEIGHT;
                 this.messageGroup.addChild(label);
 
-                if (this.messageGroup.childNodes.length >= 4) {
+                if (this.messageGroup.childNodes.length > Message.MESSAGE_LINE) {
                     this.groupTl = this.groupTl.delay(upSpeed).then(() => {
                         this.messageGroup.removeChild(this.messageGroup.firstChild);
                     }).moveBy(0, -Message.MESSAGE_HEIGHT, upSpeed).then((e) => {
-                            this.messageGroup.childNodes[2].visible = true;
-                            this.count++;
-                            this.tl.delay(speed * 5).then(() => {
-                                this.count--;
-                                if (this.count == 0) {
-                                    this.visible = false;
-                                }
-                            });
-                        }).delay(upSpeed).then(() => {
-                            this.setMessage(speed);
+                        this.messageGroup.childNodes[Message.MESSAGE_LINE - 1].visible = true;
+                        this.count++;
+                        this.tl.delay(speed * Common.Config.MESSAGE_FADEOUT).then(() => {
+                            this.count--;
+                            if (this.count == 0) {
+                                this.visible = false;
+                            }
                         });
+                    }).delay(upSpeed).then(() => {
+                        this.setMessage(speed);
+                    });
                 } else {
                     label.visible = true;
                     this.count++;
                     this.setMessage(speed);
-                    this.tl.delay(speed * 5).then(() => {
+                    this.tl.delay(speed * Common.Config.MESSAGE_FADEOUT).then(() => {
                         this.count--;
                         if (this.count == 0) {
                             this.visible = false;
                         }
                     });
                 }
-            }
-        }
-
-        set visible(flg: boolean) {
-            this.messageArea.visible = flg;
-            this.icon.visible = flg;
-
-            if (!flg) {
-                this.removeChild(this.messageGroup);
-                this.groupTl = null;
             }
         }
     }
@@ -386,6 +447,7 @@ module ShizimilyRogue.View {
         }
     }
 
+    /** ゲーム画面本体 */
     class View extends enchant.Group {
         private objects: { [id: number]: ViewObject } = {};
 
@@ -395,6 +457,9 @@ module ShizimilyRogue.View {
         private layer: enchant.Group[];
         private lastCoord: Common.Coord;
 
+        /**
+         * @constructor
+         */
         constructor(private data: GameSceneData, fov: Common.IFOVData) {
             super();
             this.roomShadow = new Shadow(data.width, data.height);
@@ -412,15 +477,30 @@ module ShizimilyRogue.View {
             this.addChild(this.roomShadow);
         }
 
-        update(fov: Common.IFOVData, action: Common.Action, speed: number): void {
-            //this.updateVisible(fov, speed);
+        /**
+         * Actionが来るごとにUpdate
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {Common.Action} action アクション
+         * @param {number} speed 速度
+         */
+        updateAction(fov: Common.IFOVData, action: Common.Action, speed: number): void {
             this.updateShadow(fov);
             this.updateObjects(fov, action, speed);
             this.moveCamera(speed);
         }
 
-        updateTurn(fov: Common.IFOVData, speed: number): void {
+        /**
+         * フレームごとにUpdate
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {number} speed 速度
+         */
+        updateFrame(fov: Common.IFOVData, speed: number): void {
             this.updateVisible(fov, speed);
+            for (var id in this.objects) {
+                if (this.objects[id] instanceof ViewObject) {
+                    this.objects[id].updateFrame();
+                }
+            }
         }
 
         private updateVisible(fov: Common.IFOVData, speed: number) {
@@ -478,7 +558,7 @@ module ShizimilyRogue.View {
 
             for (var id in this.objects) {
                 if (this.objects[id] instanceof ViewObject) {
-                    this.objects[id].update();
+                    this.objects[id].updateFrame();
                 }
             }
         }
@@ -510,6 +590,9 @@ module ShizimilyRogue.View {
     }
     
 
+    /**
+     * メニュー
+     */
     class Menu extends enchant.Group {
         private static TOP_MARGIN = 36;
         private static LEFT_MARGIN = 36;
@@ -519,18 +602,42 @@ module ShizimilyRogue.View {
         private cursor: enchant.Sprite;
         private cursorIndex: number = 0;
 
+        /**
+         * メインメニュー
+         * @param {string[]} data メニューのアイテムリスト
+         * @param {(n: number) => void} selectHandler 選択時のハンドラ
+         * @param {boolean} multiple 複数選択か否か(Default:false)
+         * @return {Menu} メニュー
+         */
         static Main(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
             return new Menu(data, selectHandler, multiple, Scene.IMAGE.MEMU_MAIN.DATA, 10, 10, 3);
         }
 
+        /**
+         * アイテムメニュー
+         * @param {string[]} data メニューのアイテムリスト
+         * @param {(n: number) => void} selectHandler 選択時のハンドラ
+         * @param {boolean} multiple 複数選択か否か(Default:false)
+         * @return {Menu} メニュー
+         */
         static Item(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
             return new Menu(data, selectHandler, multiple, Scene.IMAGE.ITEM_WINDOW.DATA, 10, 10, 10);
         }
 
+        /**
+         * アイテムの使用メニュー
+         * @param {string[]} data メニューのアイテムリスト
+         * @param {(n: number) => void} selectHandler 選択時のハンドラ
+         * @param {boolean} multiple 複数選択か否か(Default:false)
+         * @return {Menu} メニュー
+         */
         static Use(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
             return new Menu(data, selectHandler, multiple, Scene.IMAGE.USE_MENU.DATA, 400, 10, 4);
         }
 
+        /**
+         * @constructor
+         */
         constructor(
             data: string[],
             private selectHandler: (n: number) => void,
@@ -554,7 +661,33 @@ module ShizimilyRogue.View {
             this.show();
         }
 
-        public setMenuElement(data: string[]): void {
+        /**
+         * カーソルを上へ
+         */
+        public up(): void {
+            if (this.cursorIndex > 0)
+                this.cursorIndex--;
+            this.show();
+        }
+
+        /**
+         * カーソルを下へ
+         */
+        public down(): void {
+            if (this.cursorIndex < this.elements.childNodes.length - 1)
+                this.cursorIndex++;
+            this.show();
+        }
+
+        /**
+         * 選択
+         */
+        public select(): void {
+            if (this.cursor.visible)
+                this.selectHandler(this.cursorIndex);
+        }
+
+        private setMenuElement(data: string[]): void {
             var count = 0;
             if (this.elements != null) {
                 this.removeChild(this.elements);
@@ -582,26 +715,15 @@ module ShizimilyRogue.View {
             }
             this.cursor.y = (this.cursorIndex % this.size) * Menu.LINE_SIZE + Menu.TOP_MARGIN;
         }
-
-        public up(): void {
-            if (this.cursorIndex > 0)
-                this.cursorIndex--;
-            this.show();
-        }
-
-        public down(): void {
-            if (this.cursorIndex < this.elements.childNodes.length - 1)
-                this.cursorIndex++;
-            this.show();
-        }
-
-        public select(): void {
-            if (this.cursor.visible)
-                this.selectHandler(this.cursorIndex);
-        }
     }
 
+    /**
+     * 部屋内にいる時の視界外の影
+     */
     class Shadow extends enchant.Map {
+        /**
+         * @constructor
+         */
         constructor(
             private w: number,
             private h: number) {
@@ -609,7 +731,11 @@ module ShizimilyRogue.View {
             this.image = Scene.IMAGE.SHADOW.DATA;
         }
 
-        public update(area: Common.Coord[]) {
+        /**
+         * フレームごとにUpdate
+         * @param {Common.Coord[]} area 全視界の座標
+         */
+        public update(area: Common.Coord[]): void {
             var map:number[][] = [];
             for (var y = 0; y < this.h; y++) {
                 map.push(new Array<number>(this.w));
@@ -622,7 +748,15 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * マップ上のオブジェクトのFactory
+     */
     class ViewObjectFactory {
+        /**
+         * オブジェクトの取得
+         * @param {Common.IObject} object オブジェクト
+         * @return {enchant.Timeline} View用のオブジェクト
+         */
         static getInstance(object: Common.IObject): ViewObject {
             if (object.isPlayer())
                 return ViewObjectFactory.getPlayerInstance(object);
@@ -659,10 +793,17 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * マップ上のオブジェクト
+     */
     class ViewObject extends enchant.Group {
         private sprite: enchant.Sprite;
         private info: enchant.Label;
+        private lastDir: Common.DIR;
 
+        /**
+         * @constructor
+         */
         constructor(
             private data: Common.IObject,
             image: enchant.Surface,
@@ -685,12 +826,26 @@ module ShizimilyRogue.View {
                 this.info = new enchant.Label();
                 this.addChild(this.info);
             }
+            this.lastDir = data.dir;
         }
 
-        update(): void {
-            this.sprite.frame = this.frame();
+        /**
+         * フレームごとにUpdate
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {number} speed 速度
+         */
+        updateFrame(): void {
+            if (this.lastDir != this.data.dir) {
+                this.sprite.frame = this.frame();
+                this.lastDir = this.data.dir;
+            }
         }
 
+        /**
+         * Actionの送信側Update
+         * @param {Common.Action} action アクション
+         * @param {number} speed 速度
+         */
         action(action: Common.Action, speed: number): void {
             if (Common.DEBUG) {
                 if (action.sender.isUnit()) {
@@ -702,16 +857,17 @@ module ShizimilyRogue.View {
                 Scene.addAnimating();
                 this.tl
                     .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
                     .then(() => {
                     Scene.decAnimating();
                 });
             }
-       }
+        }
 
+        /**
+         * Actionの受信側Update
+         * @param {Common.Action} action アクション
+         * @param {number} speed 速度
+         */
         receive(action: Common.Action, speed: number): void {
         }
 
@@ -722,6 +878,11 @@ module ShizimilyRogue.View {
             });
         }
 
+        /**
+         * オブジェクトを消す
+         * @param {number} speed スピード
+         * @return {enchant.Timeline} スプライトのTL
+         */
         hide(speed: number): enchant.Timeline {
             var tl = this.sprite.tl;
             if (this.sprite.opacity == 1) {
@@ -730,6 +891,11 @@ module ShizimilyRogue.View {
             return tl;
         }
 
+        /**
+         * オブジェクトを表示
+         * @param {number} speed スピード
+         * @return {enchant.Timeline} スプライトのTL
+         */
         show(speed: number): enchant.Timeline {
             var tl = this.sprite.tl;
             if (this.sprite.opacity == 0) {
@@ -738,16 +904,30 @@ module ShizimilyRogue.View {
             return tl;
         }
 
+        /**
+         * オブジェクトのID
+         * @return {number} ID
+         */
         get id(): number {
             return this.data.id;
         }
 
+        /**
+         * オブジェクトのレイヤー
+         * @return {Common.Layer} レイヤー
+         */
         get layer(): Common.Layer {
             return this.data.layer;
         }
     }
     
+    /**
+     * マップ(Ground, Floorレイヤー)
+     */
     class Map extends enchant.Map {
+        /**
+         * @constructor
+         */
         constructor(
             private getTable: () => number[][],
             image: enchant.Surface) {
@@ -756,19 +936,36 @@ module ShizimilyRogue.View {
             this.update();
         }
 
-        public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.ICell) {
+        /**
+         * Ground Layerのマップを取得
+         * @param {number} width Width
+         * @param {number} height Height
+         * @param {(x: number, y: number) => Common.ICell} getTable 座標からCellを求める関数
+         * @return {Map} マップ
+         */
+        public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.ICell): Map {
             var table = (x, y) => { return getTable(x, y).ground };
             var getViewTable = () => { return Map.getGroundViewTable(width, height, table) };
             return new Map(getViewTable, Scene.IMAGE.WALL.DATA);
         }
 
-        public static floor(width: number, height: number, getTable: (x: number, y: number) => Common.ICell) {
+        /**
+         * Floor Layerのマップを取得
+         * @param {number} width Width
+         * @param {number} height Height
+         * @param {(x: number, y: number) => Common.ICell} getTable 座標からCellを求める関数
+         * @return {Map} マップ
+         */
+        public static floor(width: number, height: number, getTable: (x: number, y: number) => Common.ICell): Map {
             var table = (x, y) => { return getTable(x, y).floor };
             var getViewTable = () => { return Map.getFloorViewTable(width, height, table) };
             return new Map(getViewTable, Scene.IMAGE.FLOOR.DATA);
         }
 
-        public update() {
+        /**
+         * マップのアップデート
+         */
+        public update(): void {
             var viewTable = this.getTable();
             this.loadData(viewTable);
         }
