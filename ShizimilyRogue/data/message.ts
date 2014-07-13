@@ -2,7 +2,15 @@
     export var Message: { [action: number]: (action:Common.Action) => string } = {};
     Message[Common.ActionType.Attack] = (action) => action.sender.name + "は攻撃した！";
     Message[Common.ActionType.Pick] = (action) => action.sender.name + "は" + action.targets[0].name + "を拾った！";
-    Message[Common.ActionType.Use] = (action) => action.sender.name + "は" + action.item.name + "をたべた";
+    Message[Common.ActionType.Use] = (action) => {
+        var item = action.item;
+        switch (item.category) {
+            case Common.ItemType.Sweet:
+                return action.sender.name + "は" + action.item.name + "をたべた";
+            case Common.ItemType.Case:
+                return action.sender.name + "は" + action.item.name + "に" + action.targetItems[0].name + "とかを入れた";
+        }
+    }
 
     Message[Common.ActionType.Status] = (action) => {
         var unit = <Common.IUnit>action.targets[0];

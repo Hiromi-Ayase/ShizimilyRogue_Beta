@@ -436,6 +436,11 @@
      * ユニットオブジェクトインターフェース
      */
     export interface IUnit extends IObject {
+        weapon: Common.IItem;
+        guard: Common.IItem;
+        arrow: Common.IItem;
+        accessory: Common.IItem;
+
         hp: number;
         maxHp: number;
         atk: number;

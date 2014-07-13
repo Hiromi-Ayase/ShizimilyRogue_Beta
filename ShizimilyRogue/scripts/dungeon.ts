@@ -41,6 +41,11 @@ module ShizimilyRogue.Model {
     }
 
     export interface IUnitData extends IData {
+        weapon: Common.IItem;
+        guard: Common.IItem;
+        arrow: Common.IItem;
+        accessory: Common.IItem;
+
         dir: Common.DIR;
         state: Common.DungeonUnitState;
         hp: number;
@@ -472,6 +477,10 @@ module ShizimilyRogue.Model {
         get maxStomach(): number { return this.data.maxStomach; }
         get stomach(): number { return this.data.stomach; }
         get maxInventory(): number { return this.data.maxInventory; }
+        get weapon(): Common.IItem { return this.data.weapon; }
+        get guard(): Common.IItem { return this.data.guard; }
+        get arrow(): Common.IItem { return this.data.arrow; }
+        get accessory(): Common.IItem { return this.data.accessory; }
 
         addInventory(item: Common.IItem): boolean { return this.data.addInventory(item); }
         takeInventory(item: Common.IItem): boolean { return this.data.takeInventory(item); }

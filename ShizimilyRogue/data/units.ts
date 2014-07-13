@@ -1,14 +1,20 @@
 ﻿module ShizimilyRogue.Model.Data {
 
     export class UnitData implements IUnitData {
+        lv: number = 1;
+        weapon: Common.IItem = null;
+        guard: Common.IItem = null;
+        arrow: Common.IItem = null;
+        accessory: Common.IItem = null;
+
+        atk: number = 100;
+        def: number = 100;
+
         type: DataType = DataType.Unit;
         category: number = 0;
         dir: Common.DIR = 0;
-        lv: number = 1;
         state: Common.DungeonUnitState = Common.DungeonUnitState.Normal;
         maxHp: number = 100;
-        atk: number = 100;
-        def: number = 100;
         hp: number = this.maxHp;
         speed: Common.Speed = Common.Speed.NORMAL;
         turn: number = 0;
@@ -101,7 +107,14 @@
     }
 
     export class PlayerData extends UnitData {
-        atk = 100;
+        get atk(): number {
+            var atk = 100;
+            atk += this.lv * 15;
+            if (this.weapon != null) {
+                atk += 10;
+            }
+            return atk;
+        }
         event(me: UnitController, action: Common.Action): Common.Action[] {
             var ret = super.event(me, action);
             if (action.isMove()) {

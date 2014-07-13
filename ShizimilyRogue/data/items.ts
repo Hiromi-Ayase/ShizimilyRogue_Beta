@@ -101,6 +101,10 @@
             return list;
         }
 
+        get name(): string{
+            return "PCケース" + " [" + (this.maxItems - this.innerItems.length) + "]";
+        }
+
         select(me: Common.IItem, n: number, items: Common.IItem[]): Common.Action {
             switch (n) {
                 case 0:
@@ -141,7 +145,7 @@
             return [];
         }
 
-        addItem(item: Common.IItem): boolean {
+        private addItem(item: Common.IItem): boolean {
             if (this.innerItems.length < this.maxItems) {
                 this.innerItems.push(item);
                 return true;
@@ -150,7 +154,7 @@
             }
         }
 
-        takeItem(item: Common.IItem): boolean {
+        private takeItem(item: Common.IItem): boolean {
             for (var i = 0; i < this.innerItems.length; i++) {
                 if (this.innerItems[i].id == item.id) {
                     this.innerItems.splice(i, 1);
@@ -167,6 +171,20 @@
                 }
             }
             return false;
+        }
+    }
+
+    /**
+     * CPU
+     */
+    export class CPU extends Item {
+        constructor() {
+            super(Common.ItemType.Case, "CPU");
+        }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[]{
+            var player = <Common.IUnit>action.sender;
+            player.weapon = me;
+            return [];
         }
     }
 }

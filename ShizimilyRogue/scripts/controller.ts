@@ -84,23 +84,24 @@
                 if (this.dungeonManager.endState != Common.EndState.None) {
                     return new GameOverScene();
                 }
-
-                var dir = View.Scene.keyDirection;
-                var a = View.Scene.keyA;
-                var b = View.Scene.keyB;
-                if (dir != null) {
-                    if (Common.DEBUG)
-                        View.Scene.resetKeys();
-                    this.player.setDir(dir);
-                    if (this.getFov().movable[dir]) {
-                        var action = Common.Action.Move();
+                if (this.dungeonManager.currentTurn == this.player) {
+                    var dir = View.Scene.keyDirection;
+                    var a = View.Scene.keyA;
+                    var b = View.Scene.keyB;
+                    if (dir != null) {
+                        if (Common.DEBUG)
+                            View.Scene.resetKeys();
+                        this.player.setDir(dir);
+                        if (this.getFov().movable[dir]) {
+                            var action = Common.Action.Move();
+                            this.input(action);
+                        }
+                    } else if (a == true) {
+                        var action = Common.Action.Attack(this.player.atk);
                         this.input(action);
+                    } else if (b == true) {
+                        this.showMainMenu();
                     }
-                } else if (a == true) {
-                    var action = Common.Action.Attack(this.player.atk);
-                    this.input(action);
-                } else if (b == true) {
-                    this.showMainMenu();
                 }
                 this.viewUpdate();
             }
