@@ -441,6 +441,8 @@
         arrow: Common.IItem;
         accessory: Common.IItem;
 
+        getSpeed(): number;
+
         hp: number;
         maxHp: number;
         atk: number;

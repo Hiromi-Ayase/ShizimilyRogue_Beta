@@ -1,75 +1,5 @@
 ﻿module ShizimilyRogue.Model.Data {
-    /**
-     * アイテムデータ
-     */
-    export class Item implements IItemData {
-        type: DataType = DataType.Item;
-        innerItems: Common.IItem[] = [];
-        status: Common.ItemState = Common.ItemState.Normal;
-        unknownName: string = null;
 
-        /**
-         * @constructor
-         */
-        constructor(
-            public category: number,
-            public name: string,
-            public num: number = 1) {
-        }
-
-        /**
-         * コマンドリストの取得
-         * @param {Common.IFOVData} fov 司会情報
-         * @return {string[]} コマンドリスト
-         */
-        commands(me: Common.IItem): string[]{
-            var list = ["使う", "投げる"];
-            if (!me.cell.ground.isItem()) {
-                list.push("置く");
-            }
-            return list;
-        }
-
-        /**
-         * 
-         * @param {Common.IItem} me 自分自身
-         * @param {number} n 選択番号
-         */
-        select(me: Common.IItem, n: number, items: Common.IItem[]): Common.Action {
-            switch(n) {
-                case 0:
-                    return Common.Action.Use(me);
-                case 1:
-                    return Common.Action.Throw(me);
-                case 2:
-                    return Common.Action.Place(me);
-            }
-        }
-
-        event(me: Common.IItem, action: Common.Action): Common.Action[]{
-            var unit = <Common.IUnit>action.sender;
-            if (action.isPick()) {
-                unit.inventory.push(me);
-                return [Common.Action.Delete(me)];
-            } else if (action.isPlace()) {
-                unit.takeInventory(me);
-                return [Common.Action.Drop(me, unit.cell.coord)];
-            } else if (action.isUse()) {
-                return this.use(me, action, unit);
-            } else if (action.isThrow()) {
-                unit.takeInventory(me);
-                me.dir = unit.dir;
-                me.cell.coord = unit.cell.coord;
-                var action = Common.Action.Fly(unit.cell.coord);
-                return [action];
-            }
-            return [];
-        }
-
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
-            return [];
-        }
-    }
 
     export class Sweet extends Item {
         constructor() {
@@ -93,9 +23,9 @@
             super(Common.ItemType.Case, "PCケース");
         }
 
-        commands(me: Common.IItem): string[] {
+        commands(): string[] {
             var list = ["見る", "入れる", "投げる"];
-            if (!me.cell.ground.isItem()) {
+            if (!this.cell.ground.isItem()) {
                 list.push("置く");
             }
             return list;
@@ -105,16 +35,16 @@
             return "PCケース" + " [" + (this.maxItems - this.innerItems.length) + "]";
         }
 
-        select(me: Common.IItem, n: number, items: Common.IItem[]): Common.Action {
+        select(n: number, items: Common.IItem[]): Common.Action {
             switch (n) {
                 case 0:
-                    return Common.Action.Use(me, items);
+                    return Common.Action.Use(this, items);
                 case 1:
-                    return Common.Action.Use(me, items);
+                    return Common.Action.Use(this, items);
                 case 2:
-                    return Common.Action.Throw(me);
+                    return Common.Action.Throw(this);
                 case 3:
-                    return Common.Action.Place(me);
+                    return Common.Action.Place(this);
             }
         }
 

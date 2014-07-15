@@ -20,63 +20,7 @@ module ShizimilyRogue.Model {
         cell: Common.ICell;
     }
 
-    export enum DataType {
-        Unit, Item
-    }
-
-    export interface IData {
-        name: string;
-        category: number;
-        type: DataType;
-    }
-
-    export interface IItemData extends IData {
-        num: number;
-        status: Common.ItemState;
-        unknownName: string;
-        innerItems: Common.IItem[];
-        commands(me: Common.IItem): string[];
-        select(me: Common.IItem, n: number, items: Common.IItem[]): Common.Action;
-        event(me: Common.IItem, action: Common.Action): Common.Action[];
-    }
-
-    export interface IUnitData extends IData {
-        weapon: Common.IItem;
-        guard: Common.IItem;
-        arrow: Common.IItem;
-        accessory: Common.IItem;
-
-        dir: Common.DIR;
-        state: Common.DungeonUnitState;
-        hp: number;
-        lv: number;
-        speed: Common.Speed;
-        maxHp: number;
-        atk: number;
-        def: number;
-        turn: number;
-        currentExp: number;
-        stomach: number;
-        maxStomach: number;
-        inventory: Common.IItem[];
-        maxInventory: number;
-
-        addInventory(item: Common.IItem): boolean;
-        takeInventory(item: Common.IItem): boolean;
-
-        phase(fov: Common.IFOVData): Common.Action[];
-        event(me: UnitController, action: Common.Action): Common.Action[];
-    }
-
-    export interface IEnemyData extends IUnitData{
-        exp: number;
-        dropProbability: number;
-        awakeProbabilityWhenAppear: number;
-        awakeProbabilityWhenEnterRoom: number;
-        awakeProbabilityWhenNeighbor: number;
-    }
-
-    class DungeonObject implements Common.IObject {
+    export class DungeonObject implements Common.IObject {
         private static currentId = 1;
         id: number;
 
@@ -121,20 +65,20 @@ module ShizimilyRogue.Model {
         public init(): Common.Action[]{
             var actions: Common.Action[] = [];
             // Player作成
-            var player = new Model.Data.PlayerData("しじみりちゃん");
+            var player = new Player("しじみりちゃん");
             actions.unshift(this.addObject(player));
 
-            for (var i = 0; i < 5; i++) {
-                var ignore: IData = new Model.Data.Ignore;
+            for (var i = 0; i < 1; i++) {
+                var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
             }
             for (var i = 0; i < 5; i++) {
-                var sweet: IData = new Model.Data.Sweet;
+                var sweet: Common.IObject = new Model.Data.Sweet;
                 actions.unshift(this.addObject(sweet));
             }
 
             for (var i = 0; i < 5; i++) {
-                var pccase: IData = new Model.Data.Case;
+                var pccase: Common.IObject = new Model.Data.Case;
                 actions.unshift(this.addObject(pccase));
             }
 
@@ -146,31 +90,21 @@ module ShizimilyRogue.Model {
             return actions;
         }
 
-        private addObject(data: IData, coord: Common.Coord = null): Common.Action {
-            var object: Common.IObject;
-            switch (data.type) {
-                case DataType.Unit:
-                    if (data instanceof Data.PlayerData) {
-                        object = new Player(<IUnitData>data, this);
-                    } else {
-                        object = new Unit(<IUnitData>data, this);
-                    }
-                    break;
-                case DataType.Item:
-                    object = new Item(<IItemData>data);
-                    break;
-            }
+        private addObject(data: Common.IObject, coord: Common.Coord = null): Common.Action {
             if (coord == null) {
-                coord = this.map.getRandomPoint(object.layer);
+                coord = this.map.getRandomPoint(data.layer);
             }
-            return Common.Action.Drop(object, coord);
+            return Common.Action.Drop(data, coord);
         }
 
         public setObject(obj: Common.IObject, coord: Common.Coord): boolean {
             if (this.map.setObject(obj, coord)) {
                 this._objects.push(obj);
-                if (obj.isUnit())
+                if (obj.isUnit()) {
+                    var unit = <Unit>obj;
+                    unit.getFov = () => this.getFOV(unit);
                     this.scheduler.add(obj, true);
+                }
                 return true;
             } else {
                 return false;
@@ -184,8 +118,11 @@ module ShizimilyRogue.Model {
                         break;
                     }
                 }
-                if (obj.isUnit())
+                if (obj.isUnit()) {
+                    var unit = <Unit>obj;
+                    unit.getFov = null;
                     this.scheduler.remove(obj);
+                }
                 return true;
             } else {
                 return false;
@@ -276,6 +213,7 @@ module ShizimilyRogue.Model {
                 if (this.actionQueue.length == 0) {
                     // 次に行動するユニットのアクションを取り出す
                     this._currentUnit = this.scheduler.next();
+                    var fov = this.getFOV(this._currentUnit);
                     this.addInput(this._currentUnit.phase());
                 }
             } catch (e) {
@@ -393,34 +331,6 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Item extends DungeonObject implements Common.IItem {
-        layer = Common.Layer.Ground;
-        type = Common.DungeonObjectType.Item;
-
-        public get name(): string { return this.data.name; }
-        public get num(): number { return this.data.num; }
-        public get status(): Common.ItemState { return this.data.status; }
-        public get unknownName(): string { return this.data.unknownName; }
-        public get innerItems(): Common.IItem[] { return this.data.innerItems; }
-        public get category(): number { return this.data.category; }
-
-        commands(): string[]{
-            return this.data.commands(this);
-        }
-
-        select(n: number, items: Common.IItem[] = []): Common.Action {
-            return this.data.select(this, n, items);
-        }
-
-        event(action: Common.Action): Common.Action[]{
-            return this.data.event(this, action);
-        }
-
-        constructor(private data: IItemData) {
-            super();
-        }
-    }
-
     class FOVData implements Common.IFOVData {
         visible: { [id: number]: boolean } = {};
         id2index: { [id: number]: number } = {};
@@ -455,79 +365,6 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Unit extends DungeonObject implements Common.IUnit, UnitController {
-        layer = Common.Layer.Unit;
-        type = Common.DungeonObjectType.Unit;
-
-        getSpeed() {
-            return this.data.speed;
-        }
-
-        get atk(): number { return this.data.atk; }
-        get def(): number { return this.data.def; }
-        get lv(): number { return this.data.lv; }
-        get hp(): number { return this.data.hp; }
-        get maxHp(): number { return this.data.maxHp; }
-        get turn(): number { return this.data.turn; }
-        get dir(): Common.DIR { return this.data.dir; }
-        get inventory(): Common.IItem[] { return this.data.inventory; }
-        get state(): Common.DungeonUnitState { return this.data.state; }
-        get name(): string { return this.data.name; }
-        get currentExp(): number { return this.data.currentExp; }
-        get maxStomach(): number { return this.data.maxStomach; }
-        get stomach(): number { return this.data.stomach; }
-        get maxInventory(): number { return this.data.maxInventory; }
-        get weapon(): Common.IItem { return this.data.weapon; }
-        get guard(): Common.IItem { return this.data.guard; }
-        get arrow(): Common.IItem { return this.data.arrow; }
-        get accessory(): Common.IItem { return this.data.accessory; }
-
-        addInventory(item: Common.IItem): boolean { return this.data.addInventory(item); }
-        takeInventory(item: Common.IItem): boolean { return this.data.takeInventory(item); }
-
-        setDir(dir: number) { this.data.dir = dir; }
-
-        getFOV() {
-            return this.map.getFOV(this);
-        }
-
-        get object(): Common.IUnit {
-            return this;
-        }
-
-        phase(): Common.Action[] {
-            this.data.turn++;
-            return this.data.phase(this.map.getFOV(this));
-        }
-        event(action: Common.Action): Common.Action[] {
-            return this.data.event(this, action);
-        }
-
-        constructor(private data: IUnitData, private map: MapController) {
-            super();
-        }
-    }
-
-    class Player extends Unit {
-        id = Common.PLAYER_ID;
-
-        constructor(private playerData: IUnitData, map: MapController) {
-            super(playerData, map);
-        }
-    }
-
-    class Enemy extends Unit {
-        get exp(): number { return this.enemyData.exp; }
-        get dropProbability(): number { return this.enemyData.dropProbability; }
-        get awakeProbabilityWhenAppear(): number { return this.enemyData.awakeProbabilityWhenAppear; }
-        get awakeProbabilityWhenEnterRoom(): number { return this.enemyData.awakeProbabilityWhenEnterRoom; }
-        get awakeProbabilityWhenNeighbor(): number { return this.enemyData.awakeProbabilityWhenNeighbor; }
-
-        constructor(private enemyData: IEnemyData, map: MapController) {
-            super(enemyData, map);
-        }
-    }
-
     class Wall extends DungeonObject {
         type = Common.DungeonObjectType.Wall;
         layer = Common.Layer.Ground;
@@ -556,6 +393,406 @@ module ShizimilyRogue.Model {
                 return [Common.Action.Drop(action.sender, this.cell.coord)];
             }
             return [];
+        }
+    }
+
+    /**
+ * アイテムデータ
+ */
+    export class Item extends DungeonObject implements Common.IItem {
+        type: Common.DungeonObjectType = Common.DungeonObjectType.Item;
+        innerItems: Common.IItem[] = [];
+        status: Common.ItemState = Common.ItemState.Normal;
+        unknownName: string = null;
+        layer = Common.Layer.Ground;
+
+        /**
+         * @constructor
+         */
+        constructor(
+            public category: number,
+            public name: string,
+            public num: number = 1) {
+            super();
+        }
+
+        /**
+         * コマンドリストの取得
+         * @param {Common.IFOVData} fov 司会情報
+         * @return {string[]} コマンドリスト
+         */
+        commands(): string[] {
+            var list = ["使う", "投げる"];
+            if (!this.cell.ground.isItem()) {
+                list.push("置く");
+            }
+            return list;
+        }
+
+        /**
+         * 
+         * @param {number} n 選択番号
+         */
+        select(n: number, items: Common.IItem[]): Common.Action {
+            switch (n) {
+                case 0:
+                    return Common.Action.Use(this);
+                case 1:
+                    return Common.Action.Throw(this);
+                case 2:
+                    return Common.Action.Place(this);
+            }
+        }
+
+        event(action: Common.Action): Common.Action[] {
+            var unit = <Common.IUnit>action.sender;
+            if (action.isPick()) {
+                unit.inventory.push(this);
+                return [Common.Action.Delete(this)];
+            } else if (action.isPlace()) {
+                unit.takeInventory(this);
+                return [Common.Action.Drop(this, unit.cell.coord)];
+            } else if (action.isUse()) {
+                return this.use(this, action, unit);
+            } else if (action.isThrow()) {
+                unit.takeInventory(this);
+                this.dir = unit.dir;
+                this.cell = unit.cell
+                var action = Common.Action.Fly(unit.cell.coord);
+                return [action];
+            }
+            return [];
+        }
+
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            return [];
+        }
+    }
+
+    export class Unit extends DungeonObject implements Common.IUnit {
+        lv: number = 1;
+        weapon: Common.IItem = null;
+        guard: Common.IItem = null;
+        arrow: Common.IItem = null;
+        accessory: Common.IItem = null;
+        layer = Common.Layer.Unit;
+
+        atk: number = 100;
+        def: number = 100;
+
+        type: Common.DungeonObjectType = Common.DungeonObjectType.Unit;
+        category: number = 0;
+        dir: Common.DIR = 0;
+        state: Common.DungeonUnitState = Common.DungeonUnitState.Normal;
+        maxHp: number = 100;
+        hp: number = this.maxHp;
+        speed: Common.Speed = Common.Speed.NORMAL;
+        turn: number = 0;
+        inventory: Common.IItem[] = [];
+        maxInventory = 10;
+        currentExp: number = 0;
+        stomach: number = 100;
+        maxStomach: number = 100;
+
+        getFov: () => Common.IFOVData;
+
+        getSpeed(): number {
+            return this.speed;
+        }
+
+        setDir(dir: Common.DIR): void {
+            this.dir = dir;
+        }
+
+        phase(): Common.Action[] {
+            return [];
+        }
+
+        event(action: Common.Action): Common.Action[] {
+            if (action.isAttack()) {
+                if (action.sender.isUnit()) {
+                    var damage = Common.Damage(action.param, this.def);
+                    return [Common.Action.Status(this, Common.StatusActionType.Damage, damage)];
+                }
+            } else if (action.isFly()) {
+                if (action.sender.isItem()) {
+                    return [Common.Action.Use(<Common.IItem>action.sender)];
+                }
+            } else if (action.isStatus()) {
+                return this.statusChange(action);
+            } else if (action.isDie()) {
+                var nextAction = Common.Action.Delete(this);
+                if (action.sender.isPlayer()) {
+                    nextAction.end = Common.EndState.GameOver;
+                }
+                return [nextAction];
+            }
+            return [];
+        }
+
+        statusChange(action: Common.Action): Common.Action[] {
+            var amount = action.param;
+            if (action.subType == Common.StatusActionType.Damage) {
+                return this.damage(amount);
+            } else if (action.subType == Common.StatusActionType.Heal) {
+                this.hp += (this.hp + amount) > this.maxHp ? (this.maxHp - this.hp) : amount;
+            } else if (action.subType == Common.StatusActionType.Hunger) {
+                if (amount > this.stomach) {
+                    this.stomach = 0;
+                    var damage = Common.HungerDamage(this.maxHp);
+                    return this.damage(damage);
+                } else {
+                    this.stomach -= amount;
+                }
+            } else if (action.subType == Common.StatusActionType.Full) {
+                var full = action.param;
+                this.stomach += (this.stomach + full) > this.maxStomach ? (this.maxStomach - this.stomach) : full;
+            }
+            return [];
+        }
+
+        addInventory(item: Common.IItem): boolean {
+            if (this.inventory.length < this.maxInventory) {
+                this.inventory.push(item);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        takeInventory(item: Common.IItem): boolean {
+            for (var i = 0; i < this.inventory.length; i++) {
+                if (this.inventory[i].id == item.id) {
+                    this.inventory.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        damage(amount: number): Common.Action[] {
+            this.hp -= amount > this.hp ? this.hp : amount;
+            if (this.hp <= 0) {
+                var action = Common.Action.Die();
+                return [action];
+            }
+            return [];
+        }
+        private heal(amount: number): void {
+        }
+
+
+        constructor(public name: string) {
+            super();
+        }
+    }
+
+    class Player extends Unit {
+        id = Common.PLAYER_ID;
+
+        get atk(): number {
+            var atk = 100;
+            atk += this.lv * 15;
+            if (this.weapon != null) {
+                atk += 10;
+            }
+            return atk;
+        }
+        event(action: Common.Action): Common.Action[] {
+            var ret = super.event(action);
+            if (action.isMove()) {
+                if (this.cell.isItem()) {
+                    return [Common.Action.Pick()];
+                }
+            }
+            return ret;
+        }
+
+        phase(): Common.Action[] {
+            if (this.turn % Common.Parameter.StomachDecrease == 0) {
+
+            }
+            return [];
+        }
+
+        constructor(name: string) {
+            super(name);
+            this.maxHp = 1000;
+            this.hp = 1000;
+        }
+    }
+
+
+    export class Enemy extends Unit {
+        category = 0;
+        exp = 100;
+        dropProbability = 10;
+        awakeProbabilityWhenAppear = 100;
+        awakeProbabilityWhenEnterRoom = 100;
+        awakeProbabilityWhenNeighbor = 100;
+        hp = this.maxHp;
+
+        private static CANDIDATE = [
+            [Common.DIR.UP, Common.DIR.UP_RIGHT, Common.DIR.UP_LEFT, Common.DIR.RIGHT, Common.DIR.LEFT],
+            [Common.DIR.UP_RIGHT, Common.DIR.RIGHT, Common.DIR.UP, Common.DIR.DOWN_RIGHT, Common.DIR.UP_LEFT],
+            [Common.DIR.RIGHT, Common.DIR.DOWN_RIGHT, Common.DIR.UP_RIGHT, Common.DIR.DOWN, Common.DIR.UP],
+            [Common.DIR.DOWN_RIGHT, Common.DIR.DOWN, Common.DIR.RIGHT, Common.DIR.DOWN_LEFT, Common.DIR.UP_RIGHT],
+            [Common.DIR.DOWN, Common.DIR.DOWN_LEFT, Common.DIR.DOWN_RIGHT, Common.DIR.LEFT, Common.DIR.RIGHT],
+            [Common.DIR.DOWN_LEFT, Common.DIR.LEFT, Common.DIR.DOWN, Common.DIR.UP_LEFT, Common.DIR.DOWN_RIGHT],
+            [Common.DIR.LEFT, Common.DIR.UP_LEFT, Common.DIR.DOWN_LEFT, Common.DIR.UP, Common.DIR.DOWN],
+            [Common.DIR.UP_LEFT, Common.DIR.UP, Common.DIR.LEFT, Common.DIR.UP_RIGHT, Common.DIR.DOWN_LEFT],
+        ];
+
+        private lastMe: Common.Coord = null;
+        private lastPlayer: Common.Coord = null;
+        public phase(): Common.Action[] {
+            var fov = this.getFov();
+            var me = fov.me.cell.coord;
+            var player: Common.Coord = null;
+            var action: Common.Action = null;
+            for (var i = 0; i < fov.objects.length; i++) {
+                if (fov.objects[i].isPlayer()) {
+                    player = fov.objects[i].cell.coord;
+                    break;
+                }
+            }
+
+            if (player != null) {
+                // 視界内にプレイヤーがいた
+                if (fov.isAttackable(Common.PLAYER_ID)) {
+                    this.dir = Enemy.getAttackDir(this.cell.coord, player);
+                    action = Common.Action.Attack(this.atk);
+                } else {
+                    var dir = Enemy.move(me, player, this.lastMe, fov);
+                    if (dir != null) {
+                        this.dir = dir;
+                        action = Common.Action.Move();
+                    }
+                }
+            } else {
+                var dir = Enemy.move(me, this.lastPlayer, this.lastMe, fov);
+                if (dir != null) {
+                    this.dir = dir;
+                    action = Common.Action.Move();
+                }
+            }
+
+            if (action == null) {
+                // 何もできない場合はランダムに移動
+                var dirs: number[] = [];
+                fov.movable.map((value, index, array) => {
+                    if (value) dirs.push(index);
+                });
+                this.dir = Math.floor(dirs.length * ROT.RNG.getUniform());
+                action = Common.Action.Move();
+            }
+            this.lastPlayer = player;
+            this.lastMe = me;
+            return [action];
+        }
+
+        public event(action: Common.Action): Common.Action[] {
+            var ret = super.event(action);
+            var fov = this.getFov();
+            fov.objects.forEach(obj => {
+                if (obj.isPlayer()) {
+                    this.lastPlayer = obj.cell.coord;
+                }
+            });
+            return ret;
+        }
+
+        private static getAttackDir(src: Common.Coord, dst: Common.Coord, neighbor: boolean = true): number {
+            var diffX = dst.x - src.x;
+            var diffY = dst.y - src.y;
+
+            if (diffX == 0 && diffY > 0) {
+                return Common.DIR.DOWN;
+            } else if (diffX == 0 && diffY < 0) {
+                return Common.DIR.UP;
+            } else if (diffX > 0 && diffY == 0) {
+                return Common.DIR.RIGHT;
+            } else if (diffX < 0 && diffY == 0) {
+                return Common.DIR.LEFT;
+            } else if (diffX > 0 && diffY > 0) {
+                return Common.DIR.DOWN_RIGHT;
+            } else if (diffX > 0 && diffY < 0) {
+                return Common.DIR.UP_RIGHT;
+            } else if (diffX < 0 && diffY > 0) {
+                return Common.DIR.DOWN_LEFT;
+            } else if (diffX < 0 && diffY < 0) {
+                return Common.DIR.UP_LEFT;
+            }
+            return null;
+        }
+
+        private static move(me: Common.Coord, player: Common.Coord, lastMe: Common.Coord, fov: Common.IFOVData): number {
+            // 移動AI
+            var dir: number = null;
+            var inRoom = fov.getCell(me).isRoom();
+
+            if (!inRoom) {
+                // 通路の時
+                if (player != null) {
+                    //プレイヤーを探す
+                    dir = Enemy.getDir(me, player, fov.movable);
+                } else if (lastMe != null) {
+                    // そのまま進む
+                    dir = Enemy.getDir(lastMe, me, fov.movable);
+                }
+            } else {
+                // 部屋の時
+                if (player != null) {
+                    // プレイヤーを探す
+                    dir = Enemy.getDir(me, player, fov.movable);
+                } else {
+                    var enter: Common.Coord[] = [];
+                    // 出入口を探す
+                    for (var i = 0; i < fov.area.length; i++) {
+                        var place = fov.area[i];
+                        if (fov.getCell(place).isPath()) {
+                            enter.push(place);
+                        }
+                    }
+                    if (enter.length > 0) {
+                        var id = Math.floor(enter.length * ROT.RNG.getUniform());
+                        dir = Enemy.getDir(me, enter[id], fov.movable);
+                    }
+                }
+            }
+            return dir;
+        }
+
+        private static getDir(me: Common.Coord, target: Common.Coord, movable: boolean[]): number {
+            var vecX = target.x - me.x;
+            var vecY = target.y - me.y;
+
+            var cand: number[];
+            if (vecX == 0 && vecY > 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.DOWN];
+            } else if (vecX > 0 && vecY > 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.DOWN_RIGHT];
+            } else if (vecX > 0 && vecY == 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.RIGHT];
+            } else if (vecX > 0 && vecY < 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.UP_RIGHT];
+            } else if (vecX == 0 && vecY < 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.UP];
+            } else if (vecX < 0 && vecY < 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.UP_LEFT];
+            } else if (vecX < 0 && vecY == 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.LEFT];
+            } else if (vecX < 0 && vecY > 0) {
+                cand = Enemy.CANDIDATE[Common.DIR.DOWN_LEFT];
+            } else if (vecX == 0 && vecY == 0) {
+                return null;
+            }
+
+            for (var i = 0; i < cand.length; i++) {
+                if (movable[cand[i]]) {
+                    return cand[i];
+                }
+            }
         }
     }
 

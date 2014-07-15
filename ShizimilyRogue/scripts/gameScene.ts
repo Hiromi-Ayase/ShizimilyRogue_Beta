@@ -540,7 +540,7 @@ module ShizimilyRogue.View {
 
             if (action.isFly()) {
                 var u = ViewObjectFactory.getInstance(action.sender);
-                u.move(action.sender.cell.coord, 0);
+                u.move(action.coord, 0);
                 u.show(0);
                 this.layer[u.layer].addChild(u);
                 u.move(action.targets[0].cell.coord, speed).then(() => {
