@@ -549,7 +549,7 @@ module ShizimilyRogue.View {
             }
 
             if (action.sender != null && this.objects[action.sender.id] != null) {
-                this.objects[action.sender.id].action(action, speed);
+                this.objects[action.sender.id].updateAction(action, speed);
             }
 
             //if (this.objects[action.target.id] != null) {
@@ -767,29 +767,46 @@ module ShizimilyRogue.View {
         }
 
         private static getPlayerInstance(obj: Common.IObject): ViewObject {
-            var frame = () => {
-                var x: number[][] = [
-                    [0],
-                    [0],
-                    [0],
-                    [0],
-                    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                    [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
-                    [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
-                    [0]
-                ];
-                var ret: number[] = x[obj.dir];
-                return ret;
-            }
-            return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, frame, -0.5, -1, 128, 96);
+            var lastDir = obj.dir;
+            var frameLock = false;
+            var frame = (sprite: enchant.Sprite) => {
+                if (lastDir != obj.dir && !frameLock) {
+                    var x: number[][] = [
+                        [0],
+                        [0],
+                        [0],
+                        [0],
+                        [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                        [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
+                        [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
+                        [0]
+                    ];
+                    sprite.frame = x[obj.dir];
+                    lastDir = obj.dir;
+                }
+            };
+
+            var updateAction = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
+                if (action.isAttack()) {
+                    frameLock = true;
+                    Scene.addAnimating();
+                    sprite.tl
+                        .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                        .then(() => {
+                            Scene.decAnimating();
+                            frameLock = false;
+                        });
+                }
+            };
+            return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, frame, updateAction, -0.5, -1, 128, 96);
         }
 
         private static getUnitInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, () => [1], 0, -0.5);
+            return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, (sprite) => sprite.frame = 1, () => { }, 0, -0.5);
         }
 
         private static getItemInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => [0]);
+            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => { }, () => { });
         }
     }
 
@@ -807,7 +824,8 @@ module ShizimilyRogue.View {
         constructor(
             private data: Common.IObject,
             image: enchant.Surface,
-            private frame: () => number[],
+            private _updateFrame: (sprite: enchant.Sprite) => void,
+            private _updateAction: (sprite: enchant.Sprite, action: Common.Action, speed: number) => void,
             private marginX: number = 0,
             private marginY: number = 0,
             width: number = OBJECT_WIDTH,
@@ -816,7 +834,6 @@ module ShizimilyRogue.View {
 
             this.sprite = new enchant.Sprite(width, height);
             this.sprite.image = image;
-            this.sprite.frame = frame();
             var coord = this.data.cell.coord;
             this.sprite.opacity = 0;
             this.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT);
@@ -835,10 +852,7 @@ module ShizimilyRogue.View {
          * @param {number} speed 速度
          */
         updateFrame(): void {
-            if (this.lastDir != this.data.dir) {
-                this.sprite.frame = this.frame();
-                this.lastDir = this.data.dir;
-            }
+            this._updateFrame(this.sprite);
         }
 
         /**
@@ -846,29 +860,14 @@ module ShizimilyRogue.View {
          * @param {Common.Action} action アクション
          * @param {number} speed 速度
          */
-        action(action: Common.Action, speed: number): void {
+        updateAction(action: Common.Action, speed: number): void {
             if (Common.DEBUG) {
                 if (action.sender.isUnit()) {
                     var unit = <Common.IUnit>action.sender;
                     this.info.text = "[(" + unit.cell.coord.x + "," + unit.cell.coord.y + ")" + "dir:" + unit.dir + "]";
                 }
             }
-            if (action.isAttack()) {
-                Scene.addAnimating();
-                this.tl
-                    .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                    .then(() => {
-                    Scene.decAnimating();
-                });
-            }
-        }
-
-        /**
-         * Actionの受信側Update
-         * @param {Common.Action} action アクション
-         * @param {number} speed 速度
-         */
-        receive(action: Common.Action, speed: number): void {
+            this._updateAction(this.sprite, action, speed);
         }
 
         move(coord: Common.Coord, speed: number): enchant.Timeline {
@@ -1004,7 +1003,7 @@ module ShizimilyRogue.View {
                 11, 30, 15, 15, 11, 30, 15, 15, // 104 - 111
                 5, 22, 1, 1, 23, 45, 1, 1, // 112 - 119
                 11, 30, 15, 15, 11, 30, 15, 15, // 120 - 127
-                6, 6, 29, 29, 27, 27, 8, 8,// 128 - 135
+                6, 6, 8, 8, 27, 27, 8, 8,// 128 - 135
                 2, 2, 12, 12, 2, 2, 12, 12,// 136 - 143
                 25, 25, 29, 29, 47, 47, 29, 29,// 144 - 151
                 2, 2, 12, 12, 2, 2, 12, 12, // 152 - 159
