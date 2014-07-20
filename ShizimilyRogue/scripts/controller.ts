@@ -97,7 +97,7 @@
                             this.input(action);
                         }
                     } else if (a == true) {
-                        var action = Common.Action.Attack(this.player.atk);
+                        var action = Common.Action.Attack();
                         this.input(action);
                     } else if (b == true) {
                         this.showMainMenu();
@@ -118,7 +118,7 @@
             this._view.showMenu(View.MenuType.Main, mainItems, n => {
                 if (n == 0) {
                     this._view.closeMenu();
-                    var action = Common.Action.Attack(this.player.atk);
+                    var action = Common.Action.Attack();
                     this.input(action);
                 }
                 if (n == 1) { this.showItemMenu(); }
