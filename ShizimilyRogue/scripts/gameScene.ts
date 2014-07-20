@@ -452,7 +452,7 @@ module ShizimilyRogue.View {
 
     class ActualFPS extends enchant.Group {
         private static FPSDISP_TOP = 460;
-        private static FPSDISP_LEFT = 500;
+        private static FPSDISP_LEFT = 570;
         private fpsText: enchant.Label;
 
         private lastTime: number;
