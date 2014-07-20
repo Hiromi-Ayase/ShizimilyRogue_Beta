@@ -121,8 +121,8 @@ module ShizimilyRogue.View {
          * @param {Common.IFOVData} fov 視界情報
          * @param {number} speed スピード
          */
-        updateFrame(fov: Common.IFOVData, speed: number): void {
-            this.view.updateFrame(fov, speed);
+        updateFrame(speed: number): void {
+            this.view.updateFrame(speed);
         }
 
         private addMenuKeyHandler(): void {
@@ -485,17 +485,16 @@ module ShizimilyRogue.View {
          */
         updateAction(fov: Common.IFOVData, action: Common.Action, speed: number): void {
             this.updateShadow(fov);
+            this.updateVisible(fov, speed);
             this.updateObjects(fov, action, speed);
             this.moveCamera(speed);
         }
 
         /**
          * フレームごとにUpdate
-         * @param {Common.IFOVData} fov 視界情報
          * @param {number} speed 速度
          */
-        updateFrame(fov: Common.IFOVData, speed: number): void {
-            this.updateVisible(fov, speed);
+        updateFrame(speed: number): void {
             for (var id in this.objects) {
                 if (this.objects[id] instanceof ViewObject) {
                     this.objects[id].updateFrame();
@@ -770,19 +769,20 @@ module ShizimilyRogue.View {
             var lastDir = obj.dir;
             var lastState = obj.state;
             var frameLock = false;
+            var frameNum = 0;
             var idleAnimation = (sprite: enchant.Sprite) => {
-                if ((lastDir != obj.dir || lastState != obj.state) && !frameLock) {
+//                if (!frameLock) {
                     if (obj.state == Common.DungeonUnitState.Normal) {
-                        var delay: number = 7;  /* 1枚の画像を表示し続ける時間(s) / 30(FPS) */
+                        var delay: number = 7;  /* 1枚の画像を表示し続けるフレーム数 */
                         var x: number[][] = [
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                            [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
-                            [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
-                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3]
+                            [0, 1, 2, 3],
+                            [0, 1, 2, 3],
+                            [0, 1, 2, 3],
+                            [0, 1, 2, 3],
+                            [0, 1, 2, 3],
+                            [8, 9, 10, 11],
+                            [4, 5, 6, 7],
+                            [0, 1, 2, 3]
                         ];
                         /*var allFrame: number[][];
                         for (var dir = 0; dir < 8; dir++) {
@@ -792,33 +792,43 @@ module ShizimilyRogue.View {
                                 }
                             }
                         }*/
-                        
-                        sprite.frame = x[obj.dir];
-                        lastDir = obj.dir;
-                    }
+                        sprite.frame = x[obj.dir][frameNum];
+                        if (Scene.game.frame % delay == 0) frameNum++;
+                        if (frameNum >= x[obj.dir].length) frameNum = 0;
+//                    }
                 }
             };
 
             var actionAnimation = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
                 if (action.isAttack()) {
-                    frameLock = true;
-                    Scene.addAnimating();
+//                    frameLock = true;
+//                    Scene.addAnimating();
                     sprite.tl
                         .moveBy(20, 0, 3).moveBy(-20, 0, 3)
                         .then(() => {
-                            Scene.decAnimating();
-                            frameLock = false;
+//                            Scene.decAnimating();
+//                            frameLock = false;
                         });
                 } else if (action.isStatus() && action.subType == Common.StatusActionType.Damage) {
-                    frameLock = true;
-                    Scene.addAnimating();
-                    var x: number[] = [12, 13, null];
-                    sprite.frame = x;
+//                    frameLock = true;
+//                    Scene.addAnimating();
+                    var x: number[][] = [
+                        [12, null],
+                        [13, null],
+                        [13, null],
+                        [13, null],
+                        [12, null],
+                        [13, null],
+                        [13, null],
+                        [13, null],
+                    ];
+                    sprite.frame = x[obj.dir];
                     sprite.tl
                         .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                        .delay(5)
                         .then(() => {
-                            Scene.decAnimating();
-                            frameLock = false;
+//                            Scene.decAnimating();
+//                            frameLock = false;
                         });
                 }
             };
@@ -841,6 +851,7 @@ module ShizimilyRogue.View {
         private sprite: enchant.Sprite;
         private info: enchant.Label;
         private lastDir: Common.DIR;
+        private frameUpdateLock = false;
 
         /**
          * @constructor
@@ -876,7 +887,9 @@ module ShizimilyRogue.View {
          * @param {number} speed 速度
          */
         updateFrame(): void {
-            this._updateFrame(this.sprite);
+            if (!this.frameUpdateLock) {
+                this._updateFrame(this.sprite);
+            }
         }
 
         /**
@@ -885,6 +898,8 @@ module ShizimilyRogue.View {
          * @param {number} speed 速度
          */
         updateAction(action: Common.Action, speed: number): void {
+            this.frameUpdateLock = true;
+            Scene.addAnimating();
             if (Common.DEBUG) {
                 if (action.sender.isUnit()) {
                     var unit = <Common.IUnit>action.sender;
@@ -892,8 +907,18 @@ module ShizimilyRogue.View {
                 }
             }
             this._updateAction(this.sprite, action, speed);
+            this.sprite.tl.then(() => {
+                this.frameUpdateLock = false;
+                Scene.decAnimating();
+            });
         }
 
+        /**
+         * オブジェクトの移動
+         * @param {Common.Coord} coord 移動先座標
+         * @param {number} speed 速度
+         * @return {enchant.Timeline} スプライトのTL
+         */
         move(coord: Common.Coord, speed: number): enchant.Timeline {
             Scene.addAnimating();
             return this.tl.moveTo((coord.x + this.marginX) * OBJECT_WIDTH, (coord.y + this.marginY) * OBJECT_HEIGHT, speed).then(function () {

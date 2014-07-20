@@ -105,6 +105,7 @@
                 }
                 this.viewUpdate();
             }
+            this._view.updateFrame(10);
             return null;
         }
 
@@ -168,9 +169,6 @@
                 if (!action.isPick() && !action.isSystem()) {
                     break;
                 }
-            }
-            if (!this.dungeonManager.hasNext()) {
-                this._view.updateFrame(this.getFov(), 10);
             }
         }
 
