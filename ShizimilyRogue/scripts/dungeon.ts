@@ -419,8 +419,8 @@ module ShizimilyRogue.Model {
     }
 
     /**
- * アイテムデータ
- */
+     * アイテムデータ
+     */
     export class Item extends DungeonObject implements Common.IItem {
         type: Common.DungeonObjectType = Common.DungeonObjectType.Item;
         innerItems: Common.IItem[] = [];
@@ -433,8 +433,7 @@ module ShizimilyRogue.Model {
          */
         constructor(
             public category: number,
-            public name: string,
-            public num: number = 1) {
+            public name: string) {
             super();
         }
 
@@ -498,6 +497,7 @@ module ShizimilyRogue.Model {
         baseName: string;
         plus: number = 0;
         baseParam: number = 100;
+        //mark: Common.Mark[] = [];
 
         get name(): string {
             return this.baseName + (this.plus > 0 ? (" +") : " ") + this.plus;
