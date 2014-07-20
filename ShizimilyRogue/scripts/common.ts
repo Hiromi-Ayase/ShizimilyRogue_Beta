@@ -477,7 +477,6 @@
     export interface IItem extends IObject {
         status: ItemState;
         unknownName: string;
-        num: number;
         commands(): string[];
         innerItems: IItem[];
         select(n: number, items?: Common.IItem[]): Common.Action;

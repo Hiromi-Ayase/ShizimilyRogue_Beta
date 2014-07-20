@@ -456,6 +456,7 @@ module ShizimilyRogue.View {
         private groundMap: Map;
         private layer: enchant.Group[];
         private lastCoord: Common.Coord;
+        private lastFov:Common.IFOVData = null;
 
         /**
          * @constructor
@@ -485,9 +486,9 @@ module ShizimilyRogue.View {
          */
         updateAction(fov: Common.IFOVData, action: Common.Action, speed: number): void {
             this.updateShadow(fov);
-            this.updateVisible(fov, speed);
             this.updateObjects(fov, action, speed);
             this.moveCamera(speed);
+            this.lastFov = fov;
         }
 
         /**
@@ -495,6 +496,10 @@ module ShizimilyRogue.View {
          * @param {number} speed 速度
          */
         updateFrame(speed: number): void {
+            if (this.lastFov != null) {
+                this.updateVisible(this.lastFov, speed);
+                this.lastFov = null;
+            }
             for (var id in this.objects) {
                 if (this.objects[id] instanceof ViewObject) {
                     this.objects[id].updateFrame();
@@ -502,6 +507,11 @@ module ShizimilyRogue.View {
             }
         }
 
+        /**
+         * ユニットの見える見えないのアップデート
+         * @param {Common.IFOVData} fov 視界情報
+         * @param {number} speed 速度
+         */
         private updateVisible(fov: Common.IFOVData, speed: number) {
             for (var id in this.objects) {
                 if (fov.isVisible(id)) {
