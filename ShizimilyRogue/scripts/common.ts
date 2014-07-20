@@ -11,6 +11,10 @@
         ThrowDistance: 10,
         /** 何ターンに1お腹がへるか */
         StomachDecrease: 10,
+        /** ユニットの初期攻撃力 */
+        Atk: 100,
+        /** ユニットの初期防御力 */
+        Def: 100,
     };
 
     /** コンフィグ */
@@ -39,6 +43,12 @@
     /** お腹すいた時のダメージ量 */
     export var HungerDamage = (maxHp: number) => Math.floor(maxHp * 0.1);
 
+    /** 武器攻撃力計算式 */
+    export var WeaponAtk = (base: number, plus: number) => (base + plus);
+
+    /** 防具攻撃力計算式 */
+    export var GuardDef = (base: number, plus: number) => (base + plus);
+
     /** レイヤー */
     export enum Layer {
         Floor, Ground, Unit, Flying, Effect, MAX
@@ -51,7 +61,7 @@
 
     /** アイテム種別 */
     export enum ItemType {
-        CPU, GraphicBoard, HDD, Memory, Sweet, DVD, Case, Application
+        Weapon, Guard, HDD, Memory, Sweet, DVD, Case, Application
     }
 
     /** ダンジョンのオブジェクトのタイプ */
@@ -197,9 +207,8 @@
          * @param {number} atk 攻撃力 paramに格納
          * @return {Common.Action} アクション
          */
-        static Attack(atk: number): Common.Action {
+        static Attack(): Common.Action {
             var action = new Action(ActionType.Attack, Target.Next);
-            action.param = atk;
             return action;
         }
 
@@ -438,7 +447,6 @@
     export interface IUnit extends IObject {
         weapon: Common.IItem;
         guard: Common.IItem;
-        arrow: Common.IItem;
         accessory: Common.IItem;
 
         getSpeed(): number;
@@ -470,8 +478,8 @@
         status: ItemState;
         unknownName: string;
         num: number;
-        innerItems: IItem[];
         commands(): string[];
+        innerItems: IItem[];
         select(n: number, items?: Common.IItem[]): Common.Action;
     }
 

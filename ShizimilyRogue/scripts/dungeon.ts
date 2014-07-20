@@ -68,7 +68,7 @@ module ShizimilyRogue.Model {
             var player = new Player("しじみりちゃん");
             actions.unshift(this.addObject(player));
 
-            for (var i = 0; i < 1; i++) {
+            for (var i = 0; i < 5; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
             }
@@ -79,6 +79,16 @@ module ShizimilyRogue.Model {
 
             for (var i = 0; i < 5; i++) {
                 var pccase: Common.IObject = new Model.Data.Case;
+                actions.unshift(this.addObject(pccase));
+            }
+
+            for (var i = 0; i < 5; i++) {
+                var pccase: Common.IObject = new Model.Data.Pentium;
+                actions.unshift(this.addObject(pccase));
+            }
+
+            for (var i = 0; i < 5; i++) {
+                var pccase: Common.IObject = new Model.Data.GeForce;
                 actions.unshift(this.addObject(pccase));
             }
 
@@ -240,6 +250,18 @@ module ShizimilyRogue.Model {
         private process(sender: Common.IObject, action: Common.Action): void {
             var targets: Common.IObject[] = [];
             var obj: Common.IObject;
+            switch (action.type) {
+                case Common.ActionType.Attack:
+                    if (sender.isUnit()) {
+                        var unit = <Unit>sender;
+                        action.param = unit.atk;
+                        if (unit.weapon != null) {
+                            unit.weapon.onAttack(action);
+                        }
+                    }
+                    break;
+            }
+
             switch (action.targetType) {
                 case Common.Target.Me:
                     targets = [sender];
@@ -469,16 +491,138 @@ module ShizimilyRogue.Model {
         }
     }
 
+    /**
+     * 装備品
+     */
+    export class Equip extends Item {
+        baseName: string;
+        plus: number = 0;
+        baseParam: number = 100;
+
+        get name(): string {
+            return this.baseName + (this.plus > 0 ? (" +") : " ") + this.plus;
+        }
+        
+        /**
+         * コマンドリストの取得
+         * @param {Common.IFOVData} fov 司会情報
+         * @return {string[]} コマンドリスト
+         */
+        commands(): string[] {
+            var list = ["装備", "投げる"];
+            if (!this.cell.ground.isItem()) {
+                list.push("置く");
+            }
+            return list;
+        }
+
+        /**
+         * 
+         * @param {number} n 選択番号
+         */
+        select(n: number, items: Common.IItem[]): Common.Action {
+            switch (n) {
+                case 0:
+                    return Common.Action.Use(this);
+                case 1:
+                    return Common.Action.Throw(this);
+                case 2:
+                    return Common.Action.Place(this);
+            }
+        }
+    }
+
+    /**
+     * Weapon
+     */
+    export class Weapon extends Equip {
+        get atk(): number { return Common.GuardDef(this.baseParam, this.plus); }
+
+        constructor() {
+            super(Common.ItemType.Weapon, "Weapon");
+        }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            var player = <Common.IUnit>action.sender;
+            if (player.weapon == me) {
+                player.weapon = null;
+            } else {
+                player.weapon = me;
+            }
+            return [];
+        }
+
+        /**
+         * 攻撃時processで呼ばれる
+         */
+        onAttack(action: Common.Action): void {
+        }
+    }
+
+    /**
+     * Guard
+     */
+    export class Guard extends Equip {
+        plus: number = 0;
+        baseParam: number = 100;
+        get def(): number { return Common.GuardDef(this.baseParam, this.plus); }
+
+        constructor() {
+            super(Common.ItemType.Guard, "Guard");
+        }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            var player = <Common.IUnit>action.sender;
+            if (player.guard == me) {
+                player.guard = null;
+            } else {
+                player.guard = me;
+            }
+            return [];
+        }
+        /**
+         * ステータス変更時eventで呼ばれる
+         */
+        onStatus(action: Common.Action): Common.Action[]{
+            return [];
+        }
+    }
+
+    /**
+     * Accessory
+     */
+    export class Accessory extends Equip {
+        constructor() {
+            super(Common.ItemType.Case, "Accessory");
+        }
+        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            var player = <Common.IUnit>action.sender;
+            player.guard = me;
+            return [];
+        }
+
+        /**
+         * ステータス変更時eventで呼ばれる
+         */
+        onEvent(action: Common.Action): Common.Action[] {
+            return [];
+        }
+    }
+
+    /**
+     * ユニット
+     */
     export class Unit extends DungeonObject implements Common.IUnit {
         lv: number = 1;
-        weapon: Common.IItem = null;
-        guard: Common.IItem = null;
-        arrow: Common.IItem = null;
-        accessory: Common.IItem = null;
+        weapon: Weapon = null;
+        guard: Guard = null;
+        accessory: Accessory = null;
         layer = Common.Layer.Unit;
 
-        atk: number = 100;
-        def: number = 100;
+        get atk(): number {
+            return this.weapon == null ? Common.Parameter.Atk : this.weapon.atk;
+        }
+        get def(): number {
+            return this.guard == null ? Common.Parameter.Atk : this.guard.def;
+        }
 
         type: Common.DungeonObjectType = Common.DungeonObjectType.Unit;
         category: number = 0;
@@ -508,26 +652,34 @@ module ShizimilyRogue.Model {
             return [];
         }
 
-        event(action: Common.Action): Common.Action[] {
+        event(action: Common.Action): Common.Action[]{
+            var ret: Common.Action[] = [];
+            if (this.accessory != null) {
+                ret = ret.concat(this.accessory.onEvent(action));
+            }
+
             if (action.isAttack()) {
                 if (action.sender.isUnit()) {
                     var damage = Common.Damage(action.param, this.def);
-                    return [Common.Action.Status(this, Common.StatusActionType.Damage, damage)];
+                    ret.push(Common.Action.Status(this, Common.StatusActionType.Damage, damage));
                 }
             } else if (action.isFly()) {
                 if (action.sender.isItem()) {
-                    return [Common.Action.Use(<Common.IItem>action.sender)];
+                    ret.push(Common.Action.Use(<Common.IItem>action.sender));
                 }
             } else if (action.isStatus()) {
-                return this.statusChange(action);
+                if (this.guard != null) {
+                    ret = ret.concat(this.guard.onStatus(action));
+                }
+                ret = ret.concat(this.statusChange(action));
             } else if (action.isDie()) {
                 var nextAction = Common.Action.Delete(this);
                 if (action.sender.isPlayer()) {
                     nextAction.end = Common.EndState.GameOver;
                 }
-                return [nextAction];
+                ret.push(nextAction);
             }
-            return [];
+            return ret;
         }
 
         statusChange(action: Common.Action): Common.Action[] {
@@ -590,14 +742,6 @@ module ShizimilyRogue.Model {
     class Player extends Unit {
         id = Common.PLAYER_ID;
 
-        get atk(): number {
-            var atk = 100;
-            atk += this.lv * 15;
-            if (this.weapon != null) {
-                atk += 10;
-            }
-            return atk;
-        }
         event(action: Common.Action): Common.Action[] {
             var ret = super.event(action);
             if (action.isMove()) {
@@ -661,7 +805,7 @@ module ShizimilyRogue.Model {
                 // 視界内にプレイヤーがいた
                 if (fov.isAttackable(Common.PLAYER_ID)) {
                     this.dir = Enemy.getAttackDir(this.cell.coord, player);
-                    action = Common.Action.Attack(this.atk);
+                    action = Common.Action.Attack();
                 } else {
                     var dir = Enemy.move(me, player, this.lastMe, fov);
                     if (dir != null) {

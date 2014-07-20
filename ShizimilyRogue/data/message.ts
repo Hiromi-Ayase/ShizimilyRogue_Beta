@@ -9,6 +9,13 @@
                 return action.sender.name + "は" + action.item.name + "をたべた";
             case Common.ItemType.Case:
                 return action.sender.name + "は" + action.item.name + "に" + action.targetItems[0].name + "とかを入れた";
+            case Common.ItemType.Weapon:
+            case Common.ItemType.Guard:
+                if ((<Common.IUnit>action.sender).weapon == action.item) {
+                    return action.sender.name + "は" + action.item.name + "を装備した";
+                } else {
+                    return action.sender.name + "は" + action.item.name + "をはずした";
+                }
         }
     }
 

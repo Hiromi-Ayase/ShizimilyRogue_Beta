@@ -18,6 +18,7 @@
      */
     export class Case extends Item {
         maxItems = Math.floor(ROT.RNG.getUniform() * 6);
+        baseName = "PCケース";
 
         constructor() {
             super(Common.ItemType.Case, "PCケース");
@@ -32,7 +33,7 @@
         }
 
         get name(): string{
-            return "PCケース" + " [" + (this.maxItems - this.innerItems.length) + "]";
+            return this.baseName + " [" + (this.maxItems - this.innerItems.length) + "]";
         }
 
         select(n: number, items: Common.IItem[]): Common.Action {
@@ -104,17 +105,15 @@
         }
     }
 
-    /**
-     * CPU
-     */
-    export class CPU extends Item {
-        constructor() {
-            super(Common.ItemType.Case, "CPU");
-        }
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[]{
-            var player = <Common.IUnit>action.sender;
-            player.weapon = me;
-            return [];
-        }
+    export class Pentium extends Weapon {
+        baseParam = 1000;
+        plus = Math.floor(ROT.RNG.getUniform() * 4);
+        baseName = "Pentium";
+    }
+
+    export class GeForce extends Guard {
+        baseParam = 1000;
+        plus = Math.floor(ROT.RNG.getUniform() * 4);
+        baseName = "GeForce";
     }
 }
