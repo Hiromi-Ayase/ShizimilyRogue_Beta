@@ -47,6 +47,8 @@ module ShizimilyRogue.Model {
         isPath(): boolean { return this.type == Common.DungeonObjectType.Path; }
         isItem(): boolean { return this.type == Common.DungeonObjectType.Item; }
         isNull(): boolean { return this.type == Common.DungeonObjectType.Null; }
+        isExit(): boolean { return this.type == Common.DungeonObjectType.Exit; }
+        isTrap(): boolean { return this.type == Common.DungeonObjectType.Trap; }
     }
 
     export class DungeonManager implements MapController {
@@ -68,29 +70,34 @@ module ShizimilyRogue.Model {
             var player = new Player("しじみりちゃん");
             actions.unshift(this.addObject(player));
 
-            for (var i = 0; i < 5; i++) {
+            // 出口作成
+            var exit = new Exit();
+            actions.unshift(this.addObject(exit));
+            /*
+            for (var i = 0; i < 2; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
             }
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 2; i++) {
                 var sweet: Common.IObject = new Model.Data.Sweet;
                 actions.unshift(this.addObject(sweet));
             }
 
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 2; i++) {
                 var pccase: Common.IObject = new Model.Data.Case;
                 actions.unshift(this.addObject(pccase));
             }
 
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 2; i++) {
                 var pccase: Common.IObject = new Model.Data.Pentium;
                 actions.unshift(this.addObject(pccase));
             }
 
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 2; i++) {
                 var pccase: Common.IObject = new Model.Data.GeForce;
                 actions.unshift(this.addObject(pccase));
             }
+        */
 
             // 配置
             this.addInput(actions);
@@ -180,17 +187,12 @@ module ShizimilyRogue.Model {
             return this.map.getFOV(unit);
         }
 
-        public addInput(actions: Common.Action[], sender: Common.IObject = this._currentUnit): void {
+        addInput(actions: Common.Action[], sender: Common.IObject = this._currentUnit): void {
             for (var i = 0; i < actions.length; i++) {
                 var action = actions[i];
                 this.process(sender, action);
                 if (Common.DEBUG) {
                     Common.Debug.result(action);
-                }
-                if (action.end != Common.EndState.None) {
-                    var e = new Error("GameEnd");
-                    this._endState = action.end;
-                    throw e;
                 }
                 this.actionQueue.unshift(action);
             }
@@ -202,11 +204,16 @@ module ShizimilyRogue.Model {
 
         /**
          * 次の行動を行う
-         * @return {Common.EndState} ターンが完了したらEndState, 完了しない場合はnull
+         * @return {Common.Action} 行動したAction
          */
         public update(): Common.Action {
             var action = this.actionQueue[0];
             try {
+                if (action.end != Common.EndState.None) {
+                    this._endState = action.end;
+                    return action;
+                }
+
                 action.targetIndex++;
                 var receiver = action.target;
                 if (action.targetIndex == action.targets.length - 1) {
@@ -227,16 +234,14 @@ module ShizimilyRogue.Model {
                     this.addInput(this._currentUnit.phase());
                 }
             } catch (e) {
-                if (e.message = "GameEnd") {
-                } else {
-                    if (Common.DEBUG) {
-                        Common.Debug.message(e.message);
-                    }
-                }
-            }
-            if (this.actionQueue.length == 0) {
                 if (Common.DEBUG) {
-                    Common.Debug.message("------- Turn End --------");
+                    Common.Debug.message(e.message);
+                }
+            } finally {
+                if (this.actionQueue.length == 0) {
+                    if (Common.DEBUG) {
+                        Common.Debug.message("------- Turn End --------");
+                    }
                 }
             }
             return action;
@@ -385,6 +390,13 @@ module ShizimilyRogue.Model {
         getObjectById(id: number): Common.IObject {
             return this.objects[this.id2index[id]];
         }
+    }
+
+    class Exit extends DungeonObject {
+        category = 2;
+        type = Common.DungeonObjectType.Exit;
+        layer = Common.Layer.Ground;
+        name = "Exit";
     }
 
     class Wall extends DungeonObject {
@@ -967,6 +979,8 @@ module ShizimilyRogue.Model {
         isPlayer(): boolean { return this._objects[Common.Layer.Unit].isPlayer(); }
         isUnit(): boolean { return this._objects[Common.Layer.Unit].isUnit(); }
         isItem(): boolean { return this._objects[Common.Layer.Ground].isItem(); }
+        isTrap(): boolean { return this._objects[Common.Layer.Ground].isTrap(); }
+        isExit(): boolean { return this._objects[Common.Layer.Ground].isExit(); }
         isWall(): boolean { return this._objects[Common.Layer.Ground].isWall(); }
         isRoom(): boolean { return this._objects[Common.Layer.Floor].isRoom(); }
         isPath(): boolean { return this._objects[Common.Layer.Floor].isPath(); }

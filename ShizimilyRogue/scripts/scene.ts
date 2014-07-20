@@ -19,7 +19,7 @@
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
             MEMU_MAIN: { URL: "./images/MainMenu.png", DATA: <enchant.Surface>null },
             CURSOR: { URL: "./images/cursor.png", DATA: <enchant.Surface>null },
-            ITEM: { URL: "./images/cake.png", DATA: <enchant.Surface>null },
+            OBJECT: { URL: "./images/cake.png", DATA: <enchant.Surface>null },
             USE_MENU: { URL: "./images/UseMenu.png", DATA: <enchant.Surface>null },
             MINI_MAP: { URL: "./images/minimap.png", DATA: <enchant.Surface>null },
         };
@@ -171,6 +171,7 @@
             Scene.game.clearEventListener(enchant.Event.ENTER_FRAME);
             Scene.game.replaceScene(scene);
             Scene.game.addEventListener(enchant.Event.ENTER_FRAME, updateHandler);
+            Scene.keyLock = false;
         }
     }
 

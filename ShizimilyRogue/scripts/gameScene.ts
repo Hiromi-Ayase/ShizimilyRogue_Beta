@@ -183,6 +183,7 @@ module ShizimilyRogue.View {
     class MiniMap extends enchant.Group {
         private static BLOCK_UNIT = 16;
         private static BLOCK_PLAYER = 19;
+        private static BLOCK_EXIT = 20;
         private static BLOCK_ITEM = 18;
         private static BLOCK_OHTER = 15;
         private static X = 200;
@@ -243,6 +244,8 @@ module ShizimilyRogue.View {
                     this.groundData[coord.y][coord.x] = MiniMap.BLOCK_UNIT;
                 } else if (obj.isItem()) {
                     this.groundData[coord.y][coord.x] = MiniMap.BLOCK_ITEM;
+                } else if (obj.isExit()) {
+                    this.groundData[coord.y][coord.x] = MiniMap.BLOCK_EXIT;
                 }
                 if (!obj.isWall()) {
                     var x = coord.x;
@@ -771,8 +774,8 @@ module ShizimilyRogue.View {
                 return ViewObjectFactory.getPlayerInstance(<Common.IUnit>object);
             else if (object.isUnit())
                 return ViewObjectFactory.getUnitInstance(<Common.IUnit>object);
-            else if (object.isItem())
-                return ViewObjectFactory.getItemInstance(<Common.IItem>object);
+            else
+                return ViewObjectFactory.getObjectInstance(object);
         }
 
         private static getPlayerInstance(obj: Common.IUnit): ViewObject {
@@ -849,8 +852,8 @@ module ShizimilyRogue.View {
             return new ViewObject(obj, Scene.IMAGE.UNIT.DATA, (sprite) => sprite.frame = 1, () => { }, 0, -0.5);
         }
 
-        private static getItemInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.ITEM.DATA, () => { }, () => { });
+        private static getObjectInstance(obj: Common.IObject): ViewObject {
+            return new ViewObject(obj, Scene.IMAGE.OBJECT.DATA, (sprite) => { sprite.frame = obj.category }, () => { });
         }
     }
 

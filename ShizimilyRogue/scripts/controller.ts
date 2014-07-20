@@ -81,9 +81,13 @@
         update(e): Scene {
             if (!View.Scene.animating) {
 
-                if (this.dungeonManager.endState != Common.EndState.None) {
-                    return new GameOverScene();
+                switch (this.dungeonManager.endState) {
+                    case Common.EndState.GameOver:
+                        return new GameOverScene();
+                    case Common.EndState.Up:
+                        return new GameScene();
                 }
+
                 if (this.dungeonManager.currentTurn == this.player) {
                     var dir = View.Scene.keyDirection;
                     var a = View.Scene.keyA;
@@ -113,6 +117,8 @@
             var mainItems = ["攻撃", "アイテム"];
             if (this.cell.isItem()) {
                 mainItems.push("ひろう");
+            } else if (this.cell.isExit()) {
+                mainItems.push("次の階へ");
             }
 
             this._view.showMenu(View.MenuType.Main, mainItems, n => {
@@ -124,8 +130,14 @@
                 if (n == 1) { this.showItemMenu(); }
                 if (n == 2) {
                     this._view.closeMenu();
-                    var action = Common.Action.Pick();
-                    this.input(action);
+                    if (this.cell.isItem()) {
+                        var action = Common.Action.Pick();
+                        this.input(action);
+                    } else if (this.cell.isExit()) {
+                        var action = Common.Action.None();
+                        action.end = Common.EndState.Up;
+                        this.input(action);
+                    }
                 }
             }, false);
         }
