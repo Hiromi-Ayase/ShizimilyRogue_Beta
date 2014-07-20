@@ -33,6 +33,7 @@ module ShizimilyRogue.View {
         private pathShadow: Shadow;
         private playerHp: PlayerHp;
         private clock: Clock;
+        private actualFps: ActualFPS;
         private miniMap: MiniMap;
         private view: View;
 
@@ -51,6 +52,7 @@ module ShizimilyRogue.View {
             this.clock = new Clock();
             this.menuGroup = new enchant.Group();
             this.miniMap = new MiniMap(fov.width, fov.height);
+            this.actualFps = new ActualFPS();
             
             this.addChild(this.view);
             this.addChild(this.pathShadow);
@@ -59,7 +61,8 @@ module ShizimilyRogue.View {
             this.addChild(this.message);
             this.addChild(this.miniMap);
             this.addChild(this.menuGroup);
-            
+            this.addChild(this.actualFps);
+
             this.addMenuKeyHandler();
         }
 
@@ -108,7 +111,6 @@ module ShizimilyRogue.View {
             // 視界の表示
             this.pathShadow.visible = fov.getCell(player.cell.coord).isPath();
 
-            // プレイヤーHPの表示
             this.playerHp.show(player.hp, player.maxHp, player.stomach);
             this.view.updateAction(fov, action, speed);
             this.miniMap.update(fov);
@@ -123,6 +125,7 @@ module ShizimilyRogue.View {
          */
         updateFrame(speed: number): void {
             this.view.updateFrame(speed);
+            this.actualFps.update();
         }
 
         private addMenuKeyHandler(): void {
@@ -447,6 +450,42 @@ module ShizimilyRogue.View {
 
         set visible(flg: boolean) {
             this.clockText.visible = flg;
+        }
+    }
+
+    class ActualFPS extends enchant.Group {
+        private static FPSDISP_TOP = 460;
+        private static FPSDISP_LEFT = 570;
+        private fpsText: enchant.Label;
+
+        private lastTime: number;
+        private elapsedFrame: number = 0;
+
+        constructor() {
+            super();
+            this.fpsText = new enchant.Label();
+            this.fpsText.x = ActualFPS.FPSDISP_LEFT;
+            this.fpsText.y = ActualFPS.FPSDISP_TOP;
+            this.fpsText.font = "16px cursive";
+            this.fpsText.color = "#00ff00";
+
+            this.addChild(this.fpsText);
+
+            this.lastTime = Scene.game.getElapsedTime();
+        }
+
+        update(): void {
+            this.elapsedFrame++;
+            if (this.elapsedFrame == 30) {
+                var time = Scene.game.getElapsedTime();
+                this.fpsText.text = "fps " + (30 / (time - this.lastTime)).toFixed(3);
+                this.lastTime = time;
+                this.elapsedFrame = 0;
+            }
+        }
+
+        set visible(flg: boolean) {
+            this.fpsText.visible = flg;
         }
     }
 
@@ -784,49 +823,39 @@ module ShizimilyRogue.View {
             var frameLock = false;
             var frameNum = 0;
             var idleAnimation = (sprite: enchant.Sprite) => {
-//                if (!frameLock) {
-                    if (obj.state == Common.DungeonUnitState.Normal) {
-                        var delay: number = 7;  /* 1枚の画像を表示し続けるフレーム数 */
-                        var x: number[][] = [
-                            [0, 1, 2, 3],
-                            [0, 1, 2, 3],
-                            [0, 1, 2, 3],
-                            [0, 1, 2, 3],
-                            [0, 1, 2, 3],
-                            [8, 9, 10, 11],
-                            [4, 5, 6, 7],
-                            [0, 1, 2, 3]
-                        ];
-                        /*var allFrame: number[][];
-                        for (var dir = 0; dir < 8; dir++) {
-                            for (var flameNum = 0; flameNum < x[dir].length; flameNum++) {
-                                for (var i = 0; i < delay; i++) {
-                                    allFrame[dir].push(x[dir][flameNum]);
-                                }
+                if (obj.state == Common.DungeonUnitState.Normal) {
+                    var delay: number = 7;  /* 1枚の画像を表示し続けるフレーム数 */
+                    var x: number[][] = [
+                        [0, 1, 2, 3],
+                        [0, 1, 2, 3],
+                        [0, 1, 2, 3],
+                        [0, 1, 2, 3],
+                        [0, 1, 2, 3],
+                        [8, 9, 10, 11],
+                        [4, 5, 6, 7],
+                        [0, 1, 2, 3]
+                    ];
+                    /*var allFrame: number[][];
+                    for (var dir = 0; dir < 8; dir++) {
+                        for (var flameNum = 0; flameNum < x[dir].length; flameNum++) {
+                            for (var i = 0; i < delay; i++) {
+                                allFrame[dir].push(x[dir][flameNum]);
                             }
-                        }*/
-                        sprite.frame = x[obj.dir][frameNum];
-                        if (Scene.game.frame % delay == 0) frameNum++;
-                        if (frameNum >= x[obj.dir].length) frameNum = 0;
-//                    }
+                        }
+                    }*/
+                    sprite.frame = x[obj.dir][frameNum];
+                    if (Scene.game.frame % delay == 0) frameNum++;
+                    if (frameNum >= x[obj.dir].length) frameNum = 0;
                 }
             };
 
             var actionAnimation = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
                 if (action.isAttack()) {
-//                    frameLock = true;
-//                    Scene.addAnimating();
                     sprite.tl
-                        .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                        .then(() => {
-//                            Scene.decAnimating();
-//                            frameLock = false;
-                        });
+                        .moveBy(20, 0, 3).moveBy(-20, 0, 3);
                 } else if (action.isStatus() && action.subType == Common.StatusActionType.Damage) {
-//                    frameLock = true;
-//                    Scene.addAnimating();
                     var x: number[][] = [
-                        [12, null],
+                        [12],
                         [13, null],
                         [13, null],
                         [13, null],
@@ -838,11 +867,7 @@ module ShizimilyRogue.View {
                     sprite.frame = x[obj.dir];
                     sprite.tl
                         .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                        .delay(5)
-                        .then(() => {
-//                            Scene.decAnimating();
-//                            frameLock = false;
-                        });
+                        .delay(5);
                 }
             };
             return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, idleAnimation, actionAnimation, -0.5, -1, 128, 96);
