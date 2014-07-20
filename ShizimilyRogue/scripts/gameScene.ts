@@ -759,34 +759,47 @@ module ShizimilyRogue.View {
          */
         static getInstance(object: Common.IObject): ViewObject {
             if (object.isPlayer())
-                return ViewObjectFactory.getPlayerInstance(object);
+                return ViewObjectFactory.getPlayerInstance(<Common.IUnit>object);
             else if (object.isUnit())
-                return ViewObjectFactory.getUnitInstance(object);
+                return ViewObjectFactory.getUnitInstance(<Common.IUnit>object);
             else if (object.isItem())
-                return ViewObjectFactory.getItemInstance(object);
+                return ViewObjectFactory.getItemInstance(<Common.IItem>object);
         }
 
-        private static getPlayerInstance(obj: Common.IObject): ViewObject {
+        private static getPlayerInstance(obj: Common.IUnit): ViewObject {
             var lastDir = obj.dir;
+            var lastState = obj.state;
             var frameLock = false;
-            var frame = (sprite: enchant.Sprite) => {
-                if (lastDir != obj.dir && !frameLock) {
-                    var x: number[][] = [
-                        [0],
-                        [0],
-                        [0],
-                        [0],
-                        [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
-                        [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
-                        [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
-                        [0]
-                    ];
-                    sprite.frame = x[obj.dir];
-                    lastDir = obj.dir;
+            var idleAnimation = (sprite: enchant.Sprite) => {
+                if ((lastDir != obj.dir || lastState != obj.state) && !frameLock) {
+                    if (obj.state == Common.DungeonUnitState.Normal) {
+                        var delay: number = 7;  /* 1枚の画像を表示し続ける時間(s) / 30(FPS) */
+                        var x: number[][] = [
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+                            [8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11],
+                            [4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7],
+                            [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3]
+                        ];
+                        /*var allFrame: number[][];
+                        for (var dir = 0; dir < 8; dir++) {
+                            for (var flameNum = 0; flameNum < x[dir].length; flameNum++) {
+                                for (var i = 0; i < delay; i++) {
+                                    allFrame[dir].push(x[dir][flameNum]);
+                                }
+                            }
+                        }*/
+                        
+                        sprite.frame = x[obj.dir];
+                        lastDir = obj.dir;
+                    }
                 }
             };
 
-            var updateAction = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
+            var actionAnimation = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
                 if (action.isAttack()) {
                     frameLock = true;
                     Scene.addAnimating();
@@ -796,9 +809,20 @@ module ShizimilyRogue.View {
                             Scene.decAnimating();
                             frameLock = false;
                         });
+                } else if (action.isStatus() && action.subType == Common.StatusActionType.Damage) {
+                    frameLock = true;
+                    Scene.addAnimating();
+                    var x: number[] = [12, 13, null];
+                    sprite.frame = x;
+                    sprite.tl
+                        .moveBy(20, 0, 3).moveBy(-20, 0, 3)
+                        .then(() => {
+                            Scene.decAnimating();
+                            frameLock = false;
+                        });
                 }
             };
-            return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, frame, updateAction, -0.5, -1, 128, 96);
+            return new ViewObject(obj, Scene.IMAGE.SHIZIMILY.DATA, idleAnimation, actionAnimation, -0.5, -1, 128, 96);
         }
 
         private static getUnitInstance(obj: Common.IObject): ViewObject {
