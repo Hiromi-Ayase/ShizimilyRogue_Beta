@@ -92,11 +92,12 @@
                     var dir = View.Scene.keyDirection;
                     var a = View.Scene.keyA;
                     var b = View.Scene.keyB;
+                    var x = View.Scene.keyX;
                     if (dir != null) {
-                        if (Common.DEBUG)
-                            View.Scene.resetKeys();
+                        /*if (Common.DEBUG)
+                            View.Scene.resetKeys();*/
                         this.player.setDir(dir);
-                        if (this.getFov().movable[dir]) {
+                        if (x == false && this.getFov().movable[dir]) {
                             var action = Common.Action.Move();
                             this.input(action);
                         }
