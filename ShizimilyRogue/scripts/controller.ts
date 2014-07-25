@@ -34,8 +34,8 @@
         private _view: View.TitleScene = new View.TitleScene();
 
         update(e): Scene {
-            var a = View.Scene.keyA;
-            if (a) {
+            var a = View.Scene.CountKeyA;
+            if (a > 0) {
                 return new GameScene();
             }
             return null;
@@ -50,8 +50,8 @@
         private _view: View.GameOverScene = new View.GameOverScene();
 
         update(e): Scene {
-            var a = View.Scene.keyA;
-            if (a) {
+            var a = View.Scene.CountKeyA;
+            if (a > 0) {
                 return new TitleScene();
             }
             return null;
@@ -79,6 +79,9 @@
         }
 
         update(e): Scene {
+            View.Scene.gameElapsedFrame = View.Scene.game.frame;
+            View.Scene.updateKeyInput();
+
             if (!View.Scene.animating) {
 
                 switch (this.dungeonManager.endState) {
@@ -90,21 +93,21 @@
 
                 if (this.dungeonManager.currentTurn == this.player) {
                     var dir = View.Scene.keyDirection;
-                    var a = View.Scene.keyA;
-                    var b = View.Scene.keyB;
-                    var x = View.Scene.keyX;
+                    //var a = View.Scene.keyA;
+                    //var b = View.Scene.keyB;
+                    //var x = View.Scene.keyX;
                     if (dir != null) {
                         /*if (Common.DEBUG)
                             View.Scene.resetKeys();*/
                         this.player.setDir(dir);
-                        if (x == false && this.getFov().movable[dir]) {
+                        if (View.Scene.CountKeyX == 0 && this.getFov().movable[dir]) {
                             var action = Common.Action.Move();
                             this.input(action);
                         }
-                    } else if (a == true) {
+                    } else if (View.Scene.CountKeyA > 0) {
                         var action = Common.Action.Attack();
                         this.input(action);
-                    } else if (b == true) {
+                    } else if (View.Scene.CountKeyB > 0) {
                         this.showMainMenu();
                     }
                 }
