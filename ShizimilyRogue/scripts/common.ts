@@ -61,7 +61,7 @@
 
     /** アイテム種別 */
     export enum ItemType {
-        Weapon, Guard, HDD, Memory, Sweet, DVD, Case, Application
+        CPU, GraphicBoard, HDD, Memory, Sweet, DVD, Case, SDCard
     }
 
     /** ダンジョンのオブジェクトのタイプ */

@@ -73,8 +73,7 @@ module ShizimilyRogue.Model {
             // 出口作成
             var exit = new Exit();
             actions.unshift(this.addObject(exit));
-            /*
-            for (var i = 0; i < 2; i++) {
+            for (var i = 0; i < 5; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
             }
@@ -97,7 +96,6 @@ module ShizimilyRogue.Model {
                 var pccase: Common.IObject = new Model.Data.GeForce;
                 actions.unshift(this.addObject(pccase));
             }
-        */
 
             // 配置
             this.addInput(actions);
@@ -164,7 +162,7 @@ module ShizimilyRogue.Model {
         }
 
         public get currentTurn(): Common.IUnit {
-            return this._currentUnit;
+            return this.hasNext() ? null : this._currentUnit;
         }
 
         public get endState(): number {
@@ -551,7 +549,7 @@ module ShizimilyRogue.Model {
         get atk(): number { return Common.GuardDef(this.baseParam, this.plus); }
 
         constructor() {
-            super(Common.ItemType.Weapon, "Weapon");
+            super(Common.ItemType.CPU, "Weapon");
         }
         use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var player = <Common.IUnit>action.sender;
@@ -579,7 +577,7 @@ module ShizimilyRogue.Model {
         get def(): number { return Common.GuardDef(this.baseParam, this.plus); }
 
         constructor() {
-            super(Common.ItemType.Guard, "Guard");
+            super(Common.ItemType.GraphicBoard, "Guard");
         }
         use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var player = <Common.IUnit>action.sender;
