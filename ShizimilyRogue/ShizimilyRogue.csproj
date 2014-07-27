@@ -18,23 +18,25 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="docs\design.txt" />
-    <Content Include="images\cake.png" />
-    <Content Include="images\cursor.png" />
-    <Content Include="images\floor_01.png" />
-    <Content Include="images\ItemWindow.png" />
-    <Content Include="images\MainMenu.png" />
-    <Content Include="images\message.png" />
-    <Content Include="images\messageIcon.png" />
-    <Content Include="images\MessageWindow.png" />
+    <Content Include="images\Item\CPU.png" />
+    <Content Include="images\Item\DVD.png" />
+    <Content Include="images\Item\GraphicBoard.png" />
+    <Content Include="images\Item\HDD.png" />
+    <Content Include="images\Item\Memory.png" />
+    <Content Include="images\Item\PCCase.png" />
+    <Content Include="images\Item\SDCard.png" />
+    <Content Include="images\Item\Sweet.png" />
+    <Content Include="images\Menu\MenuCursor.png" />
+    <Content Include="images\Map\Floor.png" />
+    <Content Include="images\Menu\MenuWindow.png" />
+    <Content Include="images\Message\MessageWindow.png" />
     <Content Include="images\minimap.png" />
     <Content Include="images\shadow.png" />
-    <Content Include="images\shizimi.png" />
-    <Content Include="images\shizimily_faceIcon.png" />
-    <Content Include="images\shizimily_faceIcon_A0.png" />
+    <Content Include="images\Unit\Shizimi.png" />
+    <Content Include="images\Message\MessageIcon.png" />
     <Content Include="images\title.png" />
     <Content Include="images\unit.png" />
-    <Content Include="images\UseMenu.png" />
-    <Content Include="images\wall_01.png" />
+    <Content Include="images\Map\Wall00.png" />
     <Content Include="index.html" />
     <TypeScriptCompile Include="data\items.ts" />
     <TypeScriptCompile Include="data\message.ts" />
@@ -63,7 +65,11 @@
       <DependentUpon>web.config</DependentUpon>
     </None>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="images\Effect\" />
+    <Folder Include="images\Status\" />
+    <Folder Include="images\Trap\" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

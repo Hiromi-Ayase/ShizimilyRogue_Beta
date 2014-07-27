@@ -8,19 +8,29 @@
     // シーン
     export class Scene extends enchant.Scene {
         static IMAGE = {
-            WALL: { URL: "./images/wall_01.png", DATA: <enchant.Surface>null },
-            FLOOR: { URL: "./images/floor_01.png", DATA: <enchant.Surface>null },
+            WALL00: { URL: "./images/Map/Wall00.png", DATA: <enchant.Surface>null },
+            FLOOR: { URL: "./images/Map/Floor.png", DATA: <enchant.Surface>null },
+
+            MESSAGE_WINDOW: { URL: "./images/Message/MessageWindow.png", DATA: <enchant.Surface>null },
+            MESSAGE_ICON: { URL: "./images/Message/MessageIcon.png", DATA: <enchant.Surface>null },
+
+            MENU_CURSOR: { URL: "./images/Menu/MenuCursor.png", DATA: <enchant.Surface>null },
+            MENU_WINDOW: { URL: "./images/Menu/MenuWindow.png", DATA: <enchant.Surface>null },
+
+            CPU: { URL: "./images/Item/CPU.png", DATA: <enchant.Surface>null },
+            GRAPHIC_BOARD: { URL: "./images/Item/GraphicBoard.png", DATA: <enchant.Surface>null },
+            HDD: { URL: "./images/Item/HDD.png", DATA: <enchant.Surface>null },
+            MEMORY: { URL: "./images/Item/Memory.png", DATA: <enchant.Surface>null },
+            SWEET: { URL: "./images/Item/Sweet.png", DATA: <enchant.Surface>null },
+            DVD: { URL: "./images/Item/DVD.png", DATA: <enchant.Surface>null },
+            PC_CASE: { URL: "./images/Item/PCCase.png", DATA: <enchant.Surface>null },
+            SD_CARD: { URL: "./images/Item/SDCard.png", DATA: <enchant.Surface>null },
+
+            SHIZIMILY: { URL: "./images/Unit/Shizimi.png", DATA: <enchant.Surface>null },
+
             UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
-            SHIZIMILY: { URL: "./images/shizimi.png", DATA: <enchant.Surface>null },
             TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
-            MESSAGE: { URL: "./images/MessageWindow.png", DATA: <enchant.Surface>null },
-            ITEM_WINDOW: { URL: "./images/ItemWindow.png", DATA: <enchant.Surface>null },
-            MESSAGE_ICON: { URL: "./images/shizimily_faceIcon_A0.png", DATA: <enchant.Surface>null },
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
-            MEMU_MAIN: { URL: "./images/MainMenu.png", DATA: <enchant.Surface>null },
-            CURSOR: { URL: "./images/cursor.png", DATA: <enchant.Surface>null },
-            OBJECT: { URL: "./images/cake.png", DATA: <enchant.Surface>null },
-            USE_MENU: { URL: "./images/UseMenu.png", DATA: <enchant.Surface>null },
             MINI_MAP: { URL: "./images/minimap.png", DATA: <enchant.Surface>null },
         };
 

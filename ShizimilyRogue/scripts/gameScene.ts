@@ -291,7 +291,7 @@ module ShizimilyRogue.View {
         constructor() {
             super();
             this.messageArea = new enchant.Sprite(VIEW_WIDTH, VIEW_HEIGHT);
-            this.messageArea.image = Scene.IMAGE.MESSAGE.DATA;
+            this.messageArea.image = Scene.IMAGE.MESSAGE_WINDOW.DATA;
             this.messageArea.opacity = Message.MESSAGE_AREA_OPACITY;
             this.icon = new enchant.Sprite(VIEW_WIDTH, VIEW_HEIGHT);
             this.icon.image = Scene.IMAGE.MESSAGE_ICON.DATA;
@@ -425,6 +425,9 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * 時計
+     */
     class Clock extends enchant.Group {
         private static CLOCK_TOP = 10;
         private static CLOCK_LEFT = 550;
@@ -453,11 +456,15 @@ module ShizimilyRogue.View {
         }
     }
 
+    /**
+     * FPS表示
+     */
     class ActualFPS extends enchant.Group {
         private static FPSDISP_TOP = 460;
         private static FPSDISP_LEFT = 570;
+        private static LAP = 1000;
         private fpsText: enchant.Label;
-
+        
         private lastTime: number;
         private elapsedFrame: number = 0;
 
@@ -471,17 +478,22 @@ module ShizimilyRogue.View {
 
             this.addChild(this.fpsText);
 
-            this.lastTime = Scene.game.getElapsedTime();
+            this.lastTime = this.time;
         }
 
         update(): void {
             this.elapsedFrame++;
-            if (this.elapsedFrame == 30) {
-                var time = Scene.game.getElapsedTime();
-                this.fpsText.text = "fps " + (30 / (time - this.lastTime)).toFixed(3);
+            var time = this.time;
+            if (time - this.lastTime > ActualFPS.LAP) {
+                this.fpsText.text = "fps " + (this.elapsedFrame * 1000 / (time - this.lastTime)).toFixed(3);
                 this.lastTime = time;
                 this.elapsedFrame = 0;
             }
+        }
+
+        private get time(): number {
+            var date = new Date();
+            return date.getTime();
         }
 
         set visible(flg: boolean) {
@@ -645,13 +657,17 @@ module ShizimilyRogue.View {
      * メニュー
      */
     class Menu extends enchant.Group {
+        private static BACKGROUND_TILE_WIDTH = 64;
+        private static BACKGROUND_TILE_HEIGHT = 64;
+        private static BAKCGROUND_TILE = [4, 3, 5, 1, 0, 2, 7, 6, 8];
         private static TOP_MARGIN = 36;
         private static LEFT_MARGIN = 36;
         private static LINE_SIZE = 36;
-        private menuArea: enchant.Sprite;
+        private menuArea: enchant.Map;
         private elements: enchant.Group = null;
         private cursor: enchant.Sprite;
         private cursorIndex: number = 0;
+        private size = 3;
 
         /**
          * メインメニュー
@@ -661,7 +677,7 @@ module ShizimilyRogue.View {
          * @return {Menu} メニュー
          */
         static Main(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
-            return new Menu(data, selectHandler, multiple, Scene.IMAGE.MEMU_MAIN.DATA, 10, 10, 3);
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.MENU_WINDOW.DATA, 10, 10, 5, 3);
         }
 
         /**
@@ -672,7 +688,7 @@ module ShizimilyRogue.View {
          * @return {Menu} メニュー
          */
         static Item(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
-            return new Menu(data, selectHandler, multiple, Scene.IMAGE.ITEM_WINDOW.DATA, 10, 10, 10);
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.MENU_WINDOW.DATA, 10, 10, 5, 7);
         }
 
         /**
@@ -683,7 +699,7 @@ module ShizimilyRogue.View {
          * @return {Menu} メニュー
          */
         static Use(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
-            return new Menu(data, selectHandler, multiple, Scene.IMAGE.USE_MENU.DATA, 400, 10, 4);
+            return new Menu(data, selectHandler, multiple, Scene.IMAGE.MENU_WINDOW.DATA, 400, 10, 4,4);
         }
 
         /**
@@ -695,13 +711,15 @@ module ShizimilyRogue.View {
             private multiple: boolean,
             background: enchant.Surface,
             left: number, top: number,
-            private size: number) {
+            width: number, height: number) {
             super();
-            this.menuArea = new enchant.Sprite(background.width, background.height);
+            this.menuArea = Menu.getBackground(width, height, background);
             this.menuArea.image = background;
-            var imgCursor = Scene.IMAGE.CURSOR.DATA;
+
+            var imgCursor = Scene.IMAGE.MENU_CURSOR.DATA;
             this.cursor = new enchant.Sprite(imgCursor.width, imgCursor.height);
             this.cursor.image = imgCursor;
+
             this.cursor.x = Menu.LEFT_MARGIN;
             this.x = left;
             this.y = top;
@@ -751,7 +769,7 @@ module ShizimilyRogue.View {
                 label.font = "32px cursive";
                 label.color = "white";
                 label.y = (count % this.size) * Menu.LINE_SIZE + Menu.TOP_MARGIN;
-                label.x = Menu.LEFT_MARGIN + Scene.IMAGE.CURSOR.DATA.width;
+                label.x = Menu.LEFT_MARGIN + Scene.IMAGE.MENU_CURSOR.DATA.width;
                 this.elements.addChild(label);
                 count++;
             });
@@ -765,6 +783,26 @@ module ShizimilyRogue.View {
                 this.elements.childNodes[i].visible = i >= page * this.size && i < (page + 1) * this.size;
             }
             this.cursor.y = (this.cursorIndex % this.size) * Menu.LINE_SIZE + Menu.TOP_MARGIN;
+        }
+
+        private static getBackground(width: number, height: number, image: enchant.Surface): enchant.Map {
+            var map: enchant.Map = new enchant.Map(Menu.BACKGROUND_TILE_WIDTH, Menu.BACKGROUND_TILE_HEIGHT);
+            map.image = image;
+            var table: number[][] = new Array<number[]>(height);
+
+            for (var y = 0; y < height; y++) {
+                table[y] = new Array<number>(width);
+                for (var x = 0; x < width; x++) {
+                    var e = 0;
+                    if (x == 0) e += 1;
+                    if (x == width - 1) e += 2;
+                    if (y == 0) e += 3;
+                    if (y == height - 1) e += 6;
+                    table[y][x] = Menu.BAKCGROUND_TILE[e];
+                }
+            }
+            map.loadData(table);
+            return map;
         }
     }
 
@@ -813,6 +851,8 @@ module ShizimilyRogue.View {
                 return ViewObjectFactory.getPlayerInstance(<Common.IUnit>object);
             else if (object.isUnit())
                 return ViewObjectFactory.getUnitInstance(<Common.IUnit>object);
+            else if (object.isItem())
+                return ViewObjectFactory.getItemInstance(object);
             else
                 return ViewObjectFactory.getObjectInstance(object);
         }
@@ -878,7 +918,38 @@ module ShizimilyRogue.View {
         }
 
         private static getObjectInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.IMAGE.OBJECT.DATA, (sprite) => { sprite.frame = obj.category }, () => { });
+            return new ViewObject(obj, Scene.IMAGE.SWEET.DATA, (sprite) => { sprite.frame = obj.category }, () => { });
+        }
+
+        private static getItemInstance(obj: Common.IObject): ViewObject {
+            var image: enchant.Surface;
+            switch (obj.category) {
+                case Common.ItemType.Case:
+                    image = Scene.IMAGE.PC_CASE.DATA;
+                    break;
+                case Common.ItemType.CPU:
+                    image = Scene.IMAGE.PC_CASE.DATA;
+                    break;
+                case Common.ItemType.GraphicBoard:
+                    image = Scene.IMAGE.GRAPHIC_BOARD.DATA;
+                    break;
+                case Common.ItemType.DVD:
+                    image = Scene.IMAGE.DVD.DATA;
+                    break;
+                case Common.ItemType.Memory:
+                    image = Scene.IMAGE.MEMORY.DATA;
+                    break;
+                case Common.ItemType.HDD:
+                    image = Scene.IMAGE.HDD.DATA;
+                    break;
+                case Common.ItemType.Sweet:
+                    image = Scene.IMAGE.SWEET.DATA;
+                    break;
+                case Common.ItemType.SDCard:
+                    image = Scene.IMAGE.SD_CARD.DATA;
+                    break;
+            }
+            return new ViewObject(obj, image, (sprite) => { sprite.frame = 0; }, () => { });
         }
     }
 
@@ -1032,7 +1103,7 @@ module ShizimilyRogue.View {
         public static ground(width: number, height: number, getTable: (x: number, y: number) => Common.ICell): Map {
             var table = (x, y) => { return getTable(x, y).ground };
             var getViewTable = () => { return Map.getGroundViewTable(width, height, table) };
-            return new Map(getViewTable, Scene.IMAGE.WALL.DATA);
+            return new Map(getViewTable, Scene.IMAGE.WALL00.DATA);
         }
 
         /**
