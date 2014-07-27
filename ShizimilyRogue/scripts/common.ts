@@ -1,6 +1,6 @@
 ﻿module ShizimilyRogue.Common {
     /** デバッグモード切り替え */
-    export var DEBUG = true;
+    export var DEBUG = false;
 
     /** プレイヤーのID */
     export var PLAYER_ID = 0;

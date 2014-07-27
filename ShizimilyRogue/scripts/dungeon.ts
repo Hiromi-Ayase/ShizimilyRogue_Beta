@@ -73,10 +73,10 @@ module ShizimilyRogue.Model {
             // 出口作成
             var exit = new Exit();
             actions.unshift(this.addObject(exit));
-            for (var i = 0; i < 5; i++) {
+            /*for (var i = 0; i < 5; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
-            }
+            }*/
             for (var i = 0; i < 2; i++) {
                 var sweet: Common.IObject = new Model.Data.Sweet;
                 actions.unshift(this.addObject(sweet));
