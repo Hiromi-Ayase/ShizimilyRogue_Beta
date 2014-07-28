@@ -36,6 +36,7 @@ module ShizimilyRogue.View {
         private actualFps: ActualFPS;
         private miniMap: MiniMap;
         private view: View;
+        private focus: Common.GameSceneFocus;
 
         /**
          * @constructor
@@ -74,7 +75,8 @@ module ShizimilyRogue.View {
          * @param {boolean} multiple 複数選択(Default:false)
          */
         showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean = false): void {
-            Scene.keyLock = true;
+            //Scene.keyLock = true;
+            this.focus = Common.GameSceneFocus.Menu;
             if (type == MenuType.Main) {
                 var menu = Menu.Main(data, selectHandler, multiple);
                 this.menuGroup.addChild(menu);
@@ -98,6 +100,7 @@ module ShizimilyRogue.View {
                 }
             }
             this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+            this.focus = Common.GameSceneFocus.Field;
         }
 
         /**
@@ -128,7 +131,7 @@ module ShizimilyRogue.View {
             this.actualFps.update();
         }
 
-        private addMenuKeyHandler(): void {
+        /*private addMenuKeyHandler(): void {
             Scene.game.addEventListener(enchant.Event.UP_BUTTON_UP, event => {
                 if (this.menuGroup.childNodes.length > 0) {
                     var menu = <Menu>this.menuGroup.lastChild;
@@ -152,6 +155,38 @@ module ShizimilyRogue.View {
                     this.menuGroup.removeChild(this.menuGroup.lastChild);
                     if (this.menuGroup.childNodes.length == 0)
                         this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+                }
+            });
+        }*/
+
+        private addMenuKeyHandler(): void {
+            Scene.game.addEventListener(enchant.Event.ENTER_FRAME, (e) => {
+                if (Input.BtnUp.count == 1 && this.focus == Common.GameSceneFocus.Menu) {
+                    if (this.menuGroup.childNodes.length > 0) {
+                        var menu = <Menu>this.menuGroup.lastChild;
+                        menu.up();
+                    }
+                }
+                if (Input.BtnDown.count == 1) {
+                    if (this.menuGroup.childNodes.length > 0) {
+                        var menu = <Menu>this.menuGroup.lastChild;
+                        menu.down();
+                    }
+                }
+                if (Input.BtnA.count == 1) {
+                    if (this.menuGroup.childNodes.length > 0) {
+                        var menu = <Menu>this.menuGroup.lastChild;
+                        menu.select();
+                    }
+                }
+                if (Input.BtnB.count == 1) {
+                    if (this.menuGroup.childNodes.length > 0) {
+                        this.menuGroup.removeChild(this.menuGroup.lastChild);
+                        if (this.menuGroup.childNodes.length == 0) {
+                            this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
+                            this.focus = Common.GameSceneFocus.Field;
+                        }
+                    }
                 }
             });
         }

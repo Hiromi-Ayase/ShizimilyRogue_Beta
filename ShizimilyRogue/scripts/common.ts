@@ -27,6 +27,11 @@
         MESSAGE_FADEOUT: 5,
     };
 
+    /** GameSceneのフォーカス */
+    export enum GameSceneFocus {
+        Field, Menu,
+    }
+
     /** ドロップ位置の優先順位 */
     export var Drop: number[][] = [
         [0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1], [1, -1],
