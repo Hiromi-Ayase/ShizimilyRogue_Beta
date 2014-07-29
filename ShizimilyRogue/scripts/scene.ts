@@ -7,7 +7,7 @@
 
     // シーン
     export class Scene extends enchant.Scene {
-        static IMAGE = {
+        static ASSETS = {
             WALL00: { URL: "./images/Map/Wall00.png", DATA: <enchant.Surface>null },
             FLOOR: { URL: "./images/Map/Floor.png", DATA: <enchant.Surface>null },
 
@@ -32,6 +32,8 @@
             TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
             MINI_MAP: { URL: "./images/minimap.png", DATA: <enchant.Surface>null },
+
+            BGM_MAIN: { URL: "./music/shizimily.mp3", DATA: <enchant.DOMSound>null },
         };
 
         static game: enchant.Core;
@@ -97,15 +99,15 @@
             Scene.game = new enchant.Core(VIEW_WIDTH, VIEW_HEIGHT);
             Scene.game.fps = FPS;
 
-            var imageUrl: string[] = [];
-            for (var id in Scene.IMAGE)
-                imageUrl.push(Scene.IMAGE[id].URL);
+            var assetsURL: string[] = [];
+            for (var id in Scene.ASSETS)
+                assetsURL.push(Scene.ASSETS[id].URL);
 
-            Scene.game.preload(imageUrl);
+            Scene.game.preload(assetsURL);
             Scene.eventInit();
             Scene.game.onload = () => {
-                for (var id in Scene.IMAGE)
-                    Scene.IMAGE[id].DATA = Scene.game.assets[Scene.IMAGE[id].URL];
+                for (var id in Scene.ASSETS)
+                    Scene.ASSETS[id].DATA = Scene.game.assets[Scene.ASSETS[id].URL];
                 onloadHandler();
             };
             Scene.game.start();

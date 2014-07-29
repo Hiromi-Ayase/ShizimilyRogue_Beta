@@ -42,6 +42,7 @@
     <TypeScriptCompile Include="data\message.ts" />
     <TypeScriptCompile Include="data\units.ts" />
     <TypeScriptCompile Include="scripts\common.ts" />
+    <Content Include="music\shizimily.mp3" />
     <Content Include="scripts\enchant.js" />
     <Content Include="scripts\rot.js" />
     <Content Include="web.config" />
