@@ -1,6 +1,6 @@
 ﻿module ShizimilyRogue.Common {
     /** デバッグモード切り替え */
-    export var DEBUG = true;
+    export var DEBUG = false;
 
     /** プレイヤーのID */
     export var PLAYER_ID = 0;
@@ -26,6 +26,11 @@
         /** メッセージの自動非表示時間 */
         MESSAGE_FADEOUT: 5,
     };
+
+    /** GameSceneのフォーカス */
+    export enum GameSceneFocus {
+        Field, Menu,
+    }
 
     /** ドロップ位置の優先順位 */
     export var Drop: number[][] = [

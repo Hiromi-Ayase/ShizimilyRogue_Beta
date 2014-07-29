@@ -34,7 +34,7 @@
         private _view: View.TitleScene = new View.TitleScene();
 
         update(e): Scene {
-            var a = View.Scene.CountKeyA;
+            var a = View.Input.BtnA.count;
             if (a > 0) {
                 return new GameScene();
             }
@@ -50,7 +50,7 @@
         private _view: View.GameOverScene = new View.GameOverScene();
 
         update(e): Scene {
-            var a = View.Scene.CountKeyA;
+            var a = View.Input.BtnA.count;
             if (a > 0) {
                 return new TitleScene();
             }
@@ -79,11 +79,7 @@
         }
 
         update(e): Scene {
-            View.Scene.gameElapsedFrame = View.Scene.game.frame;
-            View.Scene.updateKeyInput();
-
             if (!View.Scene.animating) {
-
                 switch (this.dungeonManager.endState) {
                     case Common.EndState.GameOver:
                         return new GameOverScene();
@@ -92,24 +88,45 @@
                 }
 
                 if (this.dungeonManager.currentTurn == this.player) {
-                    var dir = View.Scene.keyDirection;
-                    //var a = View.Scene.keyA;
-                    //var b = View.Scene.keyB;
-                    //var x = View.Scene.keyX;
-                    if (dir != null) {
+                    var dir = View.Input.keyDirection;
+
+                    if (View.Input.BtnY.count > 0) {
+                        // TBD:飛び道具
+                        if (View.Input.BtnA.count > 0) {
+
+                        // TBD:指定方向にダッシュ
+                        } else if (View.Input.BtnB.count > 0 && dir != null) {
+                            this.player.setDir(dir);
+
+                        // 方向転換
+                        } else if (dir != null) {
+                            this.player.setDir(dir);
+                        }
+
+                    // 移動
+                    } else if (dir != null) {
                         /*if (Common.DEBUG)
                             View.Scene.resetKeys();*/
                         this.player.setDir(dir);
-                        if (View.Scene.CountKeyX == 0 && this.getFov().movable[dir]) {
+                        if (View.Input.BtnX.count == 0 && this.getFov().movable[dir]) {
                             var action = Common.Action.Move();
                             this.input(action);
                         }
-                    } else if (View.Scene.CountKeyA > 0) {
+
+                    // 攻撃
+                    } else if (View.Input.BtnA.count > 0) {
                         var action = Common.Action.Attack();
                         this.input(action);
-                    } else if (View.Scene.CountKeyB > 0) {
+
+                    // TBD:前方ダッシュ
+                    } else if (View.Input.BtnB.count > 5) {
+
+                    // メニュー
+                    } else if (View.Input.BtnX.count > 0) {
                         this.showMainMenu();
                     }
+
+
                 }
                 this.viewUpdate();
             }
