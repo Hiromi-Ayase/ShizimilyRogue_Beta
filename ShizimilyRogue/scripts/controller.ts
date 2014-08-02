@@ -170,10 +170,11 @@
                 var commandNames = item.commands();
                 this._view.showMenu(View.MenuType.Use, item.commands(), n => {
                     if (commandNames[n] == "見る") {
-                        var innerItemNames = item.innerItems.map(item => item.name);
+                        var pcCase = <Model.Data.Case>item;
+                        var innerItemNames = pcCase.innerItems.map(item => item.name);
                         this._view.showMenu(View.MenuType.Item, innerItemNames, l => {
                             this._view.closeMenu();
-                            var next: Common.Action = item.select(0, [item.innerItems[l]]);
+                            var next: Common.Action = item.select(0, [pcCase.innerItems[l]]);
                             this.input(next);
                         });
                     } else if (commandNames[n] == "入れる") {

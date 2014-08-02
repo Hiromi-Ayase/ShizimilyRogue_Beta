@@ -1,13 +1,15 @@
 ﻿module ShizimilyRogue.Model.Data {
 
-
+    /**
+     * お菓子
+     */
     export class Sweet extends Item {
         constructor() {
             super(Common.ItemType.Sweet, "スイーツ");
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
-            unit.takeInventory(me);
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
             var action = Common.Action.Status(unit, Common.StatusActionType.Heal, 100);
             return [action];
         }
@@ -19,6 +21,7 @@
     export class Case extends Item {
         maxItems = Math.floor(ROT.RNG.getUniform() * 6);
         baseName = "PCケース";
+        innerItems = [];
 
         constructor() {
             super(Common.ItemType.Case, "PCケース");
@@ -49,7 +52,7 @@
             }
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[]{
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
             var targetItems = action.targetItems;
             var type = action.subType;
             if (this.isInserted(targetItems[0])) {
@@ -64,7 +67,7 @@
             } else {
                 if (this.innerItems.length + targetItems.length <= this.maxItems) {
                     targetItems.forEach(item => {
-                        if (item != me) {
+                        if (item != this) {
                             unit.takeInventory(item);
                             this.addItem(item);
                         }
@@ -77,7 +80,7 @@
         }
 
         private addItem(item: Common.IItem): boolean {
-            if (this.innerItems.length < this.maxItems) {
+            if (this.innerItems.length < this.maxItems && item.category != Common.ItemType.Case) {
                 this.innerItems.push(item);
                 return true;
             } else {
@@ -105,15 +108,53 @@
         }
     }
 
+    /**
+     * Pentium
+     */
     export class Pentium extends Weapon {
         baseParam = 1000;
         plus = Math.floor(ROT.RNG.getUniform() * 4);
         baseName = "Pentium";
     }
 
+    /**
+     * GeForce
+     */
     export class GeForce extends Guard {
         baseParam = 1000;
         plus = Math.floor(ROT.RNG.getUniform() * 4);
         baseName = "GeForce";
     }
+
+    /**
+     * DVD
+     */
+    export class DVD extends Item {
+        constructor(name: string) {
+            super(Common.ItemType.DVD, name);
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
+            unit.takeInventory(this);
+            return [action];
+        }
+    }
+
+    /**
+     * SDCard
+     */
+    export class SDCard extends Item {
+        num: number;
+
+        constructor(name: string) {
+            super(Common.ItemType.DVD, name);
+            this.num = Math.floor(ROT.RNG.getUniform() * 5) + 2;
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
+            this.num--;
+            return [action];
+        }
+    }
+
 }

@@ -487,7 +487,6 @@
         status: ItemState;
         unknownName: string;
         commands(): string[];
-        innerItems: IItem[];
         select(n: number, items?: Common.IItem[]): Common.Action;
     }
 

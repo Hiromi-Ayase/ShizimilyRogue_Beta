@@ -433,7 +433,6 @@ module ShizimilyRogue.Model {
      */
     export class Item extends DungeonObject implements Common.IItem {
         type: Common.DungeonObjectType = Common.DungeonObjectType.Item;
-        innerItems: Common.IItem[] = [];
         status: Common.ItemState = Common.ItemState.Normal;
         unknownName: string = null;
         layer = Common.Layer.Ground;
@@ -484,7 +483,7 @@ module ShizimilyRogue.Model {
                 unit.takeInventory(this);
                 return [Common.Action.Drop(this, unit.cell.coord)];
             } else if (action.isUse()) {
-                return this.use(this, action, unit);
+                return this.use(action, unit);
             } else if (action.isThrow()) {
                 unit.takeInventory(this);
                 this.dir = unit.dir;
@@ -495,7 +494,7 @@ module ShizimilyRogue.Model {
             return [];
         }
 
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             return [];
         }
     }
@@ -551,12 +550,12 @@ module ShizimilyRogue.Model {
         constructor() {
             super(Common.ItemType.CPU, "Weapon");
         }
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var player = <Common.IUnit>action.sender;
-            if (player.weapon == me) {
+            if (player.weapon == this) {
                 player.weapon = null;
             } else {
-                player.weapon = me;
+                player.weapon = this;
             }
             return [];
         }
@@ -579,12 +578,12 @@ module ShizimilyRogue.Model {
         constructor() {
             super(Common.ItemType.GraphicBoard, "Guard");
         }
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var player = <Common.IUnit>action.sender;
-            if (player.guard == me) {
+            if (player.guard == this) {
                 player.guard = null;
             } else {
-                player.guard = me;
+                player.guard = this;
             }
             return [];
         }
@@ -603,9 +602,9 @@ module ShizimilyRogue.Model {
         constructor() {
             super(Common.ItemType.Case, "Accessory");
         }
-        use(me: Common.IItem, action: Common.Action, unit: Common.IUnit): Common.Action[] {
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             var player = <Common.IUnit>action.sender;
-            player.guard = me;
+            player.accessory = this;
             return [];
         }
 
