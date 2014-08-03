@@ -889,6 +889,8 @@ module ShizimilyRogue.View {
                 return ViewObjectFactory.getUnitInstance(<Common.IUnit>object);
             else if (object.isItem())
                 return ViewObjectFactory.getItemInstance(object);
+            else if (object.isStairs())
+                return ViewObjectFactory.getStairsInstance(object);
             else
                 return ViewObjectFactory.getObjectInstance(object);
         }
@@ -951,6 +953,10 @@ module ShizimilyRogue.View {
 
         private static getUnitInstance(obj: Common.IObject): ViewObject {
             return new ViewObject(obj, Scene.ASSETS.UNIT.DATA, (sprite) => sprite.frame = 1, () => { }, 0, -0.5);
+        }
+
+        private static getStairsInstance(obj: Common.IObject): ViewObject {
+            return new ViewObject(obj, Scene.ASSETS.STAIRS.DATA, (sprite) => { sprite.frame = 0 }, () => { });
         }
 
         private static getObjectInstance(obj: Common.IObject): ViewObject {

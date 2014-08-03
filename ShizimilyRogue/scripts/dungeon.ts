@@ -47,7 +47,7 @@ module ShizimilyRogue.Model {
         isPath(): boolean { return this.type == Common.DungeonObjectType.Path; }
         isItem(): boolean { return this.type == Common.DungeonObjectType.Item; }
         isNull(): boolean { return this.type == Common.DungeonObjectType.Null; }
-        isExit(): boolean { return this.type == Common.DungeonObjectType.Exit; }
+        isStairs(): boolean { return this.type == Common.DungeonObjectType.Stairs; }
         isTrap(): boolean { return this.type == Common.DungeonObjectType.Trap; }
     }
 
@@ -71,7 +71,7 @@ module ShizimilyRogue.Model {
             actions.unshift(this.addObject(player));
 
             // 出口作成
-            var exit = new Exit();
+            var exit = new Stairs();
             actions.unshift(this.addObject(exit));
             /*for (var i = 0; i < 5; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
@@ -390,11 +390,11 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Exit extends DungeonObject {
+    class Stairs extends DungeonObject {
         category = 2;
-        type = Common.DungeonObjectType.Exit;
+        type = Common.DungeonObjectType.Stairs;
         layer = Common.Layer.Ground;
-        name = "Exit";
+        name = "Stairs";
     }
 
     class Wall extends DungeonObject {
@@ -977,7 +977,7 @@ module ShizimilyRogue.Model {
         isUnit(): boolean { return this._objects[Common.Layer.Unit].isUnit(); }
         isItem(): boolean { return this._objects[Common.Layer.Ground].isItem(); }
         isTrap(): boolean { return this._objects[Common.Layer.Ground].isTrap(); }
-        isExit(): boolean { return this._objects[Common.Layer.Ground].isExit(); }
+        isExit(): boolean { return this._objects[Common.Layer.Ground].isStairs(); }
         isWall(): boolean { return this._objects[Common.Layer.Ground].isWall(); }
         isRoom(): boolean { return this._objects[Common.Layer.Floor].isRoom(); }
         isPath(): boolean { return this._objects[Common.Layer.Floor].isPath(); }

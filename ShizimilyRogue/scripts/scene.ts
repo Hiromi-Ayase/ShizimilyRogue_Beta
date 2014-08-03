@@ -10,6 +10,7 @@
         static ASSETS = {
             WALL00: { URL: "./images/Map/Wall00.png", DATA: <enchant.Surface>null },
             FLOOR: { URL: "./images/Map/Floor.png", DATA: <enchant.Surface>null },
+            MINI_MAP: { URL: "./images/Map/minimap.png", DATA: <enchant.Surface>null },
 
             MESSAGE_WINDOW: { URL: "./images/Message/MessageWindow.png", DATA: <enchant.Surface>null },
             MESSAGE_ICON: { URL: "./images/Message/MessageIcon.png", DATA: <enchant.Surface>null },
@@ -27,11 +28,11 @@
             SD_CARD: { URL: "./images/Item/SDCard.png", DATA: <enchant.Surface>null },
 
             SHIZIMILY: { URL: "./images/Unit/Shizimi.png", DATA: <enchant.Surface>null },
+            STAIRS: { URL: "./images/Object/Stairs.png", DATA: <enchant.Surface>null },
 
             UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
             TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
-            MINI_MAP: { URL: "./images/minimap.png", DATA: <enchant.Surface>null },
 
             BGM_MAIN: { URL: "./music/shizimily.mp3", DATA: <enchant.DOMSound>null },
         };

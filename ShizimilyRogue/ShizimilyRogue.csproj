@@ -30,7 +30,8 @@
     <Content Include="images\Map\Floor.png" />
     <Content Include="images\Menu\MenuWindow.png" />
     <Content Include="images\Message\MessageWindow.png" />
-    <Content Include="images\minimap.png" />
+    <Content Include="images\Map\minimap.png" />
+    <Content Include="images\Object\Stairs.png" />
     <Content Include="images\shadow.png" />
     <Content Include="images\Unit\Shizimi.png" />
     <Content Include="images\Message\MessageIcon.png" />

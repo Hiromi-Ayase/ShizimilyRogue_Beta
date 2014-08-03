@@ -71,7 +71,7 @@
 
     /** ダンジョンのオブジェクトのタイプ */
     export enum DungeonObjectType {
-        Null, Wall, Path, Room, Unit, Item, Exit, Trap
+        Null, Wall, Path, Room, Unit, Item, Stairs, Trap
     }
 
     /** Actionの通知範囲 */
@@ -445,7 +445,7 @@
         isRoom(): boolean;
         isPath(): boolean;
         isItem(): boolean;
-        isExit(): boolean;
+        isStairs(): boolean;
         isTrap(): boolean;
         isNull(): boolean;
     }
