@@ -157,4 +157,15 @@
         }
     }
 
+
+    export class SleepingDVD extends DVD {
+        constructor() {
+            super("子守唄のDVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
+            unit.takeInventory(this);
+            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Sleep);
+            return [action];
+        }
+    }
 }

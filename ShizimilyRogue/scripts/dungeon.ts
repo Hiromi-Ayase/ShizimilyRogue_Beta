@@ -181,7 +181,7 @@ module ShizimilyRogue.Model {
             return this.map.getObject(coord, layer);
         }
 
-        public getFOV(unit: Common.IUnit): Common.IFOVData {
+        public getFOV(unit: Common.IObject): Common.IFOVData {
             return this.map.getFOV(unit);
         }
 
@@ -292,6 +292,15 @@ module ShizimilyRogue.Model {
                     break;
                 case Common.Target.Item:
                     targets = [action.item];
+                    break;
+                case Common.Target.RoomUnit:
+                    var fov = this.getFOV(sender);
+                    targets = [];
+                    fov.objects.forEach(v => {
+                        if (v.isUnit() && v.id != sender.id) {
+                            targets.push(v);
+                        }
+                    });
                     break;
                 case Common.Target.Ground:
                     targets = [this.getCell(sender.cell.coord.x, sender.cell.coord.y).ground];
@@ -636,7 +645,6 @@ module ShizimilyRogue.Model {
         type: Common.DungeonObjectType = Common.DungeonObjectType.Unit;
         category: number = 0;
         dir: Common.DIR = 0;
-        state: Common.DungeonUnitState = Common.DungeonUnitState.Normal;
         maxHp: number = 100;
         hp: number = this.maxHp;
         speed: Common.Speed = Common.Speed.NORMAL;
@@ -646,6 +654,19 @@ module ShizimilyRogue.Model {
         currentExp: number = 0;
         stomach: number = 100;
         maxStomach: number = 100;
+
+        // 状態異常系
+        sleepTurn: number = -1;
+        confuseTurn: number = -1;
+        senselessTurn: number = -1;
+
+        isSleep(): boolean { return this.sleepTurn >= this.turn; } 
+        isConfuse(): boolean { return this.confuseTurn >= this.turn; } 
+        isSenseless(): boolean { return this.senselessTurn >= this.turn; }
+        isNormal(): boolean { return !this.isSleep() && !this.isSenseless() && !this.isConfuse(); } 
+        setSleep(turn: number): void { this.sleepTurn = this.turn + turn; }
+        setConfuse(turn: number): void { this.confuseTurn = this.turn + turn; }
+        setSenseless(turn: number): void { this.senselessTurn = this.turn + turn; }
 
         getFov: () => Common.IFOVData;
 
@@ -671,6 +692,16 @@ module ShizimilyRogue.Model {
                 if (action.sender.isUnit()) {
                     var damage = Common.Damage(action.param, this.def);
                     ret.push(Common.Action.Status(this, Common.StatusActionType.Damage, damage));
+                }
+            } else if (action.isSkill()) {
+                if (action.sender.isUnit()) {
+                    if (action.subType == Common.SkillType.Confuse) {
+                        ret.push(Common.Action.Status(this, Common.StatusActionType.Confuse, Common.Parameter.ConfuseTurn));
+                    } else if (action.subType == Common.SkillType.Sleep) {
+                        ret.push(Common.Action.Status(this, Common.StatusActionType.Sleep, Common.Parameter.SleepTurn));
+                    } else if (action.subType == Common.SkillType.Senseless) {
+                        ret.push(Common.Action.Status(this, Common.StatusActionType.Senseless, Common.Parameter.SenselessTurn));
+                    }
                 }
             } else if (action.isFly()) {
                 if (action.sender.isItem()) {
@@ -708,6 +739,12 @@ module ShizimilyRogue.Model {
             } else if (action.subType == Common.StatusActionType.Full) {
                 var full = action.param;
                 this.stomach += (this.stomach + full) > this.maxStomach ? (this.maxStomach - this.stomach) : full;
+            } else if (action.subType == Common.StatusActionType.Sleep) {
+                this.setSleep(action.param)
+            } else if (action.subType == Common.StatusActionType.Confuse) {
+                this.setConfuse(action.param)
+            } else if (action.subType == Common.StatusActionType.Senseless) {
+                this.setSenseless(action.param)
             }
             return [];
         }
@@ -739,6 +776,17 @@ module ShizimilyRogue.Model {
             }
             return [];
         }
+
+        getRandomWalk(fov): Common.Action {
+            var dirs: number[] = [];
+            fov.movable.map((value, index, array) => {
+                if (value) dirs.push(index);
+            });
+            this.dir = Math.floor(dirs.length * ROT.RNG.getUniform());
+            var action = Common.Action.Move();
+            return action;
+        }
+
         private heal(amount: number): void {
         }
 
@@ -764,6 +812,15 @@ module ShizimilyRogue.Model {
         phase(): Common.Action[] {
             if (this.turn % Common.Parameter.StomachDecrease == 0) {
 
+            }
+            if (this.isSenseless() || this.isSleep()) {
+                //睡眠または気絶中
+                return [Common.Action.None()];
+            } else if (this.isConfuse()) {
+                var fov = this.getFov();
+                var action = this.getRandomWalk(fov);
+                //混乱中
+                return [action];
             }
             return [];
         }
@@ -798,8 +855,17 @@ module ShizimilyRogue.Model {
 
         private lastMe: Common.Coord = null;
         private lastPlayer: Common.Coord = null;
-        public phase(): Common.Action[] {
+        public phase(): Common.Action[]{
             var fov = this.getFov();
+            if (this.isSenseless() || this.isSleep()) {
+                //睡眠または気絶中
+                return [Common.Action.None()];
+            } else if (this.isConfuse()) {
+                var action = this.getRandomWalk(fov);
+               //混乱中
+               return [action];
+            }
+
             var me = fov.me.cell.coord;
             var player: Common.Coord = null;
             var action: Common.Action = null;
@@ -831,20 +897,15 @@ module ShizimilyRogue.Model {
             }
 
             if (action == null) {
-                // 何もできない場合はランダムに移動
-                var dirs: number[] = [];
-                fov.movable.map((value, index, array) => {
-                    if (value) dirs.push(index);
-                });
-                this.dir = Math.floor(dirs.length * ROT.RNG.getUniform());
-                action = Common.Action.Move();
+                action = this.getRandomWalk(fov);
             }
             this.lastPlayer = player;
             this.lastMe = me;
             return [action];
         }
 
-        public event(action: Common.Action): Common.Action[] {
+
+        public event(action: Common.Action): Common.Action[]{
             var ret = super.event(action);
             var fov = this.getFov();
             fov.objects.forEach(obj => {

@@ -897,11 +897,10 @@ module ShizimilyRogue.View {
 
         private static getPlayerInstance(obj: Common.IUnit): ViewObject {
             var lastDir = obj.dir;
-            var lastState = obj.state;
             var frameLock = false;
             var frameNum = 0;
             var idleAnimation = (sprite: enchant.Sprite) => {
-                if (obj.state == Common.DungeonUnitState.Normal) {
+                if (obj.isNormal()) {
                     var delay: number = 7;  /* 1枚の画像を表示し続けるフレーム数 */
                     var x: number[][] = [
                         [0, 1, 2, 3],

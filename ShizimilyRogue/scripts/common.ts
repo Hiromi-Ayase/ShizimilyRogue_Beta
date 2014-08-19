@@ -15,6 +15,12 @@
         Atk: 100,
         /** ユニットの初期防御力 */
         Def: 100,
+        /** 睡眠ターン */
+        SleepTurn: 10,
+        /** 気絶ターン */
+        SenselessTurn: 50,
+        /** 混乱ターン数 */
+        ConfuseTurn: 15,
     };
 
     /** コンフィグ */
@@ -76,27 +82,27 @@
 
     /** Actionの通知範囲 */
     export enum Target {
-        Me, Next, Line, FarLine, Target, Item, System, Ground, Unit
+        Me, Next, Line, FarLine, Target, Item, System, Ground, Unit, RoomUnit
     }
 
     /** Actionの種別 */
     export enum ActionType {
-        Attack, Use, Throw, Pick, Place, Die, Status, Fly, Move, Delete, Swap, Drop, Set, Fail, None
+        Attack, Use, Throw, Pick, Place, Die, Status, Fly, Move, Delete, Swap, Drop, Set, Fail, Skill, None
     }
 
     /** ステータス変更Action種別 */
     export enum StatusActionType {
-        Damage, Heal, Hunger, Full
+        Damage, Heal, Hunger, Full, Sleep, Confuse, Senseless
+    }
+
+    /** スキル種別 */
+    export enum SkillType {
+        Sleep, Confuse, Senseless
     }
 
     /** 失敗Action種別 */
     export enum FailActionType {
         CaseOver
-    }
-
-    /** ユニットの状態 */
-    export enum DungeonUnitState {
-        Normal
     }
 
     /** ユニットの状態 */
@@ -167,6 +173,7 @@
         isDie(): boolean { return this.type == ActionType.Die; }
         isStatus(): boolean { return this.type == ActionType.Status; }
         isFly(): boolean { return this.type == ActionType.Fly; }
+        isSkill(): boolean { return this.type == ActionType.Skill; }
         isMove(): boolean { return this.type == ActionType.Move; }
         isDelete(): boolean { return this.type == ActionType.Delete; }
         isSwap(): boolean { return this.type == ActionType.Swap; }
@@ -214,6 +221,21 @@
          */
         static Attack(): Common.Action {
             var action = new Action(ActionType.Attack, Target.Next);
+            return action;
+        }
+
+        /**
+         * スキルアクション
+         * <ul>
+         * <li>DVD等によるスキル発動
+         * </ul>
+         * @param {targetType} 効果範囲
+         * @param {skillType} スキル種別
+         * @return {Common.Action} アクション
+         */
+        static Skill(targetType: Common.Target, skillType: Common.SkillType): Common.Action {
+            var action = new Action(ActionType.Skill, targetType);
+            action.subType = skillType;
             return action;
         }
 
@@ -470,13 +492,17 @@
         stomach: number;
         maxStomach: number;
 
+        isSleep(): boolean;
+        isConfuse(): boolean;
+        isSenseless(): boolean;
+        isNormal(): boolean;
+
         inventory: IItem[];
         maxInventory: number;
 
         addInventory(item: Common.IItem): boolean;
         takeInventory(item: Common.IItem): boolean;
 
-        state: DungeonUnitState;
         setDir(dir: number): void;
     }
 
