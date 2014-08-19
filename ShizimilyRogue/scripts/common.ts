@@ -57,8 +57,11 @@
     /** 武器攻撃力計算式 */
     export var WeaponAtk = (base: number, plus: number) => (base + plus);
 
-    /** 防具攻撃力計算式 */
+    /** 防具防御力計算式 */
     export var GuardDef = (base: number, plus: number) => (base + plus);
+
+    /** 防具鬱防御力計算式 */
+    export var GuardUtsuDef = (base: number, plus: number) => (base + plus);
 
     /** レイヤー */
     export enum Layer {
@@ -92,7 +95,7 @@
 
     /** ステータス変更Action種別 */
     export enum StatusActionType {
-        Damage, Heal, Hunger, Full, Sleep, Confuse, Senseless
+        Damage, Heal, Hunger, Full, Utsu, Comfort, Sleep, Confuse, Senseless
     }
 
     /** スキル種別 */
@@ -484,6 +487,8 @@
 
         hp: number;
         maxHp: number;
+        utsu: number;
+        maxUtsu: number;
         atk: number;
         def: number;
         lv: number;

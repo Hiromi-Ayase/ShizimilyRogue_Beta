@@ -16,6 +16,128 @@
     }
 
     /**
+     * ショートケーキ
+     */
+    export class ShortCake extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "ショートケーキ");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Full, 100);
+            return [action];
+        }
+    }
+
+    /**
+     * アイス
+     */
+    export class Ice extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "アイス");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Comfort, 100);
+            return [action];
+        }
+    }
+
+    /**
+     * 溶けたアイス
+     */
+    export class MeltedIce extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "溶けたアイス");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Utsu, 10);
+            return [action];
+        }
+    }
+
+    /**
+     * クッキー
+     */
+    export class Cookie extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "クッキー");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Full, 5);
+            return [action];
+        }
+    }
+
+    /**
+     * 睡眠薬入りバナナ
+     */
+    export class Banana_Sleep extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "睡眠薬入りバナナ");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Sleep, 10);
+            return [action];
+        }
+    }
+
+    /**
+     * からし入りバナナ
+     */
+    export class Banana_Mustard extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "からし入りバナナ");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            return [action];
+        }
+    }
+
+
+    /**
+     * 目薬入りバナナ
+     */
+    export class Banana_EyeWash extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "目薬入りバナナ");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            return [action];
+        }
+    }
+
+
+    /**
+     * 凍ったバナナ
+     */
+    export class Banana_Frozen extends Item {
+        constructor() {
+            super(Common.ItemType.Sweet, "凍ったバナナ");
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action = Common.Action.Status(unit, Common.StatusActionType.Senseless, 10);
+            return [action];
+        }
+    }
+
+    /**
      * PCケース
      */
     export class Case extends Item {
@@ -118,12 +240,57 @@
     }
 
     /**
-     * GeForce
+     * GeForce GTX Titan
      */
-    export class GeForce extends Guard {
-        baseParam = 1000;
-        plus = Math.floor(ROT.RNG.getUniform() * 4);
-        baseName = "GeForce";
+    export class GeForceGTX_Titan extends Guard {
+        baseName = "GeForce GTX Titan";
+        baseParam = 100;
+        utuParam = 90;
+    }
+
+    /**
+     * GeForce GTX 780 Ti
+     */
+    export class GeForceGTX_780Ti extends Guard {
+        baseName = "GeForce GTX 780Ti";
+        baseParam = 70;
+        utuParam = 60;
+    }
+
+    /**
+     * GeForce GT 620
+     */
+    export class GeForceGT_620 extends Guard {
+        baseName = "GeForce GT 620";
+        baseParam = 30;
+        utuParam = 0;
+    }
+
+    /**
+     * Radeon R9 295X2
+     */
+    export class Radeon_R9_295X2 extends Guard {
+        baseName = "Radeon R9 295X2";
+        baseParam = 90;
+        utuParam = 100;
+    }
+
+    /**
+     * Radeon R8 280
+     */
+    export class Radeon_R8_280 extends Guard {
+        baseName = "Radeon R8 280";
+        baseParam = 60;
+        utuParam = 70;
+    }
+
+    /**
+     * Radeon HD 6670
+     */
+    export class Radeon_HD_6670 extends Guard {
+        baseName = "Radeon HD 6670";
+        baseParam = 0;
+        utuParam = 30;
     }
 
     /**
@@ -157,7 +324,9 @@
         }
     }
 
-
+    /**
+     * 子守唄のDVD(部屋の敵が寝る)
+     */
     export class SleepingDVD extends DVD {
         constructor() {
             super("子守唄のDVD");

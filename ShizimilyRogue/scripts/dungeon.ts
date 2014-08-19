@@ -588,9 +588,11 @@ module ShizimilyRogue.Model {
      * Guard
      */
     export class Guard extends Equip {
-        plus: number = 0;
+        plus: number = Math.floor(ROT.RNG.getUniform() * 4) - 1;
         baseParam: number = 100;
+        utsuParam: number = 100;
         get def(): number { return Common.GuardDef(this.baseParam, this.plus); }
+        get utsuDef(): number { return Common.GuardUtsuDef(this.utsuParam, this.plus); }
 
         constructor() {
             super(Common.ItemType.GraphicBoard, "Guard");
@@ -654,7 +656,9 @@ module ShizimilyRogue.Model {
         category: number = 0;
         dir: Common.DIR = 0;
         maxHp: number = 100;
+        maxUtsu: number = 100;
         hp: number = this.maxHp;
+        utsu: number = this.maxUtsu;
         speed: Common.Speed = Common.Speed.NORMAL;
         turn: number = 0;
         inventory: Common.IItem[] = [];
