@@ -165,6 +165,7 @@
         use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
             unit.takeInventory(this);
             var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Sleep);
+            action.sender = unit;
             return [action];
         }
     }

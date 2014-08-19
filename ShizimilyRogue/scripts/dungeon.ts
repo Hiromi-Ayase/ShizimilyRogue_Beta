@@ -73,10 +73,11 @@ module ShizimilyRogue.Model {
             // 出口作成
             var exit = new Stairs();
             actions.unshift(this.addObject(exit));
-            /*for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 5; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
-            }*/
+            }
+            /*
             for (var i = 0; i < 2; i++) {
                 var sweet: Common.IObject = new Model.Data.Sweet;
                 actions.unshift(this.addObject(sweet));
@@ -95,6 +96,10 @@ module ShizimilyRogue.Model {
             for (var i = 0; i < 2; i++) {
                 var pccase: Common.IObject = new Model.Data.GeForce;
                 actions.unshift(this.addObject(pccase));
+            }*/
+            for (var i = 0; i < 3; i++) {
+                var dvd: Common.IObject = new Model.Data.SleepingDVD;
+                actions.unshift(this.addObject(dvd));
             }
 
             // 配置
@@ -296,6 +301,9 @@ module ShizimilyRogue.Model {
                 case Common.Target.RoomUnit:
                     var fov = this.getFOV(sender);
                     targets = [];
+                    if (action.sender != null) {
+                        sender = action.sender;
+                    }
                     fov.objects.forEach(v => {
                         if (v.isUnit() && v.id != sender.id) {
                             targets.push(v);
@@ -810,8 +818,9 @@ module ShizimilyRogue.Model {
         }
 
         phase(): Common.Action[] {
+            this.turn++;
             if (this.turn % Common.Parameter.StomachDecrease == 0) {
-
+                this.stomach--;
             }
             if (this.isSenseless() || this.isSleep()) {
                 //睡眠または気絶中
@@ -856,6 +865,7 @@ module ShizimilyRogue.Model {
         private lastMe: Common.Coord = null;
         private lastPlayer: Common.Coord = null;
         public phase(): Common.Action[]{
+            this.turn++;
             var fov = this.getFov();
             if (this.isSenseless() || this.isSleep()) {
                 //睡眠または気絶中

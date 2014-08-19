@@ -87,7 +87,7 @@
                         return new GameScene();
                 }
 
-                if (this.dungeonManager.currentTurn == this.player) {
+                if (this.dungeonManager.currentTurn == this.player && this._view.hasFieldFocus()) {
                     var dir = View.Input.keyDirection;
 
                     if (View.Input.BtnY.count > 0) {
@@ -200,7 +200,7 @@
             while (this.dungeonManager.hasNext()) {
                 var action = this.dungeonManager.update();
                 this._view.updateAction(this.getFov(), action, 10);
-                if (!action.isPick() && !action.isSystem()) {
+                if (!action.isPick() && !action.isSystem() && !action.isNone()) {
                     break;
                 }
             }

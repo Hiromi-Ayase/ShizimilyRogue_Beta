@@ -54,6 +54,7 @@ module ShizimilyRogue.View {
             this.menuGroup = new enchant.Group();
             this.miniMap = new MiniMap(fov.width, fov.height);
             this.actualFps = new ActualFPS();
+            this.focus = Common.GameSceneFocus.Field;
             
             this.addChild(this.view);
             this.addChild(this.pathShadow);
@@ -159,6 +160,13 @@ module ShizimilyRogue.View {
                 }
             });
         }*/
+
+        /**
+         * フォーカスがフィールドにあればTrue
+         */
+        public hasFieldFocus(): boolean {
+            return this.focus == Common.GameSceneFocus.Field;
+        }
 
         private addMenuKeyHandler(): void {
             Scene.game.addEventListener(enchant.Event.ENTER_FRAME, (e) => {

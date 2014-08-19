@@ -9,6 +9,10 @@
                 return action.sender.name + "は" + action.item.name + "をたべた";
             case Common.ItemType.Case:
                 return action.sender.name + "は" + action.item.name + "に" + action.targetItems[0].name + "とかを入れた";
+            case Common.ItemType.DVD:
+                return action.sender.name + "は" + action.item.name + "を再生した";
+            case Common.ItemType.SDCard:
+                return action.sender.name + "は" + action.item.name + "を読み込んだ";
             case Common.ItemType.CPU:
             case Common.ItemType.GraphicBoard:
                 if ((<Common.IUnit>action.sender).weapon == action.item) {
@@ -26,6 +30,8 @@
                 return unit.name + "は" + action.param + "のダメージ！";
             case Common.StatusActionType.Heal:
                 return unit.name + "は" + action.param + "回復した";
+            case Common.StatusActionType.Sleep:
+                return unit.name + "は寝てしまった";
             case Common.StatusActionType.Full:
                 if (unit.stomach == unit.maxStomach)
                     return unit.name + "はおなかがいっぱいになった";
