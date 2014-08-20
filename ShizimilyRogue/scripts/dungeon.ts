@@ -520,9 +520,8 @@ module ShizimilyRogue.Model {
      * 装備品
      */
     export class Equip extends Item {
+        plus: number = Math.floor(ROT.RNG.getUniform() * 4) - 1;
         baseName: string;
-        plus: number = 0;
-        baseParam: number = 100;
         //mark: Common.Mark[] = [];
 
         get name(): string {
@@ -562,6 +561,8 @@ module ShizimilyRogue.Model {
      * Weapon
      */
     export class Weapon extends Equip {
+        baseParam: number;
+        isHeavy: boolean = false;
         get atk(): number { return Common.GuardDef(this.baseParam, this.plus); }
 
         constructor() {
@@ -588,9 +589,9 @@ module ShizimilyRogue.Model {
      * Guard
      */
     export class Guard extends Equip {
-        plus: number = Math.floor(ROT.RNG.getUniform() * 4) - 1;
-        baseParam: number = 100;
-        utsuParam: number = 100;
+        baseParam: number;
+        utsuParam: number;
+        isHeavy: boolean = false;
         get def(): number { return Common.GuardDef(this.baseParam, this.plus); }
         get utsuDef(): number { return Common.GuardUtsuDef(this.utsuParam, this.plus); }
 

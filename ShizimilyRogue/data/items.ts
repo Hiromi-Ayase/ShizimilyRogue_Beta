@@ -91,7 +91,7 @@
     }
 
     /**
-     * からし入りバナナ
+     * からし入りバナナ(炎がはける）
      */
     export class Banana_Mustard extends Item {
         constructor() {
@@ -107,7 +107,7 @@
 
 
     /**
-     * 目薬入りバナナ
+     * 目薬入りバナナ(罠が見えるようになる)
      */
     export class Banana_EyeWash extends Item {
         constructor() {
@@ -123,7 +123,7 @@
 
 
     /**
-     * 凍ったバナナ
+     * 凍ったバナナ(10ターン気絶)
      */
     export class Banana_Frozen extends Item {
         constructor() {
@@ -231,12 +231,36 @@
     }
 
     /**
-     * Pentium
+     * Core i7 Extreme
      */
-    export class Pentium extends Weapon {
-        baseParam = 1000;
-        plus = Math.floor(ROT.RNG.getUniform() * 4);
-        baseName = "Pentium";
+    export class Core_i7_Extreme extends Weapon {
+        baseParam = 100;
+        baseName = "Core i7 Extreme";
+        isHeavy = true;
+    }
+
+    /**
+     * Core i7
+     */
+    export class Core_i7 extends Weapon {
+        baseParam = 70;
+        baseName = "Core i7";
+    }
+
+    /**
+     * Core i5
+     */
+    export class Core_i5 extends Weapon {
+        baseParam = 30;
+        baseName = "Core i5";
+    }
+
+    /**
+     * Core i3
+     */
+    export class Core_i3 extends Weapon {
+        baseParam = 0;
+        baseName = "Core i3";
     }
 
     /**
@@ -246,6 +270,7 @@
         baseName = "GeForce GTX Titan";
         baseParam = 100;
         utuParam = 90;
+        isHeavy = true;
     }
 
     /**
@@ -273,6 +298,7 @@
         baseName = "Radeon R9 295X2";
         baseParam = 90;
         utuParam = 100;
+        isHeavy = true;
     }
 
     /**
@@ -331,9 +357,129 @@
         constructor() {
             super("子守唄のDVD");
         }
-        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             unit.takeInventory(this);
             var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Sleep);
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * ロックDVD フロアの敵が10ターン混乱する
+     */
+    export class RockDVD extends DVD {
+        constructor() {
+            super("ロックのDVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Confuse);
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * リア充のDVD フロアの敵に100の爆発ダメージ
+     */
+    export class RealJuDVD extends DVD {
+        constructor() {
+            super("リア充なDVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Blast);
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * 意識の高いDVD(グラボ編) 装備中の防具の強さがあがる
+     */
+    export class HighAwarenessDVD_Guard extends DVD {
+        constructor() {
+            super("意識の高いDVD(グラボ編)");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * 意識の高いDVD(CPU編) 装備中の武器の強さがあがる
+     */
+    export class HighAwarenessDVD_Weapon extends DVD {
+        constructor() {
+            super("意識の高いDVD(CPU編)");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * DVD_R他のDVDをコピーできる
+     */
+    export class DVD_R extends DVD {
+        constructor() {
+            super("DVD_R");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * お宝鑑定団のDVD アイテムを識別できる
+     */
+    export class Wealth_DVD extends DVD {
+        constructor() {
+            super("お宝鑑定団のDVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * フォーマットDVD HDDの空き容量を100GB増やす
+     */
+    export class Format_DVD extends DVD {
+        constructor() {
+            super("フォーマットDVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
+            action.sender = unit;
+            return [action];
+        }
+    }
+
+    /**
+     * PC再起動DVD メモリの空き容量をMAXにする
+     */
+    export class Restart_DVD extends DVD {
+        constructor() {
+            super("PC再起動DVD");
+        }
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            /* 未実装 */
             action.sender = unit;
             return [action];
         }

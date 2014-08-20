@@ -100,7 +100,7 @@
 
     /** スキル種別 */
     export enum SkillType {
-        Sleep, Confuse, Senseless
+        Sleep, Confuse, Senseless, Blast
     }
 
     /** 失敗Action種別 */
