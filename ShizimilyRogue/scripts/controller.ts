@@ -170,7 +170,7 @@
                 var commandNames = item.commands();
                 this._view.showMenu(View.MenuType.Use, item.commands(), n => {
                     if (commandNames[n] == "見る") {
-                        var pcCase = <Model.Data.Case>item;
+                        var pcCase = <Model.Case>item;
                         var innerItemNames = pcCase.innerItems.map(item => item.name);
                         this._view.showMenu(View.MenuType.Item, innerItemNames, l => {
                             this._view.closeMenu();

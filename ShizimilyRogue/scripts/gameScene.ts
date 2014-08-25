@@ -977,7 +977,7 @@ module ShizimilyRogue.View {
                     image = Scene.ASSETS.PC_CASE.DATA;
                     break;
                 case Common.ItemType.CPU:
-                    image = Scene.ASSETS.PC_CASE.DATA;
+                    image = Scene.ASSETS.CPU.DATA;
                     break;
                 case Common.ItemType.GraphicBoard:
                     image = Scene.ASSETS.GRAPHIC_BOARD.DATA;

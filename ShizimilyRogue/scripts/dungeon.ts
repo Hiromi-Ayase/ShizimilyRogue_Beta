@@ -73,33 +73,13 @@ module ShizimilyRogue.Model {
             // 出口作成
             var exit = new Stairs();
             actions.unshift(this.addObject(exit));
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 0; i++) {
                 var ignore: Common.IObject = new Model.Data.Ignore;
                 actions.unshift(this.addObject(ignore));
             }
-            /*
-            for (var i = 0; i < 2; i++) {
-                var sweet: Common.IObject = new Model.Data.Sweet;
+            for (var i = 0; i < 20; i++) {
+                var sweet: Common.IObject = Model.Data.ItemFactory.getItem();
                 actions.unshift(this.addObject(sweet));
-            }
-
-            for (var i = 0; i < 2; i++) {
-                var pccase: Common.IObject = new Model.Data.Case;
-                actions.unshift(this.addObject(pccase));
-            }
-
-            for (var i = 0; i < 2; i++) {
-                var pccase: Common.IObject = new Model.Data.Pentium;
-                actions.unshift(this.addObject(pccase));
-            }
-
-            for (var i = 0; i < 2; i++) {
-                var pccase: Common.IObject = new Model.Data.GeForce;
-                actions.unshift(this.addObject(pccase));
-            }*/
-            for (var i = 0; i < 3; i++) {
-                var dvd: Common.IObject = new Model.Data.SleepingDVD;
-                actions.unshift(this.addObject(dvd));
             }
 
             // 配置
@@ -517,6 +497,129 @@ module ShizimilyRogue.Model {
     }
 
     /**
+     * PCケース
+     */
+    export class Case extends Item {
+        maxItems = Math.floor(ROT.RNG.getUniform() * 6);
+        innerItems = [];
+
+        constructor(public baseName: string) {
+            super(Common.ItemType.Case, baseName);
+        }
+
+        commands(): string[] {
+            var list = ["見る", "入れる", "投げる"];
+            if (!this.cell.ground.isItem()) {
+                list.push("置く");
+            }
+            return list;
+        }
+
+        get name(): string {
+            return this.baseName + " [" + (this.maxItems - this.innerItems.length) + "]";
+        }
+
+        select(n: number, items: Common.IItem[]): Common.Action {
+            switch (n) {
+                case 0:
+                    return Common.Action.Use(this, items);
+                case 1:
+                    return Common.Action.Use(this, items);
+                case 2:
+                    return Common.Action.Throw(this);
+                case 3:
+                    return Common.Action.Place(this);
+            }
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            var targetItems = action.targetItems;
+            var type = action.subType;
+            if (this.isInserted(targetItems[0])) {
+                if (this.innerItems.length + targetItems.length <= this.maxItems) {
+                    targetItems.forEach(item => {
+                        this.takeItem(item);
+                        unit.addInventory(item);
+                    });
+                } else {
+                    return [Common.Action.Fail(Common.FailActionType.CaseOver)];
+                }
+            } else {
+                if (this.innerItems.length + targetItems.length <= this.maxItems) {
+                    targetItems.forEach(item => {
+                        if (item != this) {
+                            unit.takeInventory(item);
+                            this.addItem(item);
+                        }
+                    });
+                } else {
+                    return [Common.Action.Fail(Common.FailActionType.CaseOver)];
+                }
+            }
+            return [];
+        }
+
+        private addItem(item: Common.IItem): boolean {
+            if (this.innerItems.length < this.maxItems && item.category != Common.ItemType.Case) {
+                this.innerItems.push(item);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        private takeItem(item: Common.IItem): boolean {
+            for (var i = 0; i < this.innerItems.length; i++) {
+                if (this.innerItems[i].id == item.id) {
+                    this.innerItems.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private isInserted(item: Common.IItem): boolean {
+            for (var i = 0; i < this.innerItems.length; i++) {
+                if (this.innerItems[i].id == item.id) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * DVD
+     */
+    export class DVD extends Item {
+        constructor(name: string) {
+            super(Common.ItemType.DVD, name);
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            unit.takeInventory(this);
+            return [action];
+        }
+    }
+
+    /**
+     * SDCard
+     */
+    export class SDCard extends Item {
+        num: number;
+
+        constructor(name: string) {
+            super(Common.ItemType.DVD, name);
+            this.num = Math.floor(ROT.RNG.getUniform() * 5) + 2;
+        }
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+            this.num--;
+            return [action];
+        }
+    }
+        
+    /**
      * 装備品
      */
     export class Equip extends Item {
@@ -524,10 +627,6 @@ module ShizimilyRogue.Model {
         baseName: string;
         //mark: Common.Mark[] = [];
 
-        get name(): string {
-            return this.baseName + (this.plus > 0 ? (" +") : " ") + this.plus;
-        }
-        
         /**
          * コマンドリストの取得
          * @param {Common.IFOVData} fov 司会情報
@@ -565,6 +664,10 @@ module ShizimilyRogue.Model {
         isHeavy: boolean = false;
         get atk(): number { return Common.GuardDef(this.baseParam, this.plus); }
 
+        get name(): string {
+            return this.baseName + " " + (this.plus * 100) + "MHz";
+        }
+        
         constructor() {
             super(Common.ItemType.CPU, "Weapon");
         }
@@ -595,10 +698,15 @@ module ShizimilyRogue.Model {
         get def(): number { return Common.GuardDef(this.baseParam, this.plus); }
         get utsuDef(): number { return Common.GuardUtsuDef(this.utsuParam, this.plus); }
 
+        get name(): string {
+            return this.baseName + " Rev." + (this.plus);
+        }
+        
         constructor() {
             super(Common.ItemType.GraphicBoard, "Guard");
         }
-        use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
+
+        use(action: Common.Action, unit: Common.IUnit): Common.Action[]{
             var player = <Common.IUnit>action.sender;
             if (player.guard == this) {
                 player.guard = null;
