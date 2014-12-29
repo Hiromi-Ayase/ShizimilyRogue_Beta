@@ -47,7 +47,7 @@
         ];
 
         // 移動キー入力のバッファ時間
-        private static keyBufferFrame: number = 1;
+        private static keyBufferFrame: number = 2;
 
         public static mode: InputMode = InputMode.Game;
 

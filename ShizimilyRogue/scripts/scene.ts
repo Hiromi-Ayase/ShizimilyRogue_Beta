@@ -33,6 +33,7 @@
 
             UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
             TITLE: { URL: "./images/title.png", DATA: <enchant.Surface>null },
+            LOGO: { URL: "./images/logo.png", DATA: <enchant.Surface>null },
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
 
             BGM_MAIN: { URL: "./music/shizimily.mp3", DATA: <enchant.DOMSound>null },
@@ -90,6 +91,7 @@
             Scene.game.addEventListener(enchant.Event.ENTER_FRAME, updateHandler);
             Scene.contollerUpdateHandler = updateHandler;
 
+            Input.resetKeys();
             Scene.game.replaceScene(scene);
         }
     }

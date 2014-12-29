@@ -26,6 +26,7 @@
     <Content Include="images\Item\PCCase.png" />
     <Content Include="images\Item\SDCard.png" />
     <Content Include="images\Item\Sweet.png" />
+    <Content Include="images\logo.png" />
     <Content Include="images\Map\wall_floor.png" />
     <Content Include="images\Menu\MenuCursor.png" />
     <Content Include="images\Map\Floor.png" />

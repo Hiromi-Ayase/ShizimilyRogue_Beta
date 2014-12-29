@@ -1,7 +1,7 @@
 ﻿module ShizimilyRogue.Controller {
     // ダンジョンの論理サイズ
-    var WIDTH = 35;
-    var HEIGHT = 35;
+    var WIDTH = 30;
+    var HEIGHT = 30;
 
     // ダンジョンの初期階層
     var FIRST_FLOOR = 2;
@@ -54,7 +54,7 @@
 
         update(e): Scene {
             var a = View.Input.BtnA.count;
-            if (a > 1) {
+            if (a > 0) {
                 return new TitleScene();
             }
             return null;
@@ -70,7 +70,7 @@
 
         update(e): Scene {
             var a = View.Input.BtnA.count;
-            if (a > 1) {
+            if (a > 0) {
                 return new TitleScene();
             }
             return null;
