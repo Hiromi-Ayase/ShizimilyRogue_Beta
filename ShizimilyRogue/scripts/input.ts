@@ -1,5 +1,9 @@
 ﻿module ShizimilyRogue.View {
 
+    export enum InputMode {
+        Game, Menu
+    }
+
     export class Button {
         /** キーDown経過フレームカウンタ */
         count = 0;
@@ -43,14 +47,16 @@
         ];
 
         // 移動キー入力のバッファ時間
-        private static keyBufferFrame: number = 3;
+        private static keyBufferFrame: number = 1;
+
+        public static mode: InputMode = InputMode.Game;
 
         static init(): void {
             Input.buttons.forEach((btn) => {
                 Scene.game.keybind(btn.code, btn.name);
 
                 Scene.game.addEventListener(btn.name + "buttondown", (e) => {
-                    btn.inputFlag = !Scene.keyLock && true;
+                    btn.inputFlag = true;
                     btn.lastInputFrame = Scene.game.frame;
                 });
 

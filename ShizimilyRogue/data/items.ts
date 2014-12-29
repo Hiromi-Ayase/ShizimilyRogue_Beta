@@ -78,7 +78,7 @@
     /**
      * からし入りバナナ(炎がはける）
      */
-    export class Banana_Mustard extends Item {
+    class Banana_Mustard extends Item {
         constructor() {
             super(Common.ItemType.Sweet, "からし入りバナナ");
         }
@@ -222,9 +222,10 @@
         }
         use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             unit.takeInventory(this);
-            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Sleep);
+            /* 未実装 */
+            //var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Sleep);
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -237,9 +238,10 @@
         }
         use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             unit.takeInventory(this);
-            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Confuse);
+            /* 未実装 */
+            //var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Confuse);
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -252,9 +254,10 @@
         }
         use(action: Common.Action, unit: Common.IUnit): Common.Action[] {
             unit.takeInventory(this);
-            var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Blast);
+            /* 未実装 */
+            //var action: Common.Action = Common.Action.Skill(Common.Target.RoomUnit, Common.SkillType.Blast);
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -269,7 +272,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -284,7 +287,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -299,7 +302,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -314,7 +317,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -329,7 +332,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -344,7 +347,7 @@
             unit.takeInventory(this);
             /* 未実装 */
             action.sender = unit;
-            return [action];
+            return [];
         }
     }
 
@@ -488,7 +491,8 @@
     }
 
     /** お菓子一覧 */
-    var SWEET_LIST = [ShortCake, Ice, MeltedIce, Cookie, Banana_Sleep, Banana_Mustard, Banana_EyeWash, Banana_Frozen];
+//    var SWEET_LIST = [ShortCake, Ice, MeltedIce, Cookie, Banana_Sleep, Banana_Mustard, Banana_EyeWash, Banana_Frozen];
+    var SWEET_LIST = [ShortCake];
     /** DVD一覧 */
     var DVD_LIST = [SleepingDVD, RockDVD, RealJuDVD, HighAwarenessDVD_Guard, HighAwarenessDVD_Weapon, DVD_R, Wealth_DVD, Format_DVD, Restart_DVD];
     /** SDCard一覧 */

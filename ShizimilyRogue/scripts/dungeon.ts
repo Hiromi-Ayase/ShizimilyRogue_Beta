@@ -59,27 +59,25 @@ module ShizimilyRogue.Model {
         private _endState: Common.EndState = Common.EndState.None;
         private actionQueue: Common.Action[] = [];
 
-        constructor(w: number, h: number) {
-            this.map = new Map(w, h);
-
+        constructor() {
         }
 
-        public init(): Common.Action[]{
+        public init(w: number, h: number, floor: number, player: Player): Common.Action[]{
+            this.map = new Map(w, h, floor);
+
             var actions: Common.Action[] = [];
-            // Player作成
-            var player = new Player("しじみりちゃん");
             actions.unshift(this.addObject(player));
 
             // 出口作成
             var exit = new Stairs();
             actions.unshift(this.addObject(exit));
-            for (var i = 0; i < 0; i++) {
-                var ignore: Common.IObject = new Model.Data.Ignore;
-                actions.unshift(this.addObject(ignore));
+            for (var i = 0; i < 5; i++) {
+                var enemy: Common.IObject = new Model.Data.Word;
+                actions.unshift(this.addObject(enemy));
             }
-            for (var i = 0; i < 20; i++) {
-                var sweet: Common.IObject = Model.Data.ItemFactory.getItem();
-                actions.unshift(this.addObject(sweet));
+            for (var i = 0; i < 3; i++) {
+                var item: Common.IObject = Model.Data.ItemFactory.getItem();
+                actions.unshift(this.addObject(item));
             }
 
             // 配置
@@ -182,7 +180,7 @@ module ShizimilyRogue.Model {
         }
 
         public hasNext(): boolean {
-            return this.actionQueue.length > 0;
+            return this.endState == Common.EndState.None && this.actionQueue.length > 0;
         }
 
         /**
@@ -366,7 +364,8 @@ module ShizimilyRogue.Model {
             public area: Common.Coord[],
             public movable: boolean[],
             public objects: Common.IObject[],
-            public attackable: { [id: number]: boolean }
+            public attackable: { [id: number]: boolean },
+            public floor: number
             ) {
             var index = 0;
             objects.forEach(obj => {
@@ -486,6 +485,14 @@ module ShizimilyRogue.Model {
                 this.dir = unit.dir;
                 this.cell = unit.cell
                 var action = Common.Action.Fly(unit.cell.coord);
+
+                if (unit.guard != null && unit.guard.id == this.id)
+                    unit.guard = null;
+                else if (unit.weapon != null && unit.weapon.id == this.id)
+                    unit.weapon = null;
+                else if (unit.accessory != null && unit.weapon.id == this.id)
+                    unit.accessory = null;
+
                 return [action];
             }
             return [];
@@ -508,7 +515,8 @@ module ShizimilyRogue.Model {
         }
 
         commands(): string[] {
-            var list = ["見る", "入れる", "投げる"];
+            //var list = ["見る", "入れる", "投げる"];
+            var list = ["見る", "投げる"];
             if (!this.cell.ground.isItem()) {
                 list.push("置く");
             }
@@ -523,11 +531,11 @@ module ShizimilyRogue.Model {
             switch (n) {
                 case 0:
                     return Common.Action.Use(this, items);
+//                case 1:
+//                    return Common.Action.Use(this, items);
                 case 1:
-                    return Common.Action.Use(this, items);
-                case 2:
                     return Common.Action.Throw(this);
-                case 3:
+                case 2:
                     return Common.Action.Place(this);
             }
         }
@@ -755,10 +763,10 @@ module ShizimilyRogue.Model {
         layer = Common.Layer.Unit;
 
         get atk(): number {
-            return this.weapon == null ? Common.Parameter.Atk : this.weapon.atk;
+            return Common.Parameter.Atk + (this.weapon == null ? 0 : this.weapon.atk);
         }
         get def(): number {
-            return this.guard == null ? Common.Parameter.Atk : this.guard.def;
+            return Common.Parameter.Def + (this.guard == null ? 0 : this.guard.def);
         }
 
         type: Common.DungeonObjectType = Common.DungeonObjectType.Unit;
@@ -917,7 +925,7 @@ module ShizimilyRogue.Model {
         }
     }
 
-    class Player extends Unit {
+    export class Player extends Unit {
         id = Common.PLAYER_ID;
 
         event(action: Common.Action): Common.Action[] {
@@ -933,8 +941,19 @@ module ShizimilyRogue.Model {
         phase(): Common.Action[] {
             this.turn++;
             if (this.turn % Common.Parameter.StomachDecrease == 0) {
-                this.stomach--;
+                if (this.stomach > 0)
+                    this.stomach--;
             }
+
+            if (this.stomach == 0) {
+                this.hp -= 10;
+                if (this.hp <= 0)
+                    return [Common.Action.Die()];
+            } else {
+                if (this.hp < this.maxHp)
+                    this.hp += 1;
+            }
+
             if (this.isSenseless() || this.isSleep()) {
                 //睡眠または気絶中
                 return [Common.Action.None()];
@@ -1180,10 +1199,12 @@ module ShizimilyRogue.Model {
         private width: number;
         private height: number;
         private map: Cell[][];
+        private floor: number;
 
-        public constructor(w: number, h: number) {
+        public constructor(w: number, h: number, f: number) {
             this.width = w;
             this.height = h;
+            this.floor = f;
             this.map = new Array<Cell[]>(h);
             for (var y = 0; y < h; y++) {
                 this.map[y] = new Array<Cell>(w);
@@ -1263,7 +1284,7 @@ module ShizimilyRogue.Model {
                 movable.push(this.isMovable(unit, dir));
             }
 
-            var result: FOVData = new FOVData(unit, this.width, this.height, getCell, getCellByCoord, area, movable, objects, attackable);
+            var result: FOVData = new FOVData(unit, this.width, this.height, getCell, getCellByCoord, area, movable, objects, attackable, this.floor);
             return result;
         }
 

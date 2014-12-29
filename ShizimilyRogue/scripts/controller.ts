@@ -1,7 +1,10 @@
 ﻿module ShizimilyRogue.Controller {
     // ダンジョンの論理サイズ
-    var WIDTH = 25;
-    var HEIGHT = 25;
+    var WIDTH = 35;
+    var HEIGHT = 35;
+
+    // ダンジョンの初期階層
+    var FIRST_FLOOR = 2;
 
     export class Game {
         private scene: Scene;
@@ -10,7 +13,7 @@
         public start(): void {
             View.Scene.init(() => {
                 // 最初はタイトル
-                this.setScene(new GameScene());
+                this.setScene(new TitleScene());
             });
         }
 
@@ -36,7 +39,7 @@
         update(e): Scene {
             var a = View.Input.BtnA.count;
             if (a > 0) {
-                return new GameScene();
+                return new GameScene(FIRST_FLOOR);
             }
             return null;
         }
@@ -51,7 +54,23 @@
 
         update(e): Scene {
             var a = View.Input.BtnA.count;
-            if (a > 0) {
+            if (a > 1) {
+                return new TitleScene();
+            }
+            return null;
+        }
+
+        get view() {
+            return this._view;
+        }
+    }
+
+    class ClearScene implements Scene {
+        private _view: View.ClearScene = new View.ClearScene();
+
+        update(e): Scene {
+            var a = View.Input.BtnA.count;
+            if (a > 1) {
                 return new TitleScene();
             }
             return null;
@@ -65,7 +84,7 @@
     class GameScene implements Scene {
         private dungeonManager: Model.DungeonManager;
         private _view: View.GameScene;
-        private player: Common.IUnit;
+        private player: Model.Player;
         private getFov(): Common.IFOVData {
             return this.dungeonManager.getFOV(this.player);
         }
@@ -74,17 +93,24 @@
             return this.dungeonManager.getCell(this.player.cell.coord.x, this.player.cell.coord.y);
         }
 
-        constructor() {
-            this.init();
+        constructor(floor: number, player: Model.Player = null) {
+            this.player = player;
+            this.init(floor);
         }
 
         update(e): Scene {
-            if (!View.Scene.animating) {
+            if (!View.Scene.animating && View.Input.mode == View.InputMode.Game) {
                 switch (this.dungeonManager.endState) {
                     case Common.EndState.GameOver:
                         return new GameOverScene();
                     case Common.EndState.Up:
-                        return new GameScene();
+                        View.Scene.ASSETS.SE_STAIR.DATA.play();
+                        var nextFloor = this.getFov().floor - 1;
+                        if (nextFloor == 1) {
+                            return new ClearScene();
+                        } else {
+                            return new GameScene(this.getFov().floor - 1, this.player);
+                        }
                 }
 
                 if (this.dungeonManager.currentTurn == this.player && this._view.hasFieldFocus()) {
@@ -164,7 +190,9 @@
         }
 
         private showItemMenu(): void {
-            var itemNames = this.player.inventory.map(item => item.name);
+            var p = this.player;
+            var itemNames = this.player.inventory.map(
+                item => p.guard != null && p.guard.id == item.id || p.weapon != null && p.weapon.id == item.id ? (item.name + "(E)") : item.name);
             this._view.showMenu(View.MenuType.Item, itemNames, m => {
                 var item = this.player.inventory[m];
                 var commandNames = item.commands();
@@ -172,17 +200,18 @@
                     if (commandNames[n] == "見る") {
                         var pcCase = <Model.Case>item;
                         var innerItemNames = pcCase.innerItems.map(item => item.name);
+                        var innerItemNames: any[] = ["からだよ"];
                         this._view.showMenu(View.MenuType.Item, innerItemNames, l => {
                             this._view.closeMenu();
-                            var next: Common.Action = item.select(0, [pcCase.innerItems[l]]);
-                            this.input(next);
+                            //var next: Common.Action = item.select(0, [pcCase.innerItems[l]]);
+                            //this.input(next);
                         });
-                    } else if (commandNames[n] == "入れる") {
-                        this._view.showMenu(View.MenuType.Item, itemNames, l => {
-                            this._view.closeMenu();
-                            var next: Common.Action = item.select(1, [this.player.inventory[l]]);
-                            this.input(next);
-                        });
+                    //} else if (commandNames[n] == "入れる") {
+                    //    this._view.showMenu(View.MenuType.Item, itemNames, l => {
+                    //        this._view.closeMenu();
+                    //        var next: Common.Action = item.select(1, [this.player.inventory[l]]);
+                    //        this.input(next);
+                    //    });
                     } else {
                         this._view.closeMenu();
                         var next: Common.Action = item.select(n);
@@ -210,11 +239,14 @@
             return this._view;
         }
 
-        private init(): void {
+        private init(floor :number): void {
             // Dungeon(Model)とSceneManager(View)の作成
-            this.dungeonManager = new Model.DungeonManager(WIDTH, HEIGHT);
-            var results = this.dungeonManager.init();
-            this.player = this.dungeonManager.currentTurn;
+            this.dungeonManager = new Model.DungeonManager();
+
+            if (this.player == null)
+                this.player = new Model.Player("しじみりちゃん");
+
+            var results = this.dungeonManager.init(WIDTH, HEIGHT, floor, this.player);
 
             // Map生成
             var fov = this.getFov();

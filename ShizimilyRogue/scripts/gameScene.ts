@@ -33,6 +33,7 @@ module ShizimilyRogue.View {
         private pathShadow: Shadow;
         private playerHp: PlayerHp;
         private clock: Clock;
+        private floor: Floor;
         private actualFps: ActualFPS;
         private miniMap: MiniMap;
         private view: View;
@@ -51,6 +52,7 @@ module ShizimilyRogue.View {
             this.view = new View(data, fov);
             this.playerHp = new PlayerHp();
             this.clock = new Clock();
+            this.floor = new Floor();
             this.menuGroup = new enchant.Group();
             this.miniMap = new MiniMap(fov.width, fov.height);
             this.actualFps = new ActualFPS();
@@ -60,6 +62,7 @@ module ShizimilyRogue.View {
             this.addChild(this.pathShadow);
             this.addChild(this.playerHp);
             this.addChild(this.clock);
+            this.addChild(this.floor);
             this.addChild(this.message);
             this.addChild(this.miniMap);
             this.addChild(this.menuGroup);
@@ -76,9 +79,9 @@ module ShizimilyRogue.View {
          * @param {boolean} multiple 複数選択(Default:false)
          */
         showMenu(type: MenuType, data: string[], selectHandler: (n: number) => void, multiple: boolean = false): void {
-            //Scene.keyLock = true;
             this.focus = Common.GameSceneFocus.Menu;
             if (type == MenuType.Main) {
+                Input.mode = InputMode.Menu;
                 var menu = Menu.Main(data, selectHandler, multiple);
                 this.menuGroup.addChild(menu);
             } else if (type == MenuType.Item) {
@@ -97,10 +100,10 @@ module ShizimilyRogue.View {
             while (true) {
                 this.menuGroup.removeChild(this.menuGroup.lastChild);
                 if (this.menuGroup.childNodes.length == 0) {
+                    this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Input.mode = InputMode.Game);
                     break;
                 }
             }
-            this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
             this.focus = Common.GameSceneFocus.Field;
         }
 
@@ -119,6 +122,7 @@ module ShizimilyRogue.View {
             this.view.updateAction(fov, action, speed);
             this.miniMap.update(fov);
             this.clock.show(player.turn);
+            this.floor.show(fov.floor);
             this.message.show(action, speed);
         }
 
@@ -128,7 +132,7 @@ module ShizimilyRogue.View {
          * @param {number} speed スピード
          */
         updateFrame(speed: number): void {
-            Scene.ASSETS.BGM_MAIN.DATA.play();
+            //Scene.ASSETS.BGM_MAIN.DATA.play();
             this.view.updateFrame(speed);
             this.actualFps.update();
         }
@@ -192,8 +196,8 @@ module ShizimilyRogue.View {
                     if (this.menuGroup.childNodes.length > 0) {
                         this.menuGroup.removeChild(this.menuGroup.lastChild);
                         if (this.menuGroup.childNodes.length == 0) {
-                            this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Scene.keyLock = false);
                             this.focus = Common.GameSceneFocus.Field;
+                            this.tl.delay(Common.Config.KEY_LOCK_RELEASE).then(() => Input.mode = InputMode.Game);
                         }
                     }
                 }
@@ -438,68 +442,109 @@ module ShizimilyRogue.View {
         }
     }
 
-    class PlayerHp extends enchant.Group {
-        private static PLAYERHP_TOP = 10;
-        private static PLAYERHP_LEFT = 255;
-        //private static PLAYERHP_WIDTH = VIEW_WIDTH - PlayerHp.PLAYERHP_LEFT;
-        //private static PLAYERHP_HEIGHT = 100;
+    /**
+     * ステータステキスト
+     */ 
+    class StatusLabel extends enchant.Group {
+        private static SHADOW_LEFT = 2;
+        private static SHADOW_TOP = 2;
 
-        private hpText: enchant.Label;
+        private statusLable: enchant.Label;
+        private statusLabelShadow: enchant.Label;
 
-        constructor() {
+        constructor(private left: number, private top: number) {
             super();
-            this.hpText = new enchant.Label();
-            this.hpText.x = PlayerHp.PLAYERHP_LEFT;
-            this.hpText.y = PlayerHp.PLAYERHP_TOP;
-            this.hpText.font = "24px cursive";
-            this.hpText.color = "red";
+            this.statusLabelShadow = new enchant.Label();
+            this.statusLabelShadow.x = left + StatusLabel.SHADOW_LEFT;
+            this.statusLabelShadow.y = top + StatusLabel.SHADOW_TOP;
+            this.statusLabelShadow.font = "24px cursive";
+            this.statusLabelShadow.color = "black";
 
-            //this.hpText.width = PlayerHp.PLAYERHP_WIDTH;
-            //this.hpText.height = PlayerHp.PLAYERHP_HEIGHT;
+            this.addChild(this.statusLabelShadow);
 
-            this.addChild(this.hpText);
+            this.statusLable = new enchant.Label();
+            this.statusLable.x = left;
+            this.statusLable.y = top;
+            this.statusLable.font = "24px cursive";
+            this.statusLable.color = "white";
+
+            this.addChild(this.statusLable);
+
         }
 
-        show(hp: number, maxHp: number, stomach: number): void {
-            this.hpText.text = hp + " / " + maxHp + " (" + stomach + ")";
+        _show(s: string): void {
+            this.statusLable.text = s;
+            this.statusLabelShadow.text = s;
         }
 
         set visible(flg: boolean) {
-            this.hpText.visible = flg;
+            this.statusLable.visible = flg;
+            this.statusLabelShadow.visible = flg;
         }
     }
+
 
     /**
      * 時計
      */
-    class Clock extends enchant.Group {
+    class Clock extends StatusLabel {
         private static CLOCK_TOP = 10;
         private static CLOCK_LEFT = 550;
 
-        private clockText: enchant.Label;
-
         constructor() {
-            super();
-            this.clockText = new enchant.Label();
-            this.clockText.x = Clock.CLOCK_LEFT;
-            this.clockText.y = Clock.CLOCK_TOP;
-            this.clockText.font = "24px cursive";
-            this.clockText.color = "red";
+            super(Clock.CLOCK_LEFT, Clock.CLOCK_TOP);
 
-            this.addChild(this.clockText);
         }
 
         show(turn: number): void {
             var second = turn % 60;
             var hour = (turn - second) / 60 + 17;
-            this.clockText.text = hour + " : " + (second < 10 ? "0" + String(second) : String(second));
-        }
-
-        set visible(flg: boolean) {
-            this.clockText.visible = flg;
+            super._show(hour + " : " + (second < 10 ? "0" + String(second) : String(second)));
         }
     }
 
+
+    /**
+     * フロア表示
+     */
+    class Floor extends StatusLabel {
+        private static FLOOR_TOP = 10;
+        private static FLOOR_LEFT = 10;
+
+        constructor() {
+            super(Floor.FLOOR_LEFT, Floor.FLOOR_TOP);
+        }
+
+        show(floor: number): void {
+            var text = "" + floor;
+            if (floor == 1) {
+                text += "st Floor";
+            } else if (floor == 2) {
+                text += "nd Floor";
+            } else {
+                text += "th Floor";
+            }
+            super._show(text);
+        }
+    }
+
+
+    class PlayerHp extends StatusLabel {
+        private static PLAYERHP_TOP = 10;
+        private static PLAYERHP_LEFT = 255;
+
+        private hpText: enchant.Label;
+
+        constructor() {
+            super(PlayerHp.PLAYERHP_LEFT, PlayerHp.PLAYERHP_TOP);
+        }
+
+
+        show(hp: number, maxHp: number, stomach: number): void {
+            super._show(hp + " / " + maxHp + " (" + stomach + ")");
+        }
+    }
+    
     /**
      * FPS表示
      */
@@ -705,13 +750,13 @@ module ShizimilyRogue.View {
         private static BACKGROUND_TILE_HEIGHT = 64;
         private static BAKCGROUND_TILE = [4, 3, 5, 1, 0, 2, 7, 6, 8];
         private static TOP_MARGIN = 36;
-        private static LEFT_MARGIN = 36;
+        private static LEFT_MARGIN = 18;
         private static LINE_SIZE = 36;
         private menuArea: enchant.Map;
         private elements: enchant.Group = null;
         private cursor: enchant.Sprite;
         private cursorIndex: number = 0;
-        private size = 3;
+        private size = 6;
 
         /**
          * メインメニュー
@@ -732,7 +777,7 @@ module ShizimilyRogue.View {
          * @return {Menu} メニュー
          */
         static Item(data: string[], selectHandler: (n: number) => void, multiple: boolean = false): Menu {
-            return new Menu(data, selectHandler, multiple, Scene.ASSETS.MENU_WINDOW.DATA, 10, 10, 5, 7);
+            return new Menu(data, selectHandler, multiple, Scene.ASSETS.MENU_WINDOW.DATA, 10, 10, 8, 5);
         }
 
         /**
@@ -810,6 +855,7 @@ module ShizimilyRogue.View {
                 var label: enchant.Label = new enchant.Label();
                 label.text = d;
                 label.height = Menu.LINE_SIZE;
+                label.width = 600;
                 label.font = "32px cursive";
                 label.color = "white";
                 label.y = (count % this.size) * Menu.LINE_SIZE + Menu.TOP_MARGIN;
@@ -920,14 +966,6 @@ module ShizimilyRogue.View {
                         [4, 5, 6, 7],
                         [0, 1, 2, 3]
                     ];
-                    /*var allFrame: number[][];
-                    for (var dir = 0; dir < 8; dir++) {
-                        for (var flameNum = 0; flameNum < x[dir].length; flameNum++) {
-                            for (var i = 0; i < delay; i++) {
-                                allFrame[dir].push(x[dir][flameNum]);
-                            }
-                        }
-                    }*/
                     sprite.frame = x[obj.dir][frameNum];
                     if (Scene.game.frame % delay == 0) frameNum++;
                     if (frameNum >= x[obj.dir].length) frameNum = 0;
@@ -936,30 +974,95 @@ module ShizimilyRogue.View {
 
             var actionAnimation = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
                 if (action.isAttack()) {
+                    Scene.ASSETS.SE_HEAL.DATA.clone().play();
                     sprite.tl
-                        .moveBy(20, 0, 3).moveBy(-20, 0, 3);
+                        .moveBy(ROT.DIRS[8][obj.dir][0] * 20, ROT.DIRS[8][obj.dir][1] * 20, 3).moveBy(ROT.DIRS[8][obj.dir][0] * -20, ROT.DIRS[8][obj.dir][1] * -20, 3)
+                        .delay(5);
                 } else if (action.isStatus() && action.subType == Common.StatusActionType.Damage) {
                     var x: number[][] = [
                         [12],
-                        [13, null],
-                        [13, null],
-                        [13, null],
-                        [12, null],
-                        [13, null],
-                        [13, null],
-                        [13, null],
+                        [13],
+                        [13],
+                        [13],
+                        [12],
+                        [13],
+                        [13],
+                        [13],
                     ];
-                    sprite.frame = x[obj.dir];
-                    sprite.tl
-                        .moveBy(20, 0, 3).moveBy(-20, 0, 3)
-                        .delay(5);
+                    sprite.frame = x[obj.dir][0];
+                    sprite.tl.delay(5);
+                } else if (action.isUse()) {
+                    Scene.ASSETS.SE_USE.DATA.clone().play();
+                } else if (action.isPick()) {
+                    Scene.ASSETS.SE_TAKE.DATA.clone().play();
+                } else if (action.isDie()) {
+                    Scene.ASSETS.SE_DIE.DATA.clone().play();
                 }
             };
             return new ViewObject(obj, Scene.ASSETS.SHIZIMILY.DATA, idleAnimation, actionAnimation, -0.5, -1, 128, 96);
         }
 
-        private static getUnitInstance(obj: Common.IObject): ViewObject {
-            return new ViewObject(obj, Scene.ASSETS.UNIT.DATA, (sprite) => sprite.frame = 1, () => { }, 0, -0.5);
+        private static getUnitInstance(obj: Common.IUnit): ViewObject {
+            if (obj.category == 2) {
+                var lastDir = obj.dir;
+                var frameNum = 0;
+                var idleAnimation = (sprite: enchant.Sprite) => {
+                    if (obj.isNormal()) {
+                        var delay: number = 7;  /* 1枚の画像を表示し続けるフレーム数 */
+                        var x: number[][] = [
+                            [2, 3],
+                            [4, 5],
+                            [4, 5],
+                            [0, 1],
+                            [0, 1],
+                            [6, 7],
+                            [6, 7],
+                            [2, 3]
+                        ];
+                        sprite.frame = x[obj.dir][frameNum];
+                        if (Scene.game.frame % delay == 0) frameNum++;
+                        if (frameNum >= x[obj.dir].length) frameNum = 0;
+                    }
+                };
+
+                var actionAnimation = (sprite: enchant.Sprite, action: Common.Action, speed: number) => {
+                    if (action.isAttack()) {
+                        var x: number[][] = [
+                            [9],
+                            [10],
+                            [10],
+                            [8],
+                            [8],
+                            [11],
+                            [11],
+                            [9],
+                        ];
+                        Scene.ASSETS.SE_ATTACK.DATA.clone().play();
+                        sprite.frame = x[obj.dir][0];
+                        sprite.tl
+                            .moveBy(ROT.DIRS[8][obj.dir][0] * 20, ROT.DIRS[8][obj.dir][1] * 20, 3).moveBy(ROT.DIRS[8][obj.dir][0] * -20, ROT.DIRS[8][obj.dir][1] * -20, 3)
+                            .delay(5);
+                    } else if (action.isStatus() && action.subType == Common.StatusActionType.Damage) {
+                        var x: number[][] = [
+                            [9],
+                            [10],
+                            [10],
+                            [8],
+                            [8],
+                            [11],
+                            [11],
+                            [9],
+                        ];
+                        sprite.frame = x[obj.dir][0];
+                        sprite.tl.delay(5);
+                    } else if (action.isDie()) {
+                        Scene.ASSETS.SE_DIE.DATA.clone().play();
+                    }
+                };
+                return new ViewObject(obj, Scene.ASSETS.WORD.DATA, idleAnimation, actionAnimation, -0.5, -1, 128, 96);
+            } else {
+                return new ViewObject(obj, Scene.ASSETS.UNIT.DATA, (sprite) => sprite.frame = 1, () => { }, 0, -0.5);
+            }
         }
 
         private static getStairsInstance(obj: Common.IObject): ViewObject {
@@ -1191,7 +1294,7 @@ module ShizimilyRogue.View {
             return map;
         }
 
-        private static getGroundViewTable(w: number, h: number,
+        private static getGroundViewTable2(w: number, h: number,
             table: (x: number, y: number) => Common.IObject): number[][] {
             var blockTable = [
                 0, 17, 4, 4, 16, 36, 4, 4, // 0 - 7
@@ -1247,6 +1350,62 @@ module ShizimilyRogue.View {
                         map[y][x] = mapId;
                     } else {
                         map[y][x] = 35;
+                    }
+                }
+            }
+            return map;
+        }
+
+        private static getGroundViewTable(w: number, h: number,
+            table: (x: number, y: number) => Common.IObject): number[][] {
+            var blockTable = [
+                17, 15, 13, 6, 9, 12, 0, 3,
+                14, 8, 7, 7, 2, 5, 1, 1,
+            ];
+            var map: number[][] = [];
+
+            for (var y = 0; y < h; y++) {
+                map.push(new Array(w));
+                for (var x = 0; x < w; x++) {
+                    if (table(x, y).isWall()) {
+                        var blockId = 0;
+                        blockId |= (y == 0 || table(x, y - 1).isWall()) ? 1 : 0;
+                        blockId |= (x == w - 1 || table(x + 1, y).isWall()) ? 2 : 0;
+                        blockId |= (y == h - 1 || table(x, y + 1).isWall()) ? 4 : 0;
+                        blockId |= (x == 0 || table(x - 1, y).isWall()) ? 8 : 0;
+
+                        var mapId = blockTable[blockId];
+                        if (mapId == 1) {
+                            if (y < h - 1 && x > 0 && !table(x - 1, y + 1).isWall()) {
+                                if (y < h - 1 && x < w - 1 && !table(x + 1, y + 1).isWall()) {
+                                    mapId = 18;
+                                } else {
+                                    mapId = 20;
+                                }
+                            } else if (y < h - 1 && x < w - 1 && !table(x + 1, y + 1).isWall()) {
+                                mapId = 19;
+                            }
+                        } else if (mapId == 0) {
+                            if (y < h - 1 && x < w - 1 && !table(x + 1, y + 1).isWall()) {
+                                mapId = 10;
+                            }
+                        } else if (mapId == 2) {
+                            if (y < h - 1 && x > 0 && !table(x - 1, y + 1).isWall()) {
+                                mapId = 11;
+                            }
+                        } else if (mapId == 3) {
+                            if (y < h - 1 && x < w - 1 && !table(x + 1, y + 1).isWall()) {
+                                mapId = 16;
+                            }
+                        } else if (mapId == 5) {
+                            if (y < h - 1 && x > 0 && !table(x - 1, y + 1).isWall()) {
+                                mapId = 17;
+                            }
+                        }
+                        map[y][x] = mapId;
+
+                    } else {
+                        map[y][x] = 4;
                     }
                 }
             }

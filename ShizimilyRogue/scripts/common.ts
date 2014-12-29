@@ -536,6 +536,7 @@
         width: number;
         height: number;
         getObjectById(id: number): Common.IObject;
+        floor: number;
     }
 
     export interface IEffect {

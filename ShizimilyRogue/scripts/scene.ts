@@ -8,7 +8,7 @@
     // シーン
     export class Scene extends enchant.Scene {
         static ASSETS = {
-            WALL00: { URL: "./images/Map/Wall00.png", DATA: <enchant.Surface>null },
+            WALL00: { URL: "./images/Map/wall_floor.png", DATA: <enchant.Surface>null },
             FLOOR: { URL: "./images/Map/Floor.png", DATA: <enchant.Surface>null },
             MINI_MAP: { URL: "./images/Map/minimap.png", DATA: <enchant.Surface>null },
 
@@ -28,6 +28,7 @@
             SD_CARD: { URL: "./images/Item/SDCard.png", DATA: <enchant.Surface>null },
 
             SHIZIMILY: { URL: "./images/Unit/Shizimi.png", DATA: <enchant.Surface>null },
+            WORD: { URL: "./images/Unit/Word.png", DATA: <enchant.Surface>null },
             STAIRS: { URL: "./images/Object/Stairs.png", DATA: <enchant.Surface>null },
 
             UNIT: { URL: "./images/unit.png", DATA: <enchant.Surface>null },
@@ -35,6 +36,12 @@
             SHADOW: { URL: "./images/shadow.png", DATA: <enchant.Surface>null },
 
             BGM_MAIN: { URL: "./music/shizimily.mp3", DATA: <enchant.DOMSound>null },
+            SE_ATTACK: { URL: "./sound/attack.mp3", DATA: <enchant.DOMSound>null },
+            SE_HEAL: { URL: "./sound/heal.mp3", DATA: <enchant.DOMSound>null },
+            SE_TAKE: { URL: "./sound/take.mp3", DATA: <enchant.DOMSound>null },
+            SE_USE: { URL: "./sound/use.mp3", DATA: <enchant.DOMSound>null },
+            SE_DIE: { URL: "./sound/die.mp3", DATA: <enchant.DOMSound>null },
+            SE_STAIR: { URL: "./sound/stair.mp3", DATA: <enchant.DOMSound>null },
         };
 
         static game: enchant.Core;
@@ -77,16 +84,6 @@
             return Scene._animating > 0;
         }
 
-
-        static set keyLock(value: boolean) {
-            Scene._keyLock = value;
-            if (value)
-                View.Input.resetKeys();
-        }
-        static get keyLock(): boolean {
-            return Scene._keyLock;
-        }
-
         static contollerUpdateHandler: (e: any) => void;
         static setScene(scene: Scene, updateHandler: (e) => void): void {
             Scene.game.removeEventListener(enchant.Event.ENTER_FRAME, Scene.contollerUpdateHandler);
@@ -94,7 +91,6 @@
             Scene.contollerUpdateHandler = updateHandler;
 
             Scene.game.replaceScene(scene);
-            Scene.keyLock = false;
         }
     }
 

@@ -10,16 +10,24 @@
             case Common.ItemType.Case:
                 return action.sender.name + "は" + action.item.name + "に" + action.targetItems[0].name + "とかを入れた";
             case Common.ItemType.DVD:
-                return action.sender.name + "は" + action.item.name + "を再生した";
+                return action.sender.name + "は" + action.item.name + "を再生しようとしたけど寝ちゃいました";
             case Common.ItemType.SDCard:
                 return action.sender.name + "は" + action.item.name + "を読み込んだ";
             case Common.ItemType.CPU:
-            case Common.ItemType.GraphicBoard:
                 if ((<Common.IUnit>action.sender).weapon == action.item) {
                     return action.sender.name + "は" + action.item.name + "を装備した";
                 } else {
                     return action.sender.name + "は" + action.item.name + "をはずした";
                 }
+            case Common.ItemType.GraphicBoard:
+                if ((<Common.IUnit>action.sender).guard == action.item) {
+                    return action.sender.name + "は" + action.item.name + "を装備した";
+                } else {
+                    return action.sender.name + "は" + action.item.name + "をはずした";
+                }
+            case Common.ItemType.Memory:
+            case Common.ItemType.HDD:
+                return action.sender.name + "はデータをいっぱいDLして寝ちゃいました";
         }
     }
 
